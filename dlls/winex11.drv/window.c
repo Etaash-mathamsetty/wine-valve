@@ -510,11 +510,7 @@ static unsigned long get_mwm_decorations_for_style( DWORD style, DWORD ex_style 
         if (style & WS_SYSMENU) ret |= MWM_DECOR_MENU;
         if (style & WS_MINIMIZEBOX) ret |= MWM_DECOR_MINIMIZE;
         if (style & WS_MAXIMIZEBOX) ret |= MWM_DECOR_MAXIMIZE;
-        if (style & WS_THICKFRAME) ret |= MWM_DECOR_RESIZEH;
     }
-    if (ex_style & WS_EX_DLGMODALFRAME) ret |= MWM_DECOR_BORDER;
-    else if (style & WS_THICKFRAME) return ret;
-    else if ((style & (WS_DLGFRAME|WS_BORDER)) == WS_DLGFRAME) ret |= MWM_DECOR_BORDER;
     return ret;
 }
 
