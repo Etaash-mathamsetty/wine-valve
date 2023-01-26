@@ -60,6 +60,8 @@
 @ stdcall KeLeaveGuardedRegion()
 @ stdcall -arch=!i386 KeReleaseInStackQueuedSpinLock(ptr)
 @ stdcall -fastcall KeReleaseInStackQueuedSpinLockFromDpcLevel(ptr)
+@ stdcall KeReleaseGuardedMutexUnsafe(ptr)
+@ stdcall KeReleaseGuardedMutex(ptr)
 @ stub KeSetTimeUpdateNotifyRoutine
 @ stub KefAcquireSpinLockAtDpcLevel
 @ stub KefReleaseSpinLockFromDpcLevel
