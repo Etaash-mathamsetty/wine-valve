@@ -2824,6 +2824,7 @@ HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-locale-l1-1-0",0x2,"native,built
 HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-math-l1-1-0",0x2,"native,builtin"
 HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-runtime-l1-1-0",0x2,"native,builtin"
 HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-stdio-l1-1-0",0x2,"native,builtin"
+HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-string-l1-1-0",0x2,"native,builtin"
 HKCU,Software\Wine\DllOverrides,"api-ms-win-crt-time-l1-1-0",0x2,"native,builtin"
 HKCU,Software\Wine\DllOverrides,"atl140",0x2,"native,builtin"
 HKCU,Software\Wine\DllOverrides,"concrt140",0x2,"native,builtin"
