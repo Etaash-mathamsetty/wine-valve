@@ -93,6 +93,10 @@ LRESULT system_tray_call( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, voi
 
     case WINE_SYSTRAY_RUN_LOOP:
         return -1;
+
+    case WINE_SYSTRAY_SHOW_BALLOON:
+        return user_driver->pSystrayShowBalloon( hwnd, wparam, lparam, data );
+
     default:
         FIXME( "Unknown NtUserSystemTrayCall msg %#x\n", msg );
         break;

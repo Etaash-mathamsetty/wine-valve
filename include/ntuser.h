@@ -660,6 +660,16 @@ enum wine_systray_call
     WINE_SYSTRAY_DOCK_CLEAR,
     WINE_SYSTRAY_DOCK_REMOVE,
     WINE_SYSTRAY_RUN_LOOP,
+    WINE_SYSTRAY_SHOW_BALLOON,
+};
+
+struct systray_balloon
+{
+    WCHAR info_text[256];  /* info balloon text */
+    WCHAR info_title[64];  /* info balloon title */
+    UINT  info_flags;      /* flags for info balloon */
+    UINT  info_timeout;    /* timeout for info balloon */
+    HICON info_icon;       /* info balloon icon */
 };
 
 /* NtUserDragDropCall calls */

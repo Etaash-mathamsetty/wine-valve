@@ -357,6 +357,7 @@ struct user_driver_funcs
     BOOL    (*pSystrayDockInsert)(HWND,UINT,UINT,void *);
     void    (*pSystrayDockClear)(HWND);
     BOOL    (*pSystrayDockRemove)(HWND);
+    BOOL    (*pSystrayShowBalloon)(HWND,UINT,BOOL,struct systray_balloon *);
     /* clipboard functions */
     LRESULT (*pClipboardWindowProc)(HWND,UINT,WPARAM,LPARAM);
     void    (*pUpdateClipboard)(void);

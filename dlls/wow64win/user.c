@@ -3676,6 +3676,25 @@ NTSTATUS WINAPI wow64_NtUserMessageCall( UINT *args )
     case NtUserSystemTrayCall:
         switch (msg)
         {
+        case WINE_SYSTRAY_SHOW_BALLOON:
+        {
+            struct
+            {
+                WCHAR info_text[256];  /* info balloon text */
+                WCHAR info_title[64];  /* info balloon title */
+                UINT  info_flags;      /* flags for info balloon */
+                UINT  info_timeout;    /* timeout for info balloon */
+                ULONG info_icon;       /* info balloon icon */
+            } *balloon_params32 = result_info;
+            struct systray_balloon balloon_params;
+            balloon_params.info_flags = balloon_params32->info_flags;
+            balloon_params.info_timeout = balloon_params32->info_timeout;
+            balloon_params.info_icon = UlongToHandle(balloon_params32->info_icon);
+            wcscpy( balloon_params.info_text, balloon_params32->info_text );
+            wcscpy( balloon_params.info_title, balloon_params32->info_title );
+
+            return NtUserMessageCall( hwnd, msg, wparam, lparam, &balloon_params, type, ansi );
+        }
         case WINE_SYSTRAY_NOTIFY_ICON:
         {
             struct

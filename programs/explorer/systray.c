@@ -302,7 +302,18 @@ static void show_next_balloon(void)
 
 static void update_balloon( struct icon *icon )
 {
-    if (balloon_icon == icon)
+    struct systray_balloon balloon_info;
+    balloon_info.info_flags = icon->info_flags;
+    balloon_info.info_timeout = icon->info_timeout;
+    balloon_info.info_icon = icon->info_icon;
+    wcscpy( balloon_info.info_text, icon->info_text );
+    wcscpy( balloon_info.info_title, icon->info_title );
+    if (NtUserMessageCall( icon->window, WINE_SYSTRAY_SHOW_BALLOON, icon->id, icon->display == ICON_DISPLAY_HIDDEN,
+                           &balloon_info, NtUserSystemTrayCall, FALSE ) > 0)
+    {
+        return;
+    }
+    else if (balloon_icon == icon)
     {
         hide_balloon( icon );
         show_balloon( icon );
