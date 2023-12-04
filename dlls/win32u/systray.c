@@ -52,6 +52,8 @@ LRESULT system_tray_call( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, voi
     case WINE_SYSTRAY_DOCK_REMOVE:
         return user_driver->pSystrayDockRemove( hwnd );
 
+    case WINE_SYSTRAY_RUN_LOOP:
+        return -1;
     default:
         FIXME( "Unknown NtUserSystemTrayCall msg %#x\n", msg );
         break;

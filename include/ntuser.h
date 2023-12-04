@@ -659,6 +659,7 @@ enum wine_systray_call
     WINE_SYSTRAY_DOCK_INSERT,
     WINE_SYSTRAY_DOCK_CLEAR,
     WINE_SYSTRAY_DOCK_REMOVE,
+    WINE_SYSTRAY_RUN_LOOP,
 };
 
 /* NtUserDragDropCall calls */

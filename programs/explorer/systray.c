@@ -1200,6 +1200,11 @@ void handle_parent_notify( HWND hwnd, WPARAM wp )
     sync_taskbar_buttons();
 }
 
+static DWORD WINAPI systray_run_loop(void* arg)
+{
+    return NtUserMessageCall( tray_window, WINE_SYSTRAY_RUN_LOOP, 0, 0, NULL, NtUserSystemTrayCall, FALSE ) == 0;
+}
+
 /* this function creates the listener window */
 void initialize_systray( BOOL arg_using_root, BOOL arg_enable_shell, BOOL arg_show_systray, BOOL arg_no_tray_items )
 {
@@ -1256,6 +1261,8 @@ void initialize_systray( BOOL arg_using_root, BOOL arg_enable_shell, BOOL arg_sh
         tray_window = CreateWindowExW( WS_EX_NOACTIVATE, shell_traywnd_class.lpszClassName, L"", WS_CAPTION | WS_SYSMENU,
                                        CW_USEDEFAULT, CW_USEDEFAULT, size.cx, size.cy, 0, 0, 0, 0 );
         NtUserMessageCall( tray_window, WINE_SYSTRAY_DOCK_INIT, 0, 0, NULL, NtUserSystemTrayCall, FALSE );
+        /* run loop if SNI is being used */
+        CloseHandle(CreateThread(NULL, 0, systray_run_loop, NULL, 0, NULL));
     }
 
     if (!tray_window)
