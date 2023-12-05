@@ -127,6 +127,7 @@ struct tray_icon
     UINT            callback_message;
     char            tiptext[128 * 3];    /* tooltip text */
     UINT            version;         /* notify icon api version */
+    unsigned int    notification_id;
     DBusConnection* connection;
     DBusWatch* watch;
     int watch_fd;
@@ -140,17 +141,37 @@ static struct list sni_list = LIST_INIT( sni_list );
 
 static pthread_mutex_t list_mutex;
 
+struct standalone_notification {
+    struct list entry;
+
+    HWND owner;
+    UINT id;
+    unsigned int notification_id;
+};
+
+static struct list standalone_notification_list = LIST_INIT( standalone_notification_list );
+
+static pthread_mutex_t standalone_notifications_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+
+#define BALLOON_SHOW_MIN_TIMEOUT 10000
+#define BALLOON_SHOW_MAX_TIMEOUT 30000
+
 static void* dbus_module = NULL;
 static const char* watcher_interface_name = "org.kde.StatusNotifierWatcher";
 static const char* item_interface_name = "org.kde.StatusNotifierItem";
+
+static const char* notifications_interface_name = "org.freedesktop.Notifications";
 
 static DBusConnection *global_connection;
 static DBusWatch *global_connection_watch;
 static int global_connection_watch_fd;
 static UINT global_connection_watch_flags;
 static BOOL sni_initialized = FALSE;
+static BOOL notifications_initialized = FALSE;
 
 static char* status_notifier_dst_path = NULL;
+static char* notifications_dst_path = NULL;
 
 static const char *status_field = "Status";
 static const char *icon_field = "IconPixmap";
@@ -182,6 +203,11 @@ static void sni_finalize(void)
     free(status_notifier_dst_path);
 }
 
+static void notifications_finalize(void)
+{
+    free(notifications_dst_path);
+}
+
 static void dbus_finalize(void)
 {
     if (global_connection != NULL)
@@ -199,6 +225,8 @@ static void dbus_finalize(void)
 static dbus_bool_t add_watch(DBusWatch *w, void *data);
 static void remove_watch(DBusWatch *w, void *data);
 static void toggle_watch(DBusWatch *w, void *data);
+
+static BOOL notifications_initialize(void);
 
 static BOOL dbus_initialize(void)
 {
@@ -228,18 +256,27 @@ static void snidrv_once_initialize(void)
     if (get_notifier_watcher_owner())
         /* TODO: replace this with Interlocked if there will be a getter function for this variable */
         sni_initialized = TRUE;
+    if (notifications_initialize())
+        notifications_initialized = TRUE;
 err:
     if (!sni_initialized)
-    {
         sni_finalize();
+    if (!notifications_initialized)
+        notifications_finalize();
+    if (!sni_initialized && !notifications_initialized)
         dbus_finalize();
-    }
 }
 
 BOOL snidrv_init(void)
 {
     pthread_once(&init_control, snidrv_once_initialize);
     return sni_initialized;
+}
+
+BOOL snidrv_notification_init(void)
+{
+    pthread_once(&init_control, snidrv_once_initialize);
+    return notifications_initialized;
 }
 
 static dbus_bool_t add_watch(DBusWatch *w, void *data)
@@ -311,6 +348,10 @@ static const char* dbus_name_owning_match = "type='signal',"
     "sender='org.freedesktop.DBus',"
     "member='NameOwnerChanged'";
 
+static const char* dbus_notification_close_signal = "type='signal',"
+    "interface='org.freedesktop.Notifications',"
+    "member='NotificationClosed'";
+
 static const char* const object_path = "/StatusNotifierItem";
 
 static BOOL register_notification_item(DBusConnection* ctx);
@@ -363,8 +404,42 @@ static DBusHandlerResult name_owner_filter( DBusConnection *ctx, DBusMessage *ms
                 pthread_mutex_lock(&list_mutex);
             }
         }
+        else if (strcmp(interface_name, notifications_interface_name) == 0)
+        {
+            struct standalone_notification *this, *next;
+            pthread_mutex_lock(&standalone_notifications_mutex);
+            old_path = notifications_dst_path;
+            notifications_dst_path = strdup(new_path);
+            free(old_path);
+
+            LIST_FOR_EACH_ENTRY_SAFE( this, next, &standalone_notification_list, struct standalone_notification, entry )
+            {
+                list_remove(&this->entry);
+                free(this);
+            }
+            pthread_mutex_unlock(&standalone_notifications_mutex);
+        }
+    }
+    else if (p_dbus_message_is_signal( msg, notifications_interface_name, "NotificationClosed" ))
+    {
+        unsigned int id, reason;
+        struct standalone_notification *this, *next;
+        if (!p_dbus_message_get_args( msg, &error, DBUS_TYPE_UINT32, &id, DBUS_TYPE_UINT32, &reason ))
+            goto cleanup;
+        pthread_mutex_lock(&standalone_notifications_mutex);
+        /* TODO: clear the list */
+        LIST_FOR_EACH_ENTRY_SAFE( this, next, &standalone_notification_list, struct standalone_notification, entry )
+        {
+            if (this->notification_id == id)
+            {
+                list_remove(&this->entry);
+                free(this);
+            }
+        }
+        pthread_mutex_unlock(&standalone_notifications_mutex);
     }
 
+cleanup:
     p_dbus_error_free( &error );
     return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
@@ -445,6 +520,7 @@ static BOOL get_notifier_watcher_owner(void)
 
     p_dbus_connection_add_filter( global_connection, name_owner_filter, NULL, NULL );
     p_dbus_bus_add_match( global_connection, dbus_name_owning_match, &error );
+    p_dbus_bus_add_match( global_connection, dbus_notification_close_signal, &error );
     if (p_dbus_error_is_set(&error))
     {
         WARN("failed to register matcher %s: %s\n", error.name, error.message);
@@ -457,6 +533,263 @@ static BOOL get_notifier_watcher_owner(void)
 err:
     pthread_mutexattr_destroy( &attr );
     return FALSE;
+}
+
+static BOOL notifications_initialize(void)
+{
+    char* dst_path = NULL;
+    BOOL ret = get_owner_for_interface(global_connection, "org.freedesktop.Notifications", &dst_path);
+    notifications_dst_path = dst_path;
+    return ret;
+}
+
+static BOOL handle_notification_icon(DBusMessageIter *iter, const unsigned char* icon_bits, unsigned width, unsigned height)
+{
+    DBusMessageIter sIter,bIter;
+    unsigned row_stride = width * 4;
+    const unsigned channel_count = 4;
+    const unsigned bits_per_sample = 8;
+    const bool has_alpha = true;
+    if (!p_dbus_message_iter_open_container(iter, 'r', NULL, &sIter))
+    {
+        WARN("Failed to open struct inside array!\n");
+        goto fail;
+    }
+
+    p_dbus_message_iter_append_basic(&sIter, 'i', &width);
+    p_dbus_message_iter_append_basic(&sIter, 'i', &height);
+    p_dbus_message_iter_append_basic(&sIter, 'i', &row_stride);
+    p_dbus_message_iter_append_basic(&sIter, 'b', &has_alpha);
+    p_dbus_message_iter_append_basic(&sIter, 'i', &bits_per_sample);
+    p_dbus_message_iter_append_basic(&sIter, 'i', &channel_count);
+
+    if (p_dbus_message_iter_open_container(&sIter, 'a', DBUS_TYPE_BYTE_AS_STRING, &bIter))
+    {
+        p_dbus_message_iter_append_fixed_array(&bIter, DBUS_TYPE_BYTE, &icon_bits, width * height * 4);
+        p_dbus_message_iter_close_container(&sIter, &bIter);
+    }
+    else
+    {
+        p_dbus_message_iter_abandon_container_if_open(iter, &sIter);
+        goto fail;
+    }
+    p_dbus_message_iter_close_container(iter, &sIter);
+    return TRUE;
+fail:
+    return FALSE;
+}
+
+static BOOL close_notification(DBusConnection* connection, UINT id)
+{
+    BOOL ret = FALSE;
+
+    DBusMessage* msg = NULL;
+    DBusMessageIter args;
+    DBusPendingCall* pending;
+    DBusError error;
+
+    p_dbus_error_init( &error );
+    msg = p_dbus_message_new_method_call(notifications_dst_path,
+                                         "/org/freedesktop/Notifications",
+                                         notifications_interface_name,
+                                         "CloseNotification");
+    if (!msg) goto err;
+    p_dbus_message_iter_init_append(msg, &args);
+    if (!p_dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT32, &id )) goto err;
+
+    if (!p_dbus_connection_send_with_reply (connection, msg, &pending, -1))
+        goto err;
+
+    if (!pending) goto err;
+
+    p_dbus_message_unref(msg);
+
+    p_dbus_pending_call_block(pending);
+
+    msg = p_dbus_pending_call_steal_reply(pending);
+    p_dbus_pending_call_unref(pending);
+    if (!msg) goto err;
+    if (p_dbus_set_error_from_message (&error, msg))
+    {
+        WARN("got an error - %s: %s\n", error.name, error.message);
+        p_dbus_error_free( &error);
+    }
+    ret = TRUE;
+err:
+    p_dbus_message_unref(msg);
+
+    return ret;
+}
+
+static BOOL send_notification(DBusConnection* connection, UINT id, const WCHAR* title, const WCHAR* text, HICON icon, UINT info_flags, UINT timeout, unsigned int *p_new_id)
+{
+    char info_text[256 * 3];
+    char info_title[128 * 3];
+    const char *info_text_ptr = info_text, *info_title_ptr = info_title;
+    const char* empty_string = "";
+    const char* icon_name = "";
+    BOOL ret = FALSE;
+    DBusMessage* msg = NULL;
+    DBusMessageIter args, aIter, eIter, vIter;
+    DBusPendingCall* pending;
+    DBusError error;
+    /* icon */
+    void* icon_bits = NULL;
+    unsigned width, height;
+    HICON new_icon = NULL;
+    int expire_timeout;
+    /* no text for balloon, so no balloon  */
+    if (!text || !text[0])
+        return TRUE;
+
+    info_title[0] = 0;
+    info_text[0] = 0;
+    if (title) ntdll_wcstoumbs(title, wcslen(title) + 1, info_title, ARRAY_SIZE(info_title), FALSE);
+    if (text) ntdll_wcstoumbs(text, wcslen(text) + 1, info_text, ARRAY_SIZE(info_text), FALSE);
+    /*icon*/
+    if ((info_flags & NIIF_ICONMASK) == NIIF_USER && icon)
+    {
+        unsigned int *u_icon_bits;
+        new_icon = CopyImage(icon, IMAGE_ICON, 0, 0, 0);
+        if (!create_bitmap_from_icon(new_icon, &width, &height, &icon_bits))
+        {
+            WARN("failed to copy icon %p\n", new_icon);
+            goto err;
+        }
+        u_icon_bits = icon_bits;
+        /* convert to RGBA, turns out that unlike tray icons it needs RGBA */
+        for (unsigned i = 0; i < width * height; i++)
+        {
+#ifdef WORDS_BIGENDIAN
+            u_icon_bits[i] = (u_icon_bits[i] << 8) | (u_icon_bits[i] >> 24);
+#else
+            u_icon_bits[i] = (u_icon_bits[i] << 24) | (u_icon_bits[i] >> 8);
+#endif
+        }
+    }
+    else
+    {
+        /* show placeholder icons */
+        switch (info_flags & NIIF_ICONMASK)
+        {
+        case NIIF_INFO:
+            icon_name = "dialog-information";
+            break;
+        case NIIF_WARNING:
+            icon_name = "dialog-warning";
+            break;
+        case NIIF_ERROR:
+            icon_name = "dialog-error";
+            break;
+        default:
+            break;
+        }
+    }
+    p_dbus_error_init( &error );
+    msg = p_dbus_message_new_method_call(notifications_dst_path,
+                                         "/org/freedesktop/Notifications",
+                                         notifications_interface_name,
+                                         "Notify");
+    if (!msg) goto err;
+
+    p_dbus_message_iter_init_append(msg, &args);
+    if (!p_dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &empty_string ))
+        goto err;
+    /* override id */
+    if (!p_dbus_message_iter_append_basic(&args, DBUS_TYPE_UINT32, &id ))
+        goto err;
+    /* icon name */
+    if (!p_dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &icon_name ))
+        goto err;
+    /* title */
+    if (!p_dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &info_title_ptr ))
+        goto err;
+    /* body */
+    if (!p_dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &info_text_ptr ))
+        goto err;
+    /* actions */
+    /* TODO: add default action */
+    if (p_dbus_message_iter_open_container(&args, 'a', DBUS_TYPE_STRING_AS_STRING, &aIter))
+        p_dbus_message_iter_close_container(&args, &aIter);
+    else
+        goto err;
+
+    /* hints */
+    if (p_dbus_message_iter_open_container(&args, 'a', "{sv}", &aIter))
+    {
+        if ((info_flags & NIIF_ICONMASK) == NIIF_USER && icon)
+        {
+            const char* icon_data_field = "image-data";
+            if (!p_dbus_message_iter_open_container(&aIter, 'e', NULL, &eIter))
+            {
+                p_dbus_message_iter_abandon_container_if_open(&args, &aIter);
+                goto err;
+            }
+
+            p_dbus_message_iter_append_basic(&eIter, 's', &icon_data_field);
+
+            if (!p_dbus_message_iter_open_container(&eIter, 'v', "(iiibiiay)", &vIter))
+            {
+                p_dbus_message_iter_abandon_container_if_open(&aIter, &eIter);
+                p_dbus_message_iter_abandon_container_if_open(&args, &aIter);
+                goto err;
+            }
+
+            if (!handle_notification_icon(&vIter, icon_bits, width, height))
+            {
+                p_dbus_message_iter_abandon_container_if_open(&eIter, &vIter);
+                p_dbus_message_iter_abandon_container_if_open(&aIter, &eIter);
+                p_dbus_message_iter_abandon_container_if_open(&args, &aIter);
+                goto err;
+            }
+
+            p_dbus_message_iter_close_container(&eIter, &vIter);
+            p_dbus_message_iter_close_container(&aIter, &eIter);
+        }
+        p_dbus_message_iter_close_container(&args, &aIter);
+    }
+    else
+        goto err;
+    if (timeout == 0)
+        /* just set it to system default */
+        expire_timeout = -1;
+    else
+        expire_timeout = max(min(timeout, BALLOON_SHOW_MAX_TIMEOUT), BALLOON_SHOW_MIN_TIMEOUT);
+
+    /* timeout */
+    if (!p_dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &expire_timeout ))
+        goto err;
+    if (!p_dbus_connection_send_with_reply (connection, msg, &pending, -1))
+        goto err;
+    if (!pending) goto err;
+
+    p_dbus_message_unref(msg);
+
+    p_dbus_pending_call_block(pending);
+
+    msg = p_dbus_pending_call_steal_reply(pending);
+    p_dbus_pending_call_unref(pending);
+    if (!msg) goto err;
+
+    if (p_dbus_set_error_from_message (&error, msg))
+    {
+        WARN("failed to create a notification - %s: %s\n", error.name, error.message);
+        p_dbus_error_free( &error);
+        goto err;
+    }
+    if (!p_dbus_message_iter_init(msg, &args))
+        goto err;
+
+    if (DBUS_TYPE_UINT32 != p_dbus_message_iter_get_arg_type(&args))
+        goto err;
+    else if (p_new_id)
+        p_dbus_message_iter_get_basic(&args, p_new_id);
+    ret = TRUE;
+err:
+    p_dbus_message_unref(msg);
+    if (new_icon) NtUserDestroyCursor(new_icon, 0);
+    free(icon_bits);
+    return ret;
 }
 
 static BOOL handle_id(DBusConnection* conn, DBusMessageIter *iter, const struct tray_icon* icon)
@@ -1147,7 +1480,16 @@ BOOL snidrv_add_notify_icon(const NOTIFYICONDATAW* icon_data)
         ntdll_wcstoumbs(icon_data->szTip, wcslen(icon_data->szTip) + 1, icon->tiptext, ARRAY_SIZE(icon->tiptext), FALSE);
     if (icon_data->uFlags & NIF_STATE)
         icon->state = (icon->state & ~icon_data->dwStateMask) | (icon_data->dwState & icon_data->dwStateMask);
-
+    if (notifications_dst_path && notifications_dst_path[0] &&
+        !(icon->state & NIS_HIDDEN) && (icon_data->uFlags & NIF_INFO) && icon_data->cbSize >= NOTIFYICONDATAA_V2_SIZE)
+        send_notification(icon->connection,
+                          icon->notification_id,
+                          icon_data->szInfoTitle,
+                          icon_data->szInfo,
+                          icon_data->hBalloonIcon,
+                          icon_data->dwInfoFlags,
+                          icon_data->uTimeout,
+                          &icon->notification_id);
     icon->version = icon_data->uVersion;
     if (!p_dbus_connection_try_register_object_path(connection, object_path, &notification_vtable, icon, &error))
     {
@@ -1262,6 +1604,13 @@ BOOL snidrv_modify_notify_icon( const NOTIFYICONDATAW* icon_data )
             goto err_post_unlock;
     }
 
+    if (notifications_dst_path && notifications_dst_path[0])
+    {
+        if (!(icon->state & NIS_HIDDEN) && (icon_data->uFlags & NIF_INFO) && icon_data->cbSize >= NOTIFYICONDATAA_V2_SIZE)
+            send_notification(icon->connection, icon->notification_id, icon_data->szInfoTitle, icon_data->szInfo, icon_data->hBalloonIcon, icon_data->dwInfoFlags, icon_data->uTimeout, &icon->notification_id);
+        else if ((icon->state & NIS_HIDDEN) && icon->notification_id)
+            close_notification(icon->connection, icon->notification_id);
+    }
     return TRUE;
 err:
     pthread_mutex_unlock(&icon->mutex);
@@ -1299,4 +1648,56 @@ BOOL snidrv_cleanup_notify_icons(HWND owner)
     return TRUE;
 }
 
+BOOL snidrv_show_balloon( HWND owner, UINT id, BOOL hidden, const struct systray_balloon* balloon )
+{
+    BOOL ret = TRUE;
+    struct standalone_notification *found_notification = NULL, *this;
+
+    if (!notifications_dst_path || !notifications_dst_path[0])
+        return -1;
+    pthread_mutex_lock(&standalone_notifications_mutex);
+
+    LIST_FOR_EACH_ENTRY(this, &standalone_notification_list, struct standalone_notification, entry)
+    {
+        if (this->owner == owner && this->id == id)
+        {
+            found_notification = this;
+            break;
+        }
+    }
+    /* close existing notification anyway */
+    if (!hidden)
+    {
+        if (!found_notification)
+        {
+            found_notification = malloc(sizeof(struct standalone_notification));
+            if (!found_notification)
+            {
+                ret = FALSE;
+                goto cleanup;
+            }
+            found_notification->owner = owner;
+            found_notification->id = id;
+            found_notification->notification_id = 0;
+            list_add_tail(&standalone_notification_list, &found_notification->entry);
+        }
+        else
+            TRACE("found existing notification %p %d\n", owner, id);
+        ret = send_notification(global_connection,
+                                found_notification->notification_id,
+                                balloon->info_title,
+                                balloon->info_text,
+                                balloon->info_icon,
+                                balloon->info_flags,
+                                balloon->info_timeout,
+                                &found_notification->notification_id);
+    }
+    else if (found_notification)
+    {
+        ret = close_notification(global_connection, found_notification->notification_id);
+    }
+cleanup:
+    pthread_mutex_unlock(&standalone_notifications_mutex);
+    return ret;
+}
 #endif

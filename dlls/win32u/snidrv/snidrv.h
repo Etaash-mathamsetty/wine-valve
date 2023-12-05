@@ -30,6 +30,7 @@
 
 /* snidrv */
 extern BOOL snidrv_init(void);
+extern BOOL snidrv_notification_init(void);
 extern BOOL snidrv_run_loop(void);
 
 extern BOOL snidrv_add_notify_icon( const NOTIFYICONDATAW* icon_data);
@@ -39,4 +40,6 @@ extern BOOL snidrv_set_notify_icon_version( HWND hwnd, UINT uID, UINT uVersion);
 
 extern BOOL create_bitmap_from_icon(HANDLE icon, unsigned *p_width, unsigned *p_height, void** p_bits);
 extern BOOL snidrv_cleanup_notify_icons(HWND owner);
+
+extern BOOL snidrv_show_balloon( HWND owner, UINT id, BOOL hidden, const struct systray_balloon* balloon );
 #endif
