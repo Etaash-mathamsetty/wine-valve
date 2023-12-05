@@ -35,6 +35,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(systray);
 
 #ifdef SONAME_LIBDBUS_1
 static volatile LONG sni_initialized = (LONG)FALSE;
+static volatile LONG dbus_notifications_initialized = (LONG)FALSE;
 #endif
 
 LRESULT system_tray_call( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, void *data )
@@ -69,6 +70,18 @@ LRESULT system_tray_call( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, voi
             return snidrv_run_loop();
         else if (msg == WINE_SYSTRAY_CLEANUP_ICONS)
             return snidrv_cleanup_notify_icons( hwnd );
+    }
+
+    if (msg == WINE_SYSTRAY_SHOW_BALLOON)
+    {
+        LONG l_dbus_notifications_initialized = InterlockedCompareExchange(&dbus_notifications_initialized, (LONG)FALSE, (LONG)FALSE);
+        if (!l_dbus_notifications_initialized && snidrv_notification_init())
+        {
+            InterlockedCompareExchange(&dbus_notifications_initialized, TRUE, FALSE);
+            l_dbus_notifications_initialized = TRUE;
+        }
+        if (l_dbus_notifications_initialized)
+            return snidrv_show_balloon(hwnd, wparam, lparam, data);
     }
 #endif
 
