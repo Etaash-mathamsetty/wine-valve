@@ -21,18 +21,57 @@
 #endif
 
 #include "config.h"
-
 #include "ntstatus.h"
 #define WIN32_NO_STATUS
 #include "win32u_private.h"
 #include "ntuser_private.h"
+#ifdef SONAME_LIBDBUS_1
+#include "snidrv/snidrv.h"
+#endif
 #include "shellapi.h"
 #include "wine/debug.h"
 
 WINE_DEFAULT_DEBUG_CHANNEL(systray);
 
+#ifdef SONAME_LIBDBUS_1
+static volatile LONG sni_initialized = (LONG)FALSE;
+#endif
+
 LRESULT system_tray_call( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, void *data )
 {
+#ifdef SONAME_LIBDBUS_1
+    LONG l_sni_initialized = InterlockedCompareExchange(&sni_initialized, (LONG)FALSE, (LONG)FALSE);
+    if (!l_sni_initialized && snidrv_init())
+    {
+        InterlockedCompareExchange(&sni_initialized, TRUE, FALSE);
+        l_sni_initialized = TRUE;
+    }
+    if (l_sni_initialized)
+    {
+        if (msg == WINE_SYSTRAY_NOTIFY_ICON)
+        {
+            switch (wparam)
+            {
+            case NIM_ADD:
+                return snidrv_add_notify_icon( (const NOTIFYICONDATAW *)data );
+            case NIM_MODIFY:
+                return snidrv_modify_notify_icon( (const NOTIFYICONDATAW *)data );
+            case NIM_DELETE:
+                return snidrv_delete_notify_icon( hwnd, ((const NOTIFYICONDATAW *)data)->uID );
+            case NIM_SETVERSION:
+                return snidrv_set_notify_icon_version( hwnd, ((const NOTIFYICONDATAW *)data)->uID, ((const NOTIFYICONDATAW *)data)->uVersion );
+            default:
+                FIXME( "Unknown NtUserSystemTrayCall NotifyIcon msg type %#x\n", (unsigned int)wparam );
+                break;
+            }
+        }
+        else if (msg == WINE_SYSTRAY_RUN_LOOP)
+            return snidrv_run_loop();
+        else if (msg == WINE_SYSTRAY_CLEANUP_ICONS)
+            return snidrv_cleanup_notify_icons( hwnd );
+    }
+#endif
+
     switch (msg)
     {
     case WINE_SYSTRAY_NOTIFY_ICON:
