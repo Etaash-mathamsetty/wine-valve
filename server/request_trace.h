@@ -3383,6 +3383,19 @@ static void dump_resume_process_request( const struct resume_process_request *re
     fprintf( stderr, " handle=%04x", req->handle );
 }
 
+static void dump_get_next_process_request( const struct get_next_process_request *req )
+{
+    fprintf( stderr, " last=%04x", req->last );
+    fprintf( stderr, ", access=%08x", req->access );
+    fprintf( stderr, ", attributes=%08x", req->attributes );
+    fprintf( stderr, ", flags=%08x", req->flags );
+}
+
+static void dump_get_next_process_reply( const struct get_next_process_reply *req )
+{
+    fprintf( stderr, " handle=%04x", req->handle );
+}
+
 static void dump_get_next_thread_request( const struct get_next_thread_request *req )
 {
     fprintf( stderr, " process=%04x", req->process );
@@ -3854,6 +3867,7 @@ static const dump_func req_dumpers[REQ_NB_REQUESTS] =
     (dump_func)dump_terminate_job_request,
     (dump_func)dump_suspend_process_request,
     (dump_func)dump_resume_process_request,
+    (dump_func)dump_get_next_process_request,
     (dump_func)dump_get_next_thread_request,
     (dump_func)dump_set_keyboard_repeat_request,
     (dump_func)dump_create_esync_request,
@@ -4170,6 +4184,7 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] =
     NULL,
     NULL,
     NULL,
+    (dump_func)dump_get_next_process_reply,
     (dump_func)dump_get_next_thread_reply,
     (dump_func)dump_set_keyboard_repeat_reply,
     (dump_func)dump_create_esync_reply,
@@ -4486,6 +4501,7 @@ static const char * const req_names[REQ_NB_REQUESTS] =
     "terminate_job",
     "suspend_process",
     "resume_process",
+    "get_next_process",
     "get_next_thread",
     "set_keyboard_repeat",
     "create_esync",

@@ -235,6 +235,7 @@
 @ stdcall -norelay -syscall NtGetContextThread(long ptr)
 @ stdcall -syscall NtGetCurrentProcessorNumber()
 # @ stub NtGetDevicePowerState
+@ stdcall -syscall NtGetNextProcess(ptr long long long ptr)
 @ stdcall -syscall NtGetNextThread(ptr ptr long long long ptr)
 @ stdcall -syscall NtGetNlsSectionPtr(long long long ptr ptr)
 # @ stub NtGetPlugPlayEvent
@@ -1296,6 +1297,7 @@
 @ stdcall -private -norelay ZwGetContextThread(long ptr) NtGetContextThread
 @ stdcall -private ZwGetCurrentProcessorNumber() NtGetCurrentProcessorNumber
 # @ stub ZwGetDevicePowerState
+@ stdcall -private ZwGetNextProcess(ptr long long long ptr) NtGetNextProcess
 @ stdcall -private ZwGetNextThread(ptr ptr long long long ptr) NtGetNextThread
 @ stdcall -private ZwGetNlsSectionPtr(long long long ptr ptr) NtGetNlsSectionPtr
 # @ stub ZwGetPlugPlayEvent
