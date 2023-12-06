@@ -976,6 +976,7 @@ typedef volatile struct
     struct shared_cursor cursor;
     unsigned char        keystate[256];
     unsigned __int64     monitor_serial;
+    unsigned __int64     keystate_serial;
 } desktop_shm_t;
 
 typedef volatile struct
@@ -1001,6 +1002,7 @@ typedef volatile struct
     int                  cursor_count;
     unsigned char        keystate[256];
     int                  keystate_lock;
+    unsigned __int64     desktop_keystate_serial;
 } input_shm_t;
 
 typedef volatile union
@@ -2203,9 +2205,10 @@ struct map_image_view_request
     obj_handle_t mapping;
     client_ptr_t base;
     mem_size_t   size;
+    mem_size_t   offset;
     unsigned int entry;
     unsigned short machine;
-    char __pad_38[2];
+    char __pad_46[2];
 };
 struct map_image_view_reply
 {
@@ -2496,6 +2499,8 @@ struct write_process_memory_request
 struct write_process_memory_reply
 {
     struct reply_header __header;
+    data_size_t written;
+    char __pad_12[4];
 };
 
 
@@ -5944,6 +5949,23 @@ struct resume_process_reply
 };
 
 
+struct get_next_process_request
+{
+    struct request_header __header;
+    obj_handle_t last;
+    unsigned int access;
+    unsigned int attributes;
+    unsigned int flags;
+    char __pad_28[4];
+};
+struct get_next_process_reply
+{
+    struct reply_header __header;
+    obj_handle_t handle;
+    char __pad_12[4];
+};
+
+
 struct get_next_thread_request
 {
     struct request_header __header;
@@ -6527,6 +6549,7 @@ enum request
     REQ_terminate_job,
     REQ_suspend_process,
     REQ_resume_process,
+    REQ_get_next_process,
     REQ_get_next_thread,
     REQ_set_keyboard_repeat,
     REQ_create_esync,
@@ -6846,6 +6869,7 @@ union generic_request
     struct terminate_job_request terminate_job_request;
     struct suspend_process_request suspend_process_request;
     struct resume_process_request resume_process_request;
+    struct get_next_process_request get_next_process_request;
     struct get_next_thread_request get_next_thread_request;
     struct set_keyboard_repeat_request set_keyboard_repeat_request;
     struct create_esync_request create_esync_request;
@@ -7163,6 +7187,7 @@ union generic_reply
     struct terminate_job_reply terminate_job_reply;
     struct suspend_process_reply suspend_process_reply;
     struct resume_process_reply resume_process_reply;
+    struct get_next_process_reply get_next_process_reply;
     struct get_next_thread_reply get_next_thread_reply;
     struct set_keyboard_repeat_reply set_keyboard_repeat_reply;
     struct create_esync_reply create_esync_reply;
@@ -7183,6 +7208,6 @@ union generic_reply
     struct get_inproc_alert_event_reply get_inproc_alert_event_reply;
 };
 
-#define SERVER_PROTOCOL_VERSION 862
+#define SERVER_PROTOCOL_VERSION 863
 
 #endif /* __WINE_WINE_SERVER_PROTOCOL_H */

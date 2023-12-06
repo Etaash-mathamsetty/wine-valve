@@ -301,6 +301,7 @@ DECL_HANDLER(get_job_info);
 DECL_HANDLER(terminate_job);
 DECL_HANDLER(suspend_process);
 DECL_HANDLER(resume_process);
+DECL_HANDLER(get_next_process);
 DECL_HANDLER(get_next_thread);
 DECL_HANDLER(set_keyboard_repeat);
 DECL_HANDLER(create_esync);
@@ -617,6 +618,7 @@ static const req_handler req_handlers[REQ_NB_REQUESTS] =
     (req_handler)req_terminate_job,
     (req_handler)req_suspend_process,
     (req_handler)req_resume_process,
+    (req_handler)req_get_next_process,
     (req_handler)req_get_next_thread,
     (req_handler)req_set_keyboard_repeat,
     (req_handler)req_create_esync,
@@ -1113,9 +1115,10 @@ C_ASSERT( sizeof(struct map_view_request) == 48 );
 C_ASSERT( offsetof(struct map_image_view_request, mapping) == 12 );
 C_ASSERT( offsetof(struct map_image_view_request, base) == 16 );
 C_ASSERT( offsetof(struct map_image_view_request, size) == 24 );
-C_ASSERT( offsetof(struct map_image_view_request, entry) == 32 );
-C_ASSERT( offsetof(struct map_image_view_request, machine) == 36 );
-C_ASSERT( sizeof(struct map_image_view_request) == 40 );
+C_ASSERT( offsetof(struct map_image_view_request, offset) == 32 );
+C_ASSERT( offsetof(struct map_image_view_request, entry) == 40 );
+C_ASSERT( offsetof(struct map_image_view_request, machine) == 44 );
+C_ASSERT( sizeof(struct map_image_view_request) == 48 );
 C_ASSERT( sizeof(struct map_builtin_view_request) == 16 );
 C_ASSERT( offsetof(struct get_image_view_info_request, process) == 12 );
 C_ASSERT( offsetof(struct get_image_view_info_request, addr) == 16 );
@@ -1190,6 +1193,8 @@ C_ASSERT( sizeof(struct read_process_memory_reply) == 16 );
 C_ASSERT( offsetof(struct write_process_memory_request, handle) == 12 );
 C_ASSERT( offsetof(struct write_process_memory_request, addr) == 16 );
 C_ASSERT( sizeof(struct write_process_memory_request) == 24 );
+C_ASSERT( offsetof(struct write_process_memory_reply, written) == 8 );
+C_ASSERT( sizeof(struct write_process_memory_reply) == 16 );
 C_ASSERT( offsetof(struct create_key_request, access) == 12 );
 C_ASSERT( offsetof(struct create_key_request, options) == 16 );
 C_ASSERT( sizeof(struct create_key_request) == 24 );
@@ -2327,6 +2332,13 @@ C_ASSERT( offsetof(struct suspend_process_request, handle) == 12 );
 C_ASSERT( sizeof(struct suspend_process_request) == 16 );
 C_ASSERT( offsetof(struct resume_process_request, handle) == 12 );
 C_ASSERT( sizeof(struct resume_process_request) == 16 );
+C_ASSERT( offsetof(struct get_next_process_request, last) == 12 );
+C_ASSERT( offsetof(struct get_next_process_request, access) == 16 );
+C_ASSERT( offsetof(struct get_next_process_request, attributes) == 20 );
+C_ASSERT( offsetof(struct get_next_process_request, flags) == 24 );
+C_ASSERT( sizeof(struct get_next_process_request) == 32 );
+C_ASSERT( offsetof(struct get_next_process_reply, handle) == 8 );
+C_ASSERT( sizeof(struct get_next_process_reply) == 16 );
 C_ASSERT( offsetof(struct get_next_thread_request, process) == 12 );
 C_ASSERT( offsetof(struct get_next_thread_request, last) == 16 );
 C_ASSERT( offsetof(struct get_next_thread_request, access) == 20 );
