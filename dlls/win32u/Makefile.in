@@ -48,6 +48,7 @@ SOURCES = \
 	rawinput.c \
 	region.c \
 	scroll.c \
+	snidrv/image.c \
 	snidrv/dbus.c \
 	spy.c \
 	syscall.c \
