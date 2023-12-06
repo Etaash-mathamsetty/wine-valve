@@ -306,7 +306,68 @@ static void toggle_watch(DBusWatch *w, void *data)
         remove_watch(w, data);
 }
 
+static const char* dbus_name_owning_match = "type='signal',"
+    "interface='org.freedesktop.DBus',"
+    "sender='org.freedesktop.DBus',"
+    "member='NameOwnerChanged'";
+
 static const char* const object_path = "/StatusNotifierItem";
+
+static BOOL register_notification_item(DBusConnection* ctx);
+
+static void restore_items(DBusConnection *ctx)
+{
+    struct tray_icon *icon;
+
+    LIST_FOR_EACH_ENTRY( icon, &sni_list, struct tray_icon, entry )
+        register_notification_item(icon->connection);
+}
+
+static DBusHandlerResult name_owner_filter( DBusConnection *ctx, DBusMessage *msg, void *user_data )
+{
+    char *interface_name, *old_path, *new_path;
+    DBusError error;
+
+    p_dbus_error_init( &error );
+
+    if (p_dbus_message_is_signal( msg, "org.freedesktop.DBus", "NameOwnerChanged" ) &&
+        p_dbus_message_get_args( msg, &error, DBUS_TYPE_STRING, &interface_name, DBUS_TYPE_STRING, &old_path,
+                                 DBUS_TYPE_STRING, &new_path, DBUS_TYPE_INVALID ))
+    {
+        /* check if watcher is disabled first*/
+        if (strcmp(interface_name, watcher_interface_name) == 0)
+        {
+            /* TODO: lock the mutex */
+            if (status_notifier_dst_path == NULL || status_notifier_dst_path[0] == '\0')
+            {
+                pthread_mutex_lock(&list_mutex);
+                /* switch between KDE and freedesktop interfaces, despite most implementations rely on KDE interface names */
+
+                old_path = status_notifier_dst_path;
+                status_notifier_dst_path = strdup(new_path);
+                free(old_path);
+
+                if (status_notifier_dst_path != NULL && status_notifier_dst_path[0] != '\0')
+                    restore_items(ctx);
+
+                pthread_mutex_unlock(&list_mutex);
+            }
+            else if (status_notifier_dst_path != NULL &&
+                     status_notifier_dst_path[0] != '\0' &&
+                     strcmp(interface_name, watcher_interface_name) == 0)
+            {
+                pthread_mutex_lock(&list_mutex);
+                old_path = status_notifier_dst_path;
+                status_notifier_dst_path = strdup(new_path);
+                free(old_path);
+                pthread_mutex_lock(&list_mutex);
+            }
+        }
+    }
+
+    p_dbus_error_free( &error );
+    return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
 
 static BOOL get_owner_for_interface(DBusConnection* connection, const char* interface_name, char** owner_path)
 {
@@ -382,6 +443,8 @@ static BOOL get_notifier_watcher_owner(void)
         goto err;
     }
 
+    p_dbus_connection_add_filter( global_connection, name_owner_filter, NULL, NULL );
+    p_dbus_bus_add_match( global_connection, dbus_name_owning_match, &error );
     if (p_dbus_error_is_set(&error))
     {
         WARN("failed to register matcher %s: %s\n", error.name, error.message);
