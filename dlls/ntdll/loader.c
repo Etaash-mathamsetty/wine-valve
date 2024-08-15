@@ -1699,10 +1699,6 @@ static NTSTATUS alloc_thread_tls(void)
     }
     ++tls_thread_count;
     NtCurrentTeb()->ThreadLocalStoragePointer = pointers;
-#ifdef __x86_64__  /* macOS-specific hack */
-    if (NtCurrentTeb()->Instrumentation[0])
-        ((TEB *)NtCurrentTeb()->Instrumentation[0])->ThreadLocalStoragePointer = pointers;
-#endif
     return STATUS_SUCCESS;
 }
 
@@ -4142,10 +4138,6 @@ void WINAPI LdrShutdownThread(void)
     {
         NtCurrentTeb()->ThreadLocalStoragePointer = NULL;
         --tls_thread_count;
-#ifdef __x86_64__  /* macOS-specific hack */
-        if (NtCurrentTeb()->Instrumentation[0])
-            ((TEB *)NtCurrentTeb()->Instrumentation[0])->ThreadLocalStoragePointer = NULL;
-#endif
         for (i = 0; i < tls_module_count; i++) free_tls_memory( pointers[i] );
         free_tls_memory( pointers );
     }
