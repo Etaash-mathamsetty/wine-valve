@@ -3197,6 +3197,9 @@ NTSTATUS WINAPI NtRemoveIoCompletionEx( HANDLE handle, FILE_IO_COMPLETION_INFORM
 
     TRACE( "%p %p %u %p %p %u\n", handle, info, (int)count, written, timeout, alertable );
 
+
+    if (!count) return STATUS_INVALID_PARAMETER;
+
     if (timeout && !timeout->QuadPart && (do_esync() || do_fsync()))
     {
         status = NtWaitForSingleObject( handle, alertable, timeout );
