@@ -47,6 +47,13 @@ DEFINE_GUID(GUID_NULL,0,0,0,0,0,0,0,0,0,0,0);
 static HKEY key_render;
 static HKEY key_capture;
 
+struct clsid_blob {
+    BYTE vt;
+    BYTE wReserved0[3]; // Unknown metadata, maybe flags?
+    DWORD wReserved1; // Possibly a version of some sort?
+    GUID puuid;
+};
+
 typedef struct MMDevPropStoreImpl
 {
     IPropertyStore IPropertyStore_iface;
@@ -196,15 +203,28 @@ static HRESULT MMDevice_GetPropValue(const GUID *devguid, DWORD flow, REFPROPERT
             RegGetValueW(regkey, NULL, buffer, RRF_RT_REG_DWORD, NULL, (BYTE*)&pv->ulVal, &size);
             break;
         }
-        case REG_BINARY:
-        {
-            pv->vt = VT_BLOB;
-            pv->blob.cbSize = size;
-            pv->blob.pBlobData = CoTaskMemAlloc(size);
-            if (!pv->blob.pBlobData)
-                hr = E_OUTOFMEMORY;
-            else
-                RegGetValueW(regkey, NULL, buffer, RRF_RT_REG_BINARY, NULL, (BYTE*)pv->blob.pBlobData, &size);
+        case REG_BINARY: {
+            if (IsEqualPropertyKey(*key, DEVPKEY_Device_ContainerId)) {
+                struct clsid_blob blob;
+                DWORD size = sizeof(blob);
+
+                RegGetValueW(regkey, NULL, buffer, RRF_RT_REG_BINARY, NULL, (BYTE *)&blob, &size);
+
+                pv->vt = VT_CLSID;
+                pv->puuid = CoTaskMemAlloc(sizeof(GUID));
+                if (!pv->puuid)
+                    hr = E_OUTOFMEMORY;
+                else
+                    *pv->puuid = blob.puuid;
+            } else {
+                pv->vt = VT_BLOB;
+                pv->blob.cbSize = size;
+                pv->blob.pBlobData = CoTaskMemAlloc(size);
+                if (!pv->blob.pBlobData)
+                    hr = E_OUTOFMEMORY;
+                else
+                    RegGetValueW(regkey, NULL, buffer, RRF_RT_REG_BINARY, NULL, (BYTE *)pv->blob.pBlobData, &size);
+            }
             break;
         }
         default:
@@ -247,6 +267,11 @@ static HRESULT MMDevice_SetPropValue(const GUID *devguid, DWORD flow, REFPROPERT
         case VT_LPWSTR:
         {
             ret = RegSetValueExW(regkey, buffer, 0, REG_SZ, (const BYTE*)pv->pwszVal, sizeof(WCHAR)*(1+lstrlenW(pv->pwszVal)));
+            break;
+        }
+        case VT_CLSID: {
+            struct clsid_blob blob = {.vt = VT_CLSID, .wReserved0 = {0, 0, 0}, .wReserved1 = 0, .puuid = *pv->puuid};
+            ret = RegSetValueExW(regkey, buffer, 0, REG_BINARY, (const BYTE *)&blob, sizeof(blob));
             break;
         }
         default:
