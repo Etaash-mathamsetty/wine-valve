@@ -317,6 +317,7 @@ static const struct column col_pnpentity[] =
     { L"DeviceId",             CIM_STRING|COL_FLAG_DYNAMIC },
     { L"Manufacturer",         CIM_STRING },
     { L"Name",                 CIM_STRING|COL_FLAG_DYNAMIC },
+    { L"Service",              CIM_STRING|COL_FLAG_DYNAMIC },
 };
 static const struct column col_printer[] =
 {
@@ -822,6 +823,7 @@ struct record_pnpentity
     const WCHAR *device_id;
     const WCHAR *manufacturer;
     const WCHAR *name;
+    const WCHAR *service;
 };
 struct record_printer
 {
@@ -3343,6 +3345,7 @@ static struct record_pnpentity *get_pnp_entities( UINT *count )
                             ret[i].device_id = wcsupr( build_pnp_device_id( class, product, instance ) );
                             ret[i].manufacturer = L"The Wine Project";
                             ret[i].name = get_reg_value( key_instance, L"DeviceDesc" );
+                            ret[i].service = get_reg_value( key_instance, L"Service" );
                             RegCloseKey( key_instance );
                             if (++i > nb_allocated)
                             {
@@ -3356,6 +3359,7 @@ static struct record_pnpentity *get_pnp_entities( UINT *count )
                                         free( (void *)ret[i].class_guid );
                                         free( (void *)ret[i].device_id );
                                         free( (void *)ret[i].name );
+                                        free( (void *)ret[i].service );
                                     }
                                     goto done;
                                 }
@@ -3403,6 +3407,7 @@ static enum fill_status fill_pnpentity( struct table *table, const struct expr *
         rec->device_id    = entities[i].device_id;
         rec->manufacturer = entities[i].manufacturer;
         rec->name         = entities[i].name;
+        rec->service      = entities[i].service;
         if (!match_row( table, row, cond, &status ))
         {
             free_row_values( table, row );
