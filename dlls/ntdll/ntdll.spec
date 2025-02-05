@@ -624,7 +624,7 @@
 @ stub RtlDeleteElementGenericTable
 @ stub RtlDeleteElementGenericTableAvl
 @ cdecl -arch=!i386 RtlDeleteFunctionTable(ptr)
-@ stub RtlDeleteNoSplay
+@ stdcall RtlDeleteNoSplay(ptr ptr)
 @ stub RtlDeleteOwnersRanges
 @ stub RtlDeleteRange
 @ stdcall RtlDeleteRegistryValue(long ptr wstr)
