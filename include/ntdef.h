@@ -72,6 +72,9 @@ typedef unsigned int ULONG, *PULONG;
 #endif
 #endif
 
+typedef ULONG CLONG;
+typedef CLONG *PCLONG;
+
 typedef struct _RTL_BALANCED_NODE
 {
     union
