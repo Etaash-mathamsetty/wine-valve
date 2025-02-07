@@ -621,7 +621,7 @@
 @ stdcall RtlDeleteBarrier(ptr)
 @ stdcall RtlDeleteCriticalSection(ptr)
 @ stdcall -arch=!i386 RtlDeleteGrowableFunctionTable(ptr)
-@ stub RtlDeleteElementGenericTable
+@ stdcall RtlDeleteElementGenericTable(ptr ptr)
 @ stub RtlDeleteElementGenericTableAvl
 @ cdecl -arch=!i386 RtlDeleteFunctionTable(ptr)
 @ stdcall RtlDeleteNoSplay(ptr ptr)
