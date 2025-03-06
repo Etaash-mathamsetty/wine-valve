@@ -848,7 +848,11 @@ BOOL WINAPI RtlSetCurrentTransaction(HANDLE new_transaction)
  */
 void WINAPI RtlGetCurrentProcessorNumberEx(PROCESSOR_NUMBER *processor)
 {
-    FIXME("(%p) :semi-stub\n", processor);
+    static int warn_once;
+
+    if (!warn_once++)
+        FIXME("(%p) :semi-stub\n", processor);
+
     processor->Group = 0;
     processor->Number = NtGetCurrentProcessorNumber();
     processor->Reserved = 0;
