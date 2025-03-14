@@ -1572,6 +1572,14 @@ BOOL WINAPI GetVersionExW( OSVERSIONINFOW *info )
     return TRUE;
 }
 
+/***********************************************************************
+ *         GetCurrentApplicationUserModelId   (kernelbase.@)
+ */
+LONG WINAPI /* DECLSPEC_HOTPATCH */ GetCurrentApplicationUserModelId( UINT32 *length, WCHAR *id )
+{
+    FIXME( "(%p %p): stub\n", length, id );
+    return APPMODEL_ERROR_NO_APPLICATION;
+}
 
 /***********************************************************************
  *         GetCurrentPackageFamilyName   (kernelbase.@)
