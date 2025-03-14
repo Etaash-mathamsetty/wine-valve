@@ -636,6 +636,7 @@
 @ stdcall -import GetCurrentConsoleFontEx(long long ptr)
 @ stdcall -import GetCurrentDirectoryA(long ptr)
 @ stdcall -import GetCurrentDirectoryW(long ptr)
+@ stdcall GetCurrentApplicationUserModelId(ptr ptr) kernelbase.GetCurrentApplicationUserModelId
 @ stdcall GetCurrentPackageFamilyName(ptr ptr) kernelbase.GetCurrentPackageFamilyName
 @ stdcall GetCurrentPackageFullName(ptr ptr) kernelbase.GetCurrentPackageFullName
 @ stdcall GetCurrentPackageId(ptr ptr) kernelbase.GetCurrentPackageId
