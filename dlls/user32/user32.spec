@@ -163,19 +163,19 @@
 2661 stub @
 # 2662 stub RIMRegisterForInputEx
 # 2663 stub RIMOnAsyncPnpWorkNotification
-# 2664 stub ShellMigrateWindow
-# 2665 stub SetAdditionalForegroundBoostProcesses
-# 2666 stub RegisterForTooltipDismissNotification
-# 2667 stub RegisterForCustomDockTargets
-# 2668 stub GetClipboardMetadata
-2669 stub @
-2670 stub @
-# 2671 stub ShellRegisterHotKey
-# 2672 stub SetUserObjectCapability
-# 2673 stub SetWindowMessageCapability
-# 2674 stub ShellForegroundBoostProcess
-# 2675 stub SuppressWindowActions
-# 2676 stub GetSuppressedWindowActions
+2664 stub ShellMigrateWindow  # NtUserShellMigrateWindow
+2665 stdcall SetAdditionalForegroundBoostProcesses(ptr long ptr) NtUserSetAdditionalForegroundBoostProcesses
+2666 stub RegisterForTooltipDismissNotification  # NtUserRegisterForTooltipDismissNotification
+2667 stub RegisterForCustomDockTargets  # NtUserRegisterForCustomDockTargets
+2668 stub GetClipboardMetadata  # NtUserGetClipboardMetadata
+2669 stub -noname InitThreadCoreMessagingIocp2  # NtUserInitThreadCoreMessagingIocp2
+2670 stub -noname DrainThreadCoreMessagingCompletions2  # NtUserDrainThreadCoreMessagingCompletions2
+2671 stub ShellRegisterHotKey  # NtUserShellRegisterHotKey
+2672 stub SetUserObjectCapability  # NtUserSetUserObjectCapability
+2673 stub SetWindowMessageCapability  # NtUserSetWindowMessageCapability
+2674 stub ShellForegroundBoostProcess  # NtUserShellForegroundBoostProcess
+2675 stub SuppressWindowActions  # NtUserSuppressWindowActions
+2676 stub GetSuppressedWindowActions  # NtUserGetSuppressedWindowActions
 
 # 2680 stub DwmWindowNotificationsEnabled
 # 2681 stub ApplyWindowAction
