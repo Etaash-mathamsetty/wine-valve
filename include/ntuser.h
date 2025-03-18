@@ -933,6 +933,7 @@ W32KAPI INT     WINAPI NtUserScrollWindowEx( HWND hwnd, INT dx, INT dy, const RE
 W32KAPI HPALETTE WINAPI NtUserSelectPalette( HDC hdc, HPALETTE palette, WORD force_background );
 W32KAPI UINT     WINAPI NtUserSendInput( UINT count, INPUT *inputs, int size );
 W32KAPI HWND     WINAPI NtUserSetActiveWindow( HWND hwnd );
+W32KAPI BOOL     WINAPI NtUserSetAdditionalForegroundBoostProcesses( HWND hwnd, DWORD count, HANDLE *handles );
 W32KAPI HWND     WINAPI NtUserSetCapture( HWND hwnd );
 W32KAPI DWORD    WINAPI NtUserSetClassLong( HWND hwnd, INT offset, LONG newval, BOOL ansi );
 W32KAPI ULONG_PTR WINAPI NtUserSetClassLongPtr( HWND hwnd, INT offset, LONG_PTR newval, BOOL ansi );
