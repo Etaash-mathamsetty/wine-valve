@@ -190,6 +190,17 @@ void wg_parser_destroy(wg_parser_t parser)
     WINE_UNIX_CALL(unix_wg_parser_destroy, &parser);
 }
 
+void wg_parser_dont_read(wg_parser_t parser, bool dont_read)
+{
+    TRACE("%#I64x %d\n", parser, dont_read);
+    struct wg_parser_dont_read_params params =
+    {
+        .parser = parser,
+        .dont_read = dont_read,
+    };
+    WINE_UNIX_CALL(unix_wg_parser_dont_read, &params);
+}
+
 HRESULT wg_parser_connect(wg_parser_t parser, uint64_t file_size, const WCHAR *uri)
 {
     struct wg_parser_connect_params params =
