@@ -88,14 +88,13 @@ struct wg_parser
     bool no_more_pads, has_duration, error;
     bool err_on, warn_on;
 
-    pthread_cond_t read_cond, read_done_cond, dont_read_cond;
+    pthread_cond_t read_cond, read_done_cond;
     struct
     {
         GstBuffer *buffer;
         uint64_t offset;
         uint32_t size;
         bool done;
-        uint32_t n_read_tokens;
         GstFlowReturn ret;
     } read_request;
 
@@ -233,7 +232,7 @@ static NTSTATUS wg_parser_push_data(void *args)
     parser->read_request.size = 0;
 
     pthread_mutex_unlock(&parser->mutex);
-    pthread_cond_broadcast(&parser->read_done_cond);
+    pthread_cond_signal(&parser->read_done_cond);
 
     return S_OK;
 }
@@ -1226,8 +1225,6 @@ static GstFlowReturn issue_read_request(struct wg_parser *parser, guint64 offset
     GstFlowReturn ret;
 
     pthread_mutex_lock(&parser->mutex);
-    while (parser->read_request.n_read_tokens == 0)
-        pthread_cond_wait(&parser->dont_read_cond, &parser->mutex);
 
     assert(!parser->read_request.size);
     parser->read_request.buffer = *buffer;
@@ -1778,30 +1775,6 @@ static void query_tags(struct wg_parser_stream *stream)
     gst_object_unref(peer);
 }
 
-static NTSTATUS wg_parser_dont_read(void *args)
-{
-    const struct wg_parser_dont_read_params *params = args;
-    struct wg_parser *parser = get_parser(params->parser);
-    pthread_mutex_lock(&parser->mutex);
-
-    if (!params->dont_read)
-    {
-        if ((parser->read_request.n_read_tokens++) == 0)
-            pthread_cond_signal(&parser->dont_read_cond);
-    }
-    else if (parser->read_request.n_read_tokens == 0)
-        GST_ERROR("Trying to stop read when it's already stopped!");
-    else if ((--parser->read_request.n_read_tokens) == 0)
-    {
-        /* wait for current read condition to finish */
-        while (!parser->read_request.done)
-            pthread_cond_wait(&parser->read_done_cond, &parser->mutex);
-    }
-
-    pthread_mutex_unlock(&parser->mutex);
-    return S_OK;
-}
-
 static NTSTATUS wg_parser_connect(void *args)
 {
     GstStaticPadTemplate src_template = GST_STATIC_PAD_TEMPLATE("quartz_src",
@@ -2119,11 +2092,9 @@ static NTSTATUS wg_parser_create(void *args)
     pthread_cond_init(&parser->init_cond, NULL);
     pthread_cond_init(&parser->read_cond, NULL);
     pthread_cond_init(&parser->read_done_cond, NULL);
-    pthread_cond_init(&parser->dont_read_cond, NULL);
     parser->output_compressed = params->output_compressed;
     parser->err_on = params->err_on;
     parser->warn_on = params->warn_on;
-    parser->read_request.n_read_tokens = 1;
     GST_DEBUG("Created winegstreamer parser %p.", parser);
     params->parser = (wg_parser_t)(ULONG_PTR)parser;
     return S_OK;
@@ -2147,7 +2118,6 @@ static NTSTATUS wg_parser_destroy(void *args)
     pthread_cond_destroy(&parser->init_cond);
     pthread_cond_destroy(&parser->read_cond);
     pthread_cond_destroy(&parser->read_done_cond);
-    pthread_cond_destroy(&parser->dont_read_cond);
 
     free(parser->uri);
     free(parser);
@@ -2161,8 +2131,6 @@ const unixlib_entry_t __wine_unix_call_funcs[] =
 
     X(wg_parser_create),
     X(wg_parser_destroy),
-
-    X(wg_parser_dont_read),
 
     X(wg_parser_connect),
     X(wg_parser_disconnect),
@@ -2560,8 +2528,6 @@ const unixlib_entry_t __wine_unix_call_wow64_funcs[] =
 
     X(wg_parser_create),
     X(wg_parser_destroy),
-
-    X(wg_parser_dont_read),
 
     X64(wg_parser_connect),
     X(wg_parser_disconnect),

@@ -1612,7 +1612,7 @@ static HRESULT init_stream(struct wm_reader *reader)
      * Now that they're all enabled seek back to the start again. */
     wg_parser_stream_seek(reader->streams[0].wg_stream, 1.0, 0, 0,
             AM_SEEKING_AbsolutePositioning, AM_SEEKING_NoPositioning);
-    wg_parser_dont_read(reader->wg_parser, true);
+
     return S_OK;
 
 out_disconnect_parser:
@@ -1652,7 +1652,6 @@ static HRESULT reinit_stream(struct wm_reader *reader, bool read_compressed)
     enable_opengl = FALSE;
 }
 
-    wg_parser_dont_read(reader->wg_parser, false);
     wg_parser_disconnect(reader->wg_parser);
 
     EnterCriticalSection(&reader->shutdown_cs);
@@ -1702,7 +1701,6 @@ static HRESULT reinit_stream(struct wm_reader *reader, bool read_compressed)
      * Now that they're all enabled seek back to the start again. */
     wg_parser_stream_seek(reader->streams[0].wg_stream, 1.0, 0, 0,
             AM_SEEKING_AbsolutePositioning, AM_SEEKING_NoPositioning);
-    wg_parser_dont_read(reader->wg_parser, true);
 
     return S_OK;
 
@@ -1995,7 +1993,6 @@ static HRESULT WINAPI reader_Close(IWMSyncReader2 *iface)
         return NS_E_INVALID_REQUEST;
     }
 
-    wg_parser_dont_read(reader->wg_parser, false);
     wg_parser_disconnect(reader->wg_parser);
 
     EnterCriticalSection(&reader->shutdown_cs);
@@ -2065,8 +2062,6 @@ static HRESULT WINAPI reader_GetNextSample(IWMSyncReader2 *iface,
     if (!stream_number && !output_number && !ret_stream_number)
         return E_INVALIDARG;
 
-    wg_parser_dont_read(reader->wg_parser, false);
-
     if (reader->outer == &reader->IUnknown_inner)
         EnterCriticalSection(&reader->cs);
 
@@ -2108,7 +2103,6 @@ static HRESULT WINAPI reader_GetNextSample(IWMSyncReader2 *iface,
 
     if (reader->outer == &reader->IUnknown_inner)
         LeaveCriticalSection(&reader->cs);
-    wg_parser_dont_read(reader->wg_parser, true);
     return hr;
 }
 
@@ -2552,7 +2546,6 @@ static HRESULT WINAPI reader_SetRange(IWMSyncReader2 *iface, QWORD start, LONGLO
 
     TRACE("reader %p, start %I64u, duration %I64d.\n", reader, start, duration);
 
-    wg_parser_dont_read(reader->wg_parser, false);
     EnterCriticalSection(&reader->cs);
 
     reader->start_time = start;
@@ -2564,7 +2557,6 @@ static HRESULT WINAPI reader_SetRange(IWMSyncReader2 *iface, QWORD start, LONGLO
         reader->streams[i].eos = false;
 
     LeaveCriticalSection(&reader->cs);
-    wg_parser_dont_read(reader->wg_parser, true);
     return S_OK;
 }
 
@@ -2629,7 +2621,6 @@ static HRESULT WINAPI reader_SetStreamsSelected(IWMSyncReader2 *iface,
     if (!count)
         return E_INVALIDARG;
 
-    wg_parser_dont_read(reader->wg_parser, false);
     EnterCriticalSection(&reader->cs);
 
     for (i = 0; i < count; ++i)
@@ -2638,7 +2629,6 @@ static HRESULT WINAPI reader_SetStreamsSelected(IWMSyncReader2 *iface,
         {
             LeaveCriticalSection(&reader->cs);
             WARN("Invalid stream number %u; returning NS_E_INVALID_REQUEST.\n", stream_numbers[i]);
-            wg_parser_dont_read(reader->wg_parser, true);
             return NS_E_INVALID_REQUEST;
         }
     }
@@ -2672,7 +2662,6 @@ static HRESULT WINAPI reader_SetStreamsSelected(IWMSyncReader2 *iface,
     }
 
     LeaveCriticalSection(&reader->cs);
-    wg_parser_dont_read(reader->wg_parser, true);
     return S_OK;
 }
 
