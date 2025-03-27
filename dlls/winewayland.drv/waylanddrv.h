@@ -29,6 +29,7 @@
 #include <wayland-client.h>
 #include <xkbcommon/xkbcommon.h>
 #include <xkbcommon/xkbregistry.h>
+#include "cursor-shape-v1-client-protocol.h"
 #include "pointer-constraints-unstable-v1-client-protocol.h"
 #include "relative-pointer-unstable-v1-client-protocol.h"
 #include "text-input-unstable-v3-client-protocol.h"
@@ -124,6 +125,7 @@ struct wayland_pointer
     struct zwp_confined_pointer_v1 *zwp_confined_pointer_v1;
     struct zwp_locked_pointer_v1 *zwp_locked_pointer_v1;
     struct zwp_relative_pointer_v1 *zwp_relative_pointer_v1;
+    struct wp_cursor_shape_device_v1 *wp_cursor_shape_device_v1;
     HWND focused_hwnd;
     HWND constraint_hwnd;
     BOOL pending_warp;
@@ -206,6 +208,7 @@ struct wayland
     struct wp_color_manager_v1 *wp_color_manager_v1;
     struct xdg_system_bell_v1 *xdg_system_bell_v1;
     struct xdg_activation_v1 *xdg_activation_v1;
+    struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;
