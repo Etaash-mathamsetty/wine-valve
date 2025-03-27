@@ -227,12 +227,6 @@ struct wg_parser_create_params
     UINT8 warn_on;
 };
 
-struct wg_parser_dont_read_params
-{
-    wg_parser_t parser;
-    UINT8 dont_read;
-};
-
 struct wg_parser_connect_params
 {
     wg_parser_t parser;
@@ -431,8 +425,6 @@ enum unix_funcs
 
     unix_wg_parser_create,
     unix_wg_parser_destroy,
-
-    unix_wg_parser_dont_read,
 
     unix_wg_parser_connect,
     unix_wg_parser_disconnect,
