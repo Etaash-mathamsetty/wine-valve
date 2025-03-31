@@ -632,6 +632,7 @@ SOURCES = \
 	physicalmonitorenumerationapi.h \
 	pktdef.h \
 	poppack.h \
+	powersetting.h \
 	powrprof.h \
 	prntvpt.h \
 	processthreadsapi.h \
