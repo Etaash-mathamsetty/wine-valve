@@ -529,6 +529,7 @@ UINT WINAPI ImeToAsciiEx( UINT vkey, UINT vsc, BYTE *state, TRANSMSGLIST *msgs, 
     UINT size, count = 0;
     INPUTCONTEXT *ctx;
     NTSTATUS status;
+    BOOL key_consumed = TRUE;
 
     TRACE( "vkey %#x, vsc %#x, state %p, msgs %p, flags %#x, himc %p\n",
            vkey, vsc, state, msgs, flags, himc );
@@ -547,6 +548,7 @@ UINT WINAPI ImeToAsciiEx( UINT vkey, UINT vsc, BYTE *state, TRANSMSGLIST *msgs, 
         if (!(compstr = ImmLockIMCC( (ctx->hCompStr = himcc) ))) goto done;
 
         params.compstr = compstr;
+        params.key_consumed = &key_consumed;
         status = NtUserMessageCall( ctx->hWnd, WINE_IME_TO_ASCII_EX, vkey, vsc, &params,
                                     NtUserImeDriverCall, FALSE );
         size = compstr->dwSize;
@@ -573,6 +575,12 @@ UINT WINAPI ImeToAsciiEx( UINT vkey, UINT vsc, BYTE *state, TRANSMSGLIST *msgs, 
             if (compstr->dwCompAttrOffset) msg.lParam |= GCS_COMPATTR;
             if (compstr->dwCompClauseOffset) msg.lParam |= GCS_COMPCLAUSE;
             else msg.lParam |= CS_INSERTCHAR|CS_NOMOVECARET;
+            msgs->TransMsg[count++] = msg;
+        }
+
+        if (!key_consumed)
+        {
+            TRANSMSG msg = {.message = WM_IME_KEYDOWN, .wParam = vkey, .lParam = vsc};
             msgs->TransMsg[count++] = msg;
         }
     }
