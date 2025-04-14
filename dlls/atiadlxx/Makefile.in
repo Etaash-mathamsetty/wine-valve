@@ -1,8 +1,13 @@
-EXTRADEFS = -DWINE_NO_LONG_TYPES
 MODULE = atiadlxx.dll
-IMPORTS = dxgi
+UNIXLIB   = atiadlxx.so
+UNIX_CFLAGS = $(DRM_CFLAGS)
+UNIX_LIBS = $(DRM_LIBS) $(DRMAMDGPU_LIBS)
+IMPORTS = version vulkan-1 user32 gdi32
+IMPORTLIB = atiadlxx
 
 EXTRADLLFLAGS = -mno-cygwin -Wb,--prefer-native
 
 SOURCES = \
-	atiadlxx_main.c
+	atiadlxx_main.c \
+	unixlib.c \
+	dxvk_interfaces.idl
