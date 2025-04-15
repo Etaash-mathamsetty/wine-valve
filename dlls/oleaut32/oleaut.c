@@ -41,6 +41,7 @@
 #include "oleaut32_oaidl.h"
 
 #include "wine/debug.h"
+#include "wine/exception.h"
 
 WINE_DEFAULT_DEBUG_CHANNEL(ole);
 WINE_DECLARE_DEBUG_CHANNEL(heap);
@@ -241,8 +242,16 @@ BSTR WINAPI SysAllocString(LPCOLESTR str)
 {
     if (!str) return 0;
 
-    /* Delegate this to the SysAllocStringLen32 method. */
-    return SysAllocStringLen(str, lstrlenW(str));
+    __TRY
+    {
+        /* Delegate this to the SysAllocStringLen32 method. */
+        return SysAllocStringLen(str, lstrlenW(str));
+    }
+    __EXCEPT_PAGE_FAULT
+    {
+        return 0;
+    }
+    __ENDTRY
 }
 
 static inline IMalloc *get_malloc(void)
