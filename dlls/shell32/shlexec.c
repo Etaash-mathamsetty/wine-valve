@@ -646,7 +646,6 @@ static UINT SHELL_FindExecutable(LPCWSTR lpPath, LPCWSTR lpFile, LPCWSTR lpVerb,
         {
             if (wcsncpy_s(xlpFile, ARRAY_SIZE(xlpFile), lpFile, _TRUNCATE))
                 return ERROR_FILE_NOT_FOUND;
-
             if (PathFileExistsDefExtW(xlpFile, 0xbf) || PathFileExistsW(xlpFile))
             {
                 GetFullPathNameW(xlpFile, ARRAY_SIZE(xlpFile), xlpFile, NULL);
