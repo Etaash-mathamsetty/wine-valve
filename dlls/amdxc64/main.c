@@ -86,7 +86,11 @@ HRESULT STDMETHODCALLTYPE AMDFSR4FFX_UpdateFfxApiProvider(IAmdExtFfxApi *iface, 
 
     TRACE("%p %p %u\n", iface, data, size);
 
-    if (!amdffx) return E_NOINTERFACE;
+    if (!amdffx) 
+    {
+        ERR("Failed to load FSR4 dll (amdxcffx)!\n");
+        return E_NOINTERFACE;
+    }
 
     pfn = (updateffxapi_pfn)GetProcAddress(amdffx, "UpdateFfxApiProvider");
 
