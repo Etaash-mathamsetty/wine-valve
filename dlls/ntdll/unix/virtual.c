@@ -3628,10 +3628,12 @@ static NTSTATUS virtual_map_image( HANDLE mapping, void **addr_ptr, SIZE_T *size
             free_pages( view, view->base, offset );
             size -= offset;
         }
+
+        image_info->base = wine_server_client_ptr( view->base );
         SERVER_START_REQ( map_image_view )
         {
             req->mapping = wine_server_obj_handle( mapping );
-            req->base    = wine_server_client_ptr( view->base );
+            req->base    = image_info->base;
             req->size    = size;
             req->entry   = image_info->entry_point;
             req->machine = image_info->machine;
@@ -4038,8 +4040,6 @@ NTSTATUS virtual_map_module( HANDLE mapping, void **module, SIZE_T *size, SECTIO
         status = virtual_map_image( mapping, module, size, shared_file, limit_low, limit_high, 0,
                                     machine, image_info, filename, FALSE, 0 );
         virtual_fill_image_information( image_info, info );
-        if (status == STATUS_IMAGE_NOT_AT_BASE)
-            info->TransferAddress = (char *)*module + image_info->entry_point;
     }
     if (shared_file) NtClose( shared_file );
     free( image_info );
