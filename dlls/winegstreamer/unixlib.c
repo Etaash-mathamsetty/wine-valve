@@ -298,7 +298,6 @@ NTSTATUS wg_init_gstreamer(void *arg)
     if (params->err_on)
         setenv("GST_DEBUG", "WINE:1,protonmediaconverter:1,1", FALSE);
     setenv("GST_DEBUG_NO_COLOR", "1", FALSE);
-    setenv("GST_GL_WINDOW", "x11", 1);
 
     /* GStreamer installs a temporary SEGV handler when it loads plugins
      * to initialize its registry calling exit(-1) when any fault is caught.
@@ -325,7 +324,7 @@ NTSTATUS wg_init_gstreamer(void *arg)
     GST_INFO("GStreamer library version %s; wine built with %d.%d.%d.",
             gst_version_string(), GST_VERSION_MAJOR, GST_VERSION_MINOR, GST_VERSION_MICRO);
 
-    if (!(gl_display = gst_gl_display_new()))
+    if (!(gl_display = gst_gl_display_new_with_type(GST_GL_DISPLAY_TYPE_EGL_SURFACELESS)))
         GST_ERROR("Failed to create OpenGL display");
     else
     {
