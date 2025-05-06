@@ -7,6 +7,7 @@ IMPORTS = user32 win32u
 SOURCES = \
 	display.c \
 	dllmain.c \
+	fractional-scale-v1.xml \
 	opengl.c \
 	pointer-constraints-unstable-v1.xml \
 	relative-pointer-unstable-v1.xml \
