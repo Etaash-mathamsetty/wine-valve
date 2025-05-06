@@ -138,6 +138,25 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener =
     xdg_toplevel_handle_close
 };
 
+void wp_fractional_scale_handle_scale(void* data,
+        struct wp_fractional_scale_v1 *fractional_scale_v1, uint32_t scale)
+{
+    double *data_scale;
+
+    assert(data);
+    data_scale = data;
+
+    /* FIXME: handle locking! */
+    *data_scale = scale / 120.0;
+
+    TRACE("Got scale %lf\n", *data_scale);
+}
+
+static const struct wp_fractional_scale_v1_listener wp_fractional_scale_listener =
+{
+    wp_fractional_scale_handle_scale
+};
+
 /**********************************************************************
  *          wayland_surface_create
  *
@@ -174,7 +193,21 @@ struct wayland_surface *wayland_surface_create(HWND hwnd)
         goto err;
     }
 
+    /* in case we don't get notification */
+    surface->window.fractional_scale = 1.0;
     surface->window.scale = 1.0;
+
+    if (process_wayland.wp_fractional_scale_manager_v1)
+    {
+        surface->wp_fractional_scale_v1 =
+            wp_fractional_scale_manager_v1_get_fractional_scale(
+                process_wayland.wp_fractional_scale_manager_v1,
+                surface->wl_surface);
+        wp_fractional_scale_v1_add_listener(
+            surface->wp_fractional_scale_v1,
+            &wp_fractional_scale_listener,
+            &surface->window.fractional_scale);
+    }
 
     return surface;
 
@@ -206,6 +239,12 @@ void wayland_surface_destroy(struct wayland_surface *surface)
     pthread_mutex_unlock(&process_wayland.keyboard.mutex);
 
     wayland_surface_clear_role(surface);
+
+    if (surface->wp_fractional_scale_v1)
+    {
+        wp_fractional_scale_v1_destroy(surface->wp_fractional_scale_v1);
+        surface->wp_fractional_scale_v1 = NULL;
+    }
 
     if (surface->wp_viewport)
     {
