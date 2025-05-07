@@ -31,7 +31,11 @@
 
 #include "waylanddrv.h"
 
+#define IS_OPTION_TRUE(ch) \
+    ((ch) == 'y' || (ch) == 'Y' || (ch) == 't' || (ch) == 'T' || (ch) == '1')
+
 char *process_name = NULL;
+BOOL option_use_system_cursors = TRUE;
 
 static const struct user_driver_funcs waylanddrv_funcs =
 {
@@ -55,6 +59,147 @@ static const struct user_driver_funcs waylanddrv_funcs =
     .pVulkanInit = WAYLAND_VulkanInit,
     .pwine_get_wgl_driver = WAYLAND_wine_get_wgl_driver,
 };
+
+static inline void ascii_to_unicode(WCHAR *dst, const char *src, size_t len)
+{
+    while (len--) *dst++ = (unsigned char)*src++;
+}
+
+static inline UINT asciiz_to_unicode(WCHAR *dst, const char *src)
+{
+    WCHAR *p = dst;
+    while ((*p++ = *src++));
+    return (p - dst) * sizeof(WCHAR);
+}
+
+static HKEY reg_open_key(HKEY root, const WCHAR *name, ULONG name_len)
+{
+    UNICODE_STRING nameW = {name_len, name_len, (WCHAR *)name};
+    OBJECT_ATTRIBUTES attr;
+    HANDLE ret;
+
+    attr.Length = sizeof(attr);
+    attr.RootDirectory = root;
+    attr.ObjectName = &nameW;
+    attr.Attributes = 0;
+    attr.SecurityDescriptor = NULL;
+    attr.SecurityQualityOfService = NULL;
+
+    return NtOpenKeyEx(&ret, MAXIMUM_ALLOWED, &attr, 0) ? 0 : ret;
+}
+
+static HKEY open_hkcu_key(const char *name)
+{
+    WCHAR bufferW[256];
+    static HKEY hkcu;
+
+    if (!hkcu)
+    {
+        char buffer[256];
+        DWORD_PTR sid_data[(sizeof(TOKEN_USER) + SECURITY_MAX_SID_SIZE) / sizeof(DWORD_PTR)];
+        DWORD i, len = sizeof(sid_data);
+        SID *sid;
+
+        if (NtQueryInformationToken(GetCurrentThreadEffectiveToken(), TokenUser, sid_data, len, &len))
+            return 0;
+
+        sid = ((TOKEN_USER *)sid_data)->User.Sid;
+        len = sprintf(buffer, "\\Registry\\User\\S-%u-%lu", sid->Revision,
+               (unsigned long) MAKELONG(MAKEWORD(sid->IdentifierAuthority.Value[5],
+                                        sid->IdentifierAuthority.Value[4]),
+                               MAKEWORD(sid->IdentifierAuthority.Value[3],
+                                        sid->IdentifierAuthority.Value[2])));
+        for (i = 0; i < sid->SubAuthorityCount; i++)
+            len += sprintf(buffer + len, "-%lu", (unsigned long)sid->SubAuthority[i]);
+
+        ascii_to_unicode(bufferW, buffer, len);
+        hkcu = reg_open_key(NULL, bufferW, len * sizeof(WCHAR));
+    }
+
+    return reg_open_key(hkcu, bufferW, asciiz_to_unicode(bufferW, name) - sizeof(WCHAR));
+}
+
+static ULONG query_reg_value(HKEY hkey, const WCHAR *name,
+                             KEY_VALUE_PARTIAL_INFORMATION *info, ULONG size)
+{
+    unsigned int name_size = name ? lstrlenW(name) * sizeof(WCHAR) : 0;
+    UNICODE_STRING nameW = {name_size, name_size, (WCHAR *)name};
+
+    if (NtQueryValueKey(hkey, &nameW, KeyValuePartialInformation,
+                        info, size, &size))
+        return 0;
+
+    return size - FIELD_OFFSET(KEY_VALUE_PARTIAL_INFORMATION, Data);
+}
+
+static inline DWORD get_config_key(HKEY defkey, HKEY appkey, const char *name,
+                                   WCHAR *buffer, DWORD size)
+{
+    WCHAR nameW[128];
+    char buf[2048];
+    KEY_VALUE_PARTIAL_INFORMATION *info = (void *)buf;
+
+    asciiz_to_unicode(nameW, name);
+
+    if (appkey && query_reg_value(appkey, nameW, info, sizeof(buf)))
+    {
+        size = min(info->DataLength, size - sizeof(WCHAR));
+        memcpy(buffer, info->Data, size);
+        buffer[size / sizeof(WCHAR)] = 0;
+        return 0;
+    }
+
+    if (defkey && query_reg_value(defkey, nameW, info, sizeof(buf)))
+    {
+        size = min(info->DataLength, size - sizeof(WCHAR));
+        memcpy(buffer, info->Data, size);
+        buffer[size / sizeof(WCHAR)] = 0;
+        return 0;
+    }
+
+    return ERROR_FILE_NOT_FOUND;
+}
+
+static void wayland_init_options(void)
+{
+    static const WCHAR waylanddriverW[] = {'\\','W','a','y','l','a','n','d',' ','D','r','i','v','e','r',0};
+    WCHAR buffer[MAX_PATH+16], *p, *appname;
+    HKEY hkey, appkey = 0;
+    DWORD len;
+
+    /* @@ Wine registry key: HKCU\Software\Wine\Wayland Driver */
+    hkey = open_hkcu_key("Software\\Wine\\Wayland Driver");
+
+    /* open the app-specific key */
+    appname = NtCurrentTeb()->Peb->ProcessParameters->ImagePathName.Buffer;
+    if ((p = wcsrchr(appname, '/'))) appname = p + 1;
+    if ((p = wcsrchr(appname, '\\'))) appname = p + 1;
+    len = lstrlenW(appname);
+
+    if (len && len < MAX_PATH)
+    {
+        HKEY tmpkey;
+        int i;
+        for (i = 0; appname[i]; i++) buffer[i] = RtlDowncaseUnicodeChar(appname[i]);
+        buffer[i] = 0;
+        appname = buffer;
+        if ((process_name = malloc(len * 3 + 1)))
+            ntdll_wcstoumbs(appname, len + 1, process_name, len * 3 + 1, FALSE);
+        memcpy(appname + i, waylanddriverW, sizeof(waylanddriverW));
+        /* @@ Wine registry key: HKCU\Software\Wine\AppDefaults\app.exe\Wayland Driver */
+        if ((tmpkey = open_hkcu_key("Software\\Wine\\AppDefaults")))
+        {
+            appkey = reg_open_key(tmpkey, appname, lstrlenW(appname) * sizeof(WCHAR));
+            NtClose(tmpkey);
+        }
+    }
+
+    if (!get_config_key(hkey, appkey, "UseSystemCursors", buffer, sizeof(buffer)))
+        option_use_system_cursors = IS_OPTION_TRUE(buffer[0]);
+
+    NtClose(appkey);
+    NtClose(hkey);
+}
 
 static void wayland_init_process_name(void)
 {
@@ -91,6 +236,7 @@ static NTSTATUS waylanddrv_unix_init(void *arg)
     __wine_set_user_driver(&waylanddrv_funcs, WINE_GDI_DRIVER_VERSION);
 
     wayland_init_process_name();
+    wayland_init_options();
 
     if (!wayland_process_init()) goto err;
 

@@ -38,6 +38,8 @@
 #include "wlr-data-control-unstable-v1-client-protocol.h"
 #include "xdg-toplevel-icon-v1-client-protocol.h"
 #include "fractional-scale-v1-client-protocol.h"
+#include "tablet-v2-client-protocol.h"
+#include "cursor-shape-v1-client-protocol.h"
 
 #include "windef.h"
 #include "winbase.h"
@@ -57,6 +59,7 @@
 
 extern char *process_name;
 extern struct wayland process_wayland;
+extern BOOL option_use_system_cursors;
 
 /**********************************************************************
  *          Definitions for wayland types
@@ -107,6 +110,7 @@ struct wayland_pointer
     struct zwp_confined_pointer_v1 *zwp_confined_pointer_v1;
     struct zwp_locked_pointer_v1 *zwp_locked_pointer_v1;
     struct zwp_relative_pointer_v1 *zwp_relative_pointer_v1;
+    struct wp_cursor_shape_device_v1 *wp_cursor_shape_device_v1;
     HWND focused_hwnd;
     HWND constraint_hwnd;
     BOOL pending_warp;
@@ -174,6 +178,7 @@ struct wayland
     struct zwlr_data_control_manager_v1 *zwlr_data_control_manager_v1;
     struct wl_data_device_manager *wl_data_device_manager;
     struct xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager_v1;
+    struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;

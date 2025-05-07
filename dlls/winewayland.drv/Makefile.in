@@ -5,12 +5,14 @@ UNIX_LIBS = -lwin32u $(WAYLAND_CLIENT_LIBS) $(WAYLAND_EGL_LIBS) $(XKBCOMMON_LIBS
 IMPORTS = user32 win32u
 
 SOURCES = \
+	cursor-shape-v1.xml \
 	display.c \
 	dllmain.c \
 	fractional-scale-v1.xml \
 	opengl.c \
 	pointer-constraints-unstable-v1.xml \
 	relative-pointer-unstable-v1.xml \
+	tablet-v2.xml \
 	text-input-unstable-v3.xml \
 	version.rc \
 	viewporter.xml \
