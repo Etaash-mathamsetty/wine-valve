@@ -104,13 +104,13 @@ static HKEY open_hkcu_key(const char *name)
             return 0;
 
         sid = ((TOKEN_USER *)sid_data)->User.Sid;
-        len = sprintf(buffer, "\\Registry\\User\\S-%u-%lu", sid->Revision,
-               (unsigned long) MAKELONG(MAKEWORD(sid->IdentifierAuthority.Value[5],
+        len = sprintf(buffer, "\\Registry\\User\\S-%u-%u", sid->Revision,
+                      MAKELONG(MAKEWORD(sid->IdentifierAuthority.Value[5],
                                         sid->IdentifierAuthority.Value[4]),
                                MAKEWORD(sid->IdentifierAuthority.Value[3],
                                         sid->IdentifierAuthority.Value[2])));
         for (i = 0; i < sid->SubAuthorityCount; i++)
-            len += sprintf(buffer + len, "-%lu", (unsigned long)sid->SubAuthority[i]);
+            len += sprintf(buffer + len, "-%u", sid->SubAuthority[i]);
 
         ascii_to_unicode(bufferW, buffer, len);
         hkcu = reg_open_key(NULL, bufferW, len * sizeof(WCHAR));
