@@ -1383,7 +1383,7 @@ static void init_opengl(void)
     egl_display = p_eglGetPlatformDisplay(EGL_PLATFORM_WAYLAND_KHR,
                                           process_wayland.wl_display,
                                           NULL);
-    if (egl_display == EGL_NO_DISPLAY)
+    if (egl_display == EGL_NO_DISPLAY || egl_display == (void *)EGL_BAD_PARAMETER)
     {
         ERR("Failed to get EGLDisplay\n");
         goto err;
