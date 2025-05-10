@@ -1244,6 +1244,7 @@ static BOOL init_opengl_funcs(void)
     opengl_funcs.ext.p_wglCreateContextAttribsARB = wayland_wglCreateContextAttribsARB;
 
     register_extension("WGL_EXT_swap_control");
+    register_extension("WGL_EXT_swap_control_tear");
     opengl_funcs.ext.p_wglGetSwapIntervalEXT = wayland_wglGetSwapIntervalEXT;
     opengl_funcs.ext.p_wglSwapIntervalEXT = wayland_wglSwapIntervalEXT;
 
