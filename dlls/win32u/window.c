@@ -2040,7 +2040,8 @@ static struct window_surface *get_window_surface( HWND hwnd, UINT swp_flags, BOO
     else if (create_layered || is_layered) needs_surface = TRUE;
 
     if (is_opengl && !is_layered && !create_layered
-        && !(!create_opaque && NtUserGetLayeredWindowAttributes( hwnd, NULL, NULL, &layered_flags ) && layered_flags & LWA_COLORKEY))
+        && !(!create_opaque && NtUserGetLayeredWindowAttributes( hwnd, NULL, NULL, &layered_flags ) && layered_flags & LWA_COLORKEY)
+        && !user_driver->pHasWindowManager("waylanddrv"))
     {
         if (new_surface) window_surface_release( new_surface );
         new_surface = NULL;
