@@ -458,3 +458,11 @@ BOOL WAYLAND_CreateWindowSurface(HWND hwnd, BOOL layered, const RECT *surface_re
     wayland_win_data_release(data);
     return TRUE;
 }
+
+/***********************************************************************
+ *           WAYLAND_HasWindowManager
+ */
+BOOL WAYLAND_HasWindowManager(const char *name)
+{
+    return !strcmp("waylanddrv", name);
+}
