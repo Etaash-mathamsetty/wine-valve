@@ -138,18 +138,27 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener =
     xdg_toplevel_handle_close
 };
 
-void wp_fractional_scale_handle_scale(void* data,
+void wp_fractional_scale_handle_scale(void* user_data,
         struct wp_fractional_scale_v1 *fractional_scale_v1, uint32_t scale)
 {
-    double *data_scale;
+    struct wayland_win_data *data;
+    struct wayland_surface *surface;
+    HWND hwnd = user_data;
+    assert(hwnd);
 
-    assert(data);
-    data_scale = data;
+    if ((data = wayland_win_data_get(hwnd)))
+    {
+        if((surface = data->wayland_surface))
+        {
+            surface->window.fractional_scale = scale / 120.0;
+            surface->window.scale =
+                surface->window.fractional_scale * NtUserGetSystemDpiForProcess(0) / 96.0;
 
-    /* FIXME: handle locking! */
-    *data_scale = scale / 120.0;
+            TRACE("Got scale %lf\n", surface->window.fractional_scale);
+        }
 
-    TRACE("Got scale %lf\n", *data_scale);
+        wayland_win_data_release(data);
+    }
 }
 
 static const struct wp_fractional_scale_v1_listener wp_fractional_scale_listener =
@@ -206,7 +215,7 @@ struct wayland_surface *wayland_surface_create(HWND hwnd)
         wp_fractional_scale_v1_add_listener(
             surface->wp_fractional_scale_v1,
             &wp_fractional_scale_listener,
-            &surface->window.fractional_scale);
+            hwnd);
     }
 
     return surface;
