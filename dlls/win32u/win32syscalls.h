@@ -445,7 +445,6 @@
     SYSCALL_ENTRY( 0x11b9, NtUserWindowFromPoint, 8 ) \
     SYSCALL_ENTRY( 0x11ba, __wine_get_file_outline_text_metric, 16 ) \
     SYSCALL_ENTRY( 0x11bb, __wine_get_icm_profile, 16 )
-
 #ifdef _WIN64
 #define ALL_SYSCALLS \
     SYSCALL_ENTRY( 0x1000, NtGdiAbortDoc, 8 ) \
@@ -892,7 +891,6 @@
     SYSCALL_ENTRY( 0x11b9, NtUserWindowFromPoint, 16 ) \
     SYSCALL_ENTRY( 0x11ba, __wine_get_file_outline_text_metric, 32 ) \
     SYSCALL_ENTRY( 0x11bb, __wine_get_icm_profile, 32 )
-
 #else
 #define ALL_SYSCALLS ALL_SYSCALLS32
 #endif
