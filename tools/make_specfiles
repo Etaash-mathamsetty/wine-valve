@@ -379,7 +379,6 @@ sub read_syscalls($)
     {
         my $descr = $funcs{$func};
         next unless $descr->{flags} =~ /-syscall/;
-        next if $descr->{target} ne $func && defined $funcs{$descr->{target}};
         my ($args32, $args64) = get_args_size( $funcs{$func}->{args} );
         my $id;
         if ($descr->{flags} =~ /-syscall=(0[Xx][0-9a-fA-F]+)/)
