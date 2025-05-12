@@ -82,6 +82,7 @@ typedef HRESULT (__stdcall *updateffxapi_pfn)(void*, unsigned int);
 
 HRESULT STDMETHODCALLTYPE AMDFSR4FFX_UpdateFfxApiProvider(IAmdExtFfxApi *iface, void* data, unsigned int size)
 {
+    const char *env;
     updateffxapi_pfn pfn;
     HMODULE amdffx = LoadLibraryA("amdxcffx64");
 
@@ -94,10 +95,11 @@ HRESULT STDMETHODCALLTYPE AMDFSR4FFX_UpdateFfxApiProvider(IAmdExtFfxApi *iface, 
     }
 
     pfn = (updateffxapi_pfn)GetProcAddress(amdffx, "UpdateFfxApiProvider");
+    env = getenv("FSR4_UPGRADE");
 
-    if(pfn && getenv("FSR4_UPGRADE"))
+    if(pfn && env && env[0] != '0')
     {
-        FIXME("replaced fsr3 with fsr4!\n");
+        FIXME("Replaced FSR3 with FSR4!\n");
         return pfn(data, size);
     }
 
