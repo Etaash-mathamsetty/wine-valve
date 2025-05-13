@@ -2260,11 +2260,12 @@ static void hacks_init(void)
         setenv("LIBGL_ALWAYS_SOFTWARE", "1", 0);
     }
 
-    if (sgi && !strcmp(sgi, "2379390"))
+   if (main_argc > 1 && (strstr(main_argv[1], "\\EADesktop.exe") || strstr(main_argv[1], "\\Link2EA.exe")
+        || strstr(main_argv[1], "EA Desktop\\ErrorReporter.exe") || strstr(main_argv[1], "\\EAConnect_microsoft.exe")
+        || strstr(main_argv[1], "\\EALaunchHelper.exe") || strstr(main_argv[1], "\\EACrashReporter.exe")))
     {
-        ERR("HACK: setting vk_x11_override_min_image_count, vk_x11_strict_image_count.\n");
-        setenv("vk_x11_override_min_image_count", "2", 0);
-        setenv("vk_x11_strict_image_count", "true", 0);
+        ERR("HACK: setting LIBGL_ALWAYS_SOFTWARE.\n");
+        setenv("LIBGL_ALWAYS_SOFTWARE", "1", 0);
     }
 }
 
