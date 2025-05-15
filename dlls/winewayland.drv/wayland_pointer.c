@@ -200,6 +200,57 @@ static void pointer_handle_button(void *data, struct wl_pointer *wl_pointer,
 static void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer,
                                 uint32_t time, uint32_t axis, wl_fixed_t value)
 {
+    HWND hwnd;
+    INPUT input = {0};
+    /*
+        We are given a distance in the surface local coordinate system.
+        However, we need to convert that into a WHEEL_DELTA which represents
+        physical mouse wheel motion. Using default settings on KDE Plasma,
+        I obtained a value of 15 for one mouse wheel click. So that is the
+        value I have chosen for now. However, what do other compositors default to?
+        Additionally, the system's scroll sensitivity now affects winewayland,
+        is that going to cause issues?
+
+        So many unknowns for such a seemingly trivial task :(
+        just because we are trying to support touchpads...
+    */
+    double scroll_value = (wl_fixed_to_double(value) / 15.0) * WHEEL_DELTA;
+    struct wayland_pointer *pointer = &process_wayland.pointer;
+
+    if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
+
+    input.type = INPUT_MOUSE;
+
+    /*
+        Truncation makes the most sense:
+        Imagine a infinite resolution scroll wheel
+        Assume that input axis value is some fraction of a tick
+        Accumulate input axis value * WHEEL_DELTA
+        Truncate to WHEEL_DELTA precision
+        Do subtraction on original value
+        Leftover accumulation is just leftover rotation on the wheel
+    */
+    switch (axis)
+    {
+        case WL_POINTER_AXIS_VERTICAL_SCROLL:
+            input.mi.dwFlags = MOUSEEVENTF_WHEEL;
+            pointer->accum_wheel += -scroll_value;
+            input.mi.mouseData = trunc(pointer->accum_wheel / WHEEL_DELTA) * WHEEL_DELTA;
+            pointer->accum_wheel -= (int)input.mi.mouseData;
+            break;
+        case WL_POINTER_AXIS_HORIZONTAL_SCROLL:
+            input.mi.dwFlags = MOUSEEVENTF_HWHEEL;
+            pointer->accum_wheelH += scroll_value;
+            input.mi.mouseData = trunc(pointer->accum_wheelH / WHEEL_DELTA) * WHEEL_DELTA;
+            pointer->accum_wheelH -= (int)input.mi.mouseData;
+            break;
+        default: break;
+    }
+
+    TRACE("hwnd=%p axis=%u value=%lf out=%d\n", hwnd, axis, scroll_value, (int)input.mi.mouseData);
+
+    if (input.mi.mouseData)
+        NtUserSendHardwareInput(hwnd, 0, &input, 0);
 }
 
 static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
@@ -219,29 +270,6 @@ static void pointer_handle_axis_stop(void *data, struct wl_pointer *wl_pointer,
 static void pointer_handle_axis_discrete(void *data, struct wl_pointer *wl_pointer,
                                          uint32_t axis, int32_t discrete)
 {
-    INPUT input = {0};
-    HWND hwnd;
-
-    if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
-
-    input.type = INPUT_MOUSE;
-
-    switch (axis)
-    {
-    case WL_POINTER_AXIS_VERTICAL_SCROLL:
-        input.mi.dwFlags = MOUSEEVENTF_WHEEL;
-        input.mi.mouseData = -WHEEL_DELTA * discrete;
-        break;
-    case WL_POINTER_AXIS_HORIZONTAL_SCROLL:
-        input.mi.dwFlags = MOUSEEVENTF_HWHEEL;
-        input.mi.mouseData = WHEEL_DELTA * discrete;
-        break;
-    default: break;
-    }
-
-    TRACE("hwnd=%p axis=%u discrete=%d\n", hwnd, axis, discrete);
-
-    NtUserSendHardwareInput(hwnd, 0, &input, 0);
 }
 
 static const struct wl_pointer_listener pointer_listener =
