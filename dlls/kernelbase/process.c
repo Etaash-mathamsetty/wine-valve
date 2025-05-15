@@ -626,16 +626,16 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
     /* Generally just workarounds for winewayland not supporting cross process rendering (yet) */
     static const struct option wayland_options[] = {
         {L"launcher_epic.exe", L" --in-process-gpu"}, /* ZZZ EGS */
+        {L"Battle.net.exe", L" --in-process-gpu"},
     };
 
     unsigned int i;
     char sgi[64] = {0};
     char wayland_hack_enabled[64] = {0};
 
-    GetEnvironmentVariableA("SteamGameId", sgi, sizeof(sgi));
-
     if (!cmd) return NULL;
 
+    GetEnvironmentVariableA("SteamGameId", sgi, sizeof(sgi));
     GetEnvironmentVariableA("WINE_WAYLAND_HACKS",
         wayland_hack_enabled, sizeof(wayland_hack_enabled));
 
