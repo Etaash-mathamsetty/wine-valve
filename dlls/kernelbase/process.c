@@ -635,6 +635,23 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
 
     if (!cmd) return NULL;
 
+    GetEnvironmentVariableA("WINE_WAYLAND_HACKS",
+        wayland_hack_enabled, sizeof(wayland_hack_enabled));
+
+    if (wayland_hack_enabled[0] == '1')
+    {
+        for (i = 0; i < ARRAY_SIZE(wayland_options); ++i)
+        {
+            if (wcsstr( cmd, wayland_options[i].exe_name ))
+            {
+                if (wayland_options[i].steamgameid && strcmp( sgi, wayland_options[i].steamgameid ))
+                    continue;
+                FIXME( "HACK: appending %s to command line.\n", debugstr_w(wayland_options[i].append) );
+                return wayland_options[i].append;
+            }
+        }
+    }
+
     for (i = 0; i < ARRAY_SIZE(options); ++i)
     {
         if (wcsstr( cmd, options[i].exe_name ))
@@ -643,22 +660,6 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
                 continue;
             FIXME( "HACK: appending %s to command line.\n", debugstr_w(options[i].append) );
             return options[i].append;
-        }
-    }
-
-    GetEnvironmentVariableA("WINE_WAYLAND_HACKS",
-            wayland_hack_enabled, sizeof(wayland_hack_enabled));
-
-    if (wayland_hack_enabled[0] != '1') return NULL;
-
-    for (i = 0; i < ARRAY_SIZE(wayland_options); ++i)
-    {
-        if (wcsstr( cmd, wayland_options[i].exe_name ))
-        {
-            if (wayland_options[i].steamgameid && strcmp( sgi, wayland_options[i].steamgameid ))
-                continue;
-            FIXME( "HACK: appending %s to command line.\n", debugstr_w(wayland_options[i].append) );
-            return wayland_options[i].append;
         }
     }
 
