@@ -586,13 +586,14 @@ static int battleye_launcher_redirect_hack( const WCHAR *app_name, WCHAR *new_na
 
 static const WCHAR *hack_append_command_line( const WCHAR *cmd )
 {
-    static const struct
+    struct option
     {
         const WCHAR *exe_name;
         const WCHAR *append;
         const char *steamgameid;
-    }
-    options[] =
+    };
+
+    static const struct option options[] =
     {
         {L"UniverseGenerator.exe", L" --disable_direct_composition=1"},
         {L"Blaite\\nw.exe", L" --disable_direct_composition=1"},
@@ -621,8 +622,17 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
         {L"UnrealCEFSubProcess.exe", L" --use-gl=swiftshader", "2316580"},
         {L"UnrealCEFSubProcess.exe", L" --use-angle=d3d9", "2684500"},
     };
+
+    /* Generally just workarounds for winewayland not supporting cross process rendering (yet) */
+    static const struct option wayland_options[] = {
+        { L"launcher_epic.exe", L" --in-process-gpu"} /* ZZZ EGS */
+    };
+
     unsigned int i;
-    char sgi[64];
+    char sgi[64] = {0};
+    char wayland_hack_enabled[64] = {0};
+
+    GetEnvironmentVariableA("SteamGameId", sgi, sizeof(sgi));
 
     if (!cmd) return NULL;
 
@@ -630,13 +640,29 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
     {
         if (wcsstr( cmd, options[i].exe_name ))
         {
-            if (options[i].steamgameid && !(GetEnvironmentVariableA( "SteamGameId", sgi, sizeof(sgi) )
-                && !strcmp( sgi, options[i].steamgameid )))
+            if (options[i].steamgameid && strcmp( sgi, options[i].steamgameid ))
                 continue;
             FIXME( "HACK: appending %s to command line.\n", debugstr_w(options[i].append) );
             return options[i].append;
         }
     }
+
+    GetEnvironmentVariableA("WINE_WAYLAND_HACKS",
+            wayland_hack_enabled, sizeof(wayland_hack_enabled));
+
+    if (wayland_hack_enabled[0] != '1') return NULL;
+
+    for (i = 0; i < ARRAY_SIZE(wayland_options); ++i)
+    {
+        if (wcsstr( cmd, wayland_options[i].exe_name ))
+        {
+            if (wayland_options[i].steamgameid && strcmp( sgi, wayland_options[i].steamgameid ))
+                continue;
+            FIXME( "HACK: appending %s to command line.\n", debugstr_w(wayland_options[i].append) );
+            return wayland_options[i].append;
+        }
+    }
+
     return NULL;
 }
 
