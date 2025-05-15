@@ -119,6 +119,8 @@ struct wayland_pointer
     struct wayland_cursor cursor;
     double accum_x;
     double accum_y;
+    double accum_wheel;
+    double accum_wheelH;
     pthread_mutex_t mutex;
 };
 
