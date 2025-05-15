@@ -624,7 +624,7 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
 
     /* Generally just workarounds for winewayland not supporting cross process rendering (yet) */
     static const struct option wayland_options[] = {
-        { L"launcher_epic.exe", L" --in-process-gpu"} /* ZZZ EGS */
+        {L"launcher_epic.exe", L" --in-process-gpu"}, /* ZZZ EGS */
     };
 
     unsigned int i;
