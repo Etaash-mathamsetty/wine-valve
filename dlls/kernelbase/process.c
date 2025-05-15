@@ -627,6 +627,7 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
     static const struct option wayland_options[] = {
         {L"launcher_epic.exe", L" --in-process-gpu"}, /* ZZZ EGS */
         {L"Battle.net.exe", L" --in-process-gpu"},
+        {L"RSI Launcher.exe", L" --in-process-gpu"}
     };
 
     unsigned int i;
