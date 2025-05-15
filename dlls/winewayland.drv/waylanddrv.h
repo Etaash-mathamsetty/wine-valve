@@ -117,6 +117,7 @@ struct wayland_pointer
     double accum_y;
     double accum_wheel;
     double accum_wheelH;
+    LONG discrete_event_handled;
     pthread_mutex_t mutex;
 };
 
