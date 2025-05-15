@@ -313,9 +313,10 @@ static void relative_pointer_v1_relative_motion(void *private,
     if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
     if (!(data = wayland_win_data_get(hwnd))) return;
 
+    /* Use "raw" input by default. However, it's not nessessarily raw */
     wayland_motion_delta_to_window(data->wayland_surface,
-                                   wl_fixed_to_double(dx),
-                                   wl_fixed_to_double(dy),
+                                   wl_fixed_to_double(dx_unaccel),
+                                   wl_fixed_to_double(dy_unaccel),
                                    &screen_x, &screen_y);
     wayland_win_data_release(data);
 
@@ -335,7 +336,7 @@ static void relative_pointer_v1_relative_motion(void *private,
     pthread_mutex_unlock(&pointer->mutex);
 
     TRACE("hwnd=%p wayland_dxdy=%.2f,%.2f accum_dxdy=%d,%d\n",
-          hwnd, wl_fixed_to_double(dx), wl_fixed_to_double(dy),
+          hwnd, wl_fixed_to_double(dx_unaccel), wl_fixed_to_double(dy_unaccel),
           (int)input.mi.dx, (int)input.mi.dy);
 
     NtUserSendHardwareInput(hwnd, 0, &input, 0);
