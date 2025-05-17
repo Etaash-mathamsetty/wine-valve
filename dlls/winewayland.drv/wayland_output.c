@@ -39,6 +39,7 @@ static uint32_t next_output_id = 0;
 #define WAYLAND_OUTPUT_CHANGED_NAME       0x02
 #define WAYLAND_OUTPUT_CHANGED_LOGICAL_XY 0x04
 #define WAYLAND_OUTPUT_CHANGED_LOGICAL_WH 0x08
+#define WAYLAND_OUTPUT_CHANGED_TRANSFORM  0x10
 
 /**********************************************************************
  *          Output handling
@@ -139,6 +140,14 @@ static void wayland_output_done(struct wayland_output *output)
     {
         RB_FOR_EACH_ENTRY(mode, &output->pending.modes, struct wayland_output_mode, entry)
         {
+            /* Need to flip w,h when the output is transformed by 90 or 270 degrees */
+            if (output->pending.transform == WL_OUTPUT_TRANSFORM_270 ||
+                output->pending.transform == WL_OUTPUT_TRANSFORM_90)
+            {
+                const int32_t temp = mode->width;
+                mode->width = mode->height;
+                mode->height = temp;
+            }
             wayland_output_state_add_mode(&output->current,
                                           mode->width, mode->height, mode->refresh,
                                           mode == output->pending.current_mode);
@@ -165,6 +174,11 @@ static void wayland_output_done(struct wayland_output *output)
     {
         output->current.logical_w = output->pending.logical_w;
         output->current.logical_h = output->pending.logical_h;
+    }
+
+    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_TRANSFORM)
+    {
+        output->current.transform = output->pending.transform;
     }
 
     output->pending_flags = 0;
@@ -200,6 +214,11 @@ static void output_handle_geometry(void *data, struct wl_output *wl_output,
                                    const char *make, const char *model,
                                    int32_t output_transform)
 {
+    struct wayland_output *output = data;
+
+    output->pending.transform = output_transform;
+
+    output->pending_flags |= WAYLAND_OUTPUT_CHANGED_TRANSFORM;
 }
 
 static void output_handle_mode(void *data, struct wl_output *wl_output,
