@@ -300,6 +300,27 @@ static NTSTATUS unix_device_set_feature_report(void *args)
     return STATUS_SUCCESS;
 }
 
+static NTSTATUS unix_hidraw_enabled(void *args)
+{
+    char *value;
+    char vidpid[MAX_PATH] = {0};
+    struct hidraw_enabled_params *params = args;
+
+    if ((value = getenv("PROTON_DISABLE_HIDRAW")))
+    {
+        if (!strcmp(value, "1")) { params->enabled = FALSE; params->env_set = TRUE; }
+        snprintf(vidpid, ARRAY_SIZE(vidpid), "0x%04X/0x%04X", params->vid, params->pid);
+        if (strcasestr(value, vidpid)) { params->enabled = FALSE; params->env_set = TRUE; }
+    } else if ((value = getenv("PROTON_ENABLE_HIDRAW")))
+    {
+        if (!strcmp(value, "1")) { params->enabled = TRUE; params->env_set = TRUE; }
+        snprintf(vidpid, ARRAY_SIZE(vidpid), "0x%04X/0x%04X", params->vid, params->pid);
+        if (strcasestr(value, vidpid)) { params->enabled = TRUE; params->env_set = TRUE; }
+    }
+
+    return STATUS_SUCCESS;
+}
+
 const unixlib_entry_t __wine_unix_call_funcs[] =
 {
     sdl_bus_init,
@@ -319,6 +340,7 @@ const unixlib_entry_t __wine_unix_call_funcs[] =
     unix_device_set_output_report,
     unix_device_get_feature_report,
     unix_device_set_feature_report,
+    unix_hidraw_enabled
 };
 
 C_ASSERT(ARRAYSIZE(__wine_unix_call_funcs) == unix_funcs_count);
