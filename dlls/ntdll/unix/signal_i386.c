@@ -591,16 +591,6 @@ static inline TEB *get_current_teb(void)
 }
 
 
-/***********************************************************************
- *           is_inside_syscall
- */
-static BOOL is_inside_syscall( ucontext_t *sigcontext )
-{
-    return ((char *)ESP_sig(sigcontext) >= (char *)ntdll_get_thread_data()->kernel_stack &&
-            (char *)ESP_sig(sigcontext) <= (char *)get_syscall_frame());
-}
-
-
 void set_process_instrumentation_callback( void *callback )
 {
     if (callback) FIXME( "Not supported.\n" );
@@ -1825,7 +1815,7 @@ static BOOL handle_syscall_fault( ucontext_t *sigcontext, void *stack_ptr,
     struct syscall_frame *frame = get_syscall_frame();
     UINT i, *stack;
 
-    if (!is_inside_syscall( sigcontext )) return FALSE;
+    if (!is_inside_syscall( ESP_sig(sigcontext) )) return FALSE;
 
     TRACE( "code=%x flags=%x addr=%p ip=%08x\n",
            rec->ExceptionCode, rec->ExceptionFlags, rec->ExceptionAddress, context->Eip );
@@ -1888,7 +1878,7 @@ static BOOL handle_syscall_trap( ucontext_t *sigcontext, siginfo_t *siginfo )
 
         EIP_sig( sigcontext ) = (ULONG)__wine_unix_call_dispatcher_prolog_end;
     }
-    else if (siginfo->si_code == 4 /* TRAP_HWBKPT */ && is_inside_syscall( sigcontext ))
+    else if (siginfo->si_code == 4 /* TRAP_HWBKPT */ && is_inside_syscall( ESP_sig(sigcontext) ))
     {
         TRACE_(seh)( "ignoring HWBKPT in syscall eip=%p\n", (void *)EIP_sig(sigcontext) );
         return TRUE;
@@ -2132,8 +2122,10 @@ static void abrt_handler( int signal, siginfo_t *siginfo, void *sigcontext )
  */
 static void quit_handler( int signal, siginfo_t *siginfo, void *sigcontext )
 {
+    ucontext_t *ucontext = sigcontext;
+
     init_handler( sigcontext );
-    if (!is_inside_syscall( sigcontext )) user_mode_abort_thread( 0, get_syscall_frame() );
+    if (!is_inside_syscall( ESP_sig(ucontext) )) user_mode_abort_thread( 0, get_syscall_frame() );
     abort_thread( 0 );
 }
 
@@ -2149,7 +2141,7 @@ static void usr1_handler( int signal, siginfo_t *siginfo, void *sigcontext )
 
     init_handler( sigcontext );
 
-    if (is_inside_syscall( ucontext ))
+    if (is_inside_syscall( ESP_sig(ucontext) ))
     {
         struct syscall_frame *frame = get_syscall_frame();
         ULONG64 saved_compaction = 0;

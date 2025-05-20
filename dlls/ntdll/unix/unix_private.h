@@ -469,6 +469,12 @@ static inline BOOL is_inside_syscall_stack_guard( const char *stack_ptr )
     return (stack_ptr >= kernel_stack && stack_ptr < kernel_stack + kernel_stack_guard_size);
 }
 
+static inline BOOL is_inside_syscall( ULONG_PTR sp )
+{
+    return ((char *)sp >= (char *)ntdll_get_thread_data()->kernel_stack &&
+            (char *)sp <= (char *)get_syscall_frame());
+}
+
 static inline BOOL is_ec_code( ULONG_PTR ptr )
 {
     const UINT64 *map = (const UINT64 *)peb->EcCodeBitMap;
