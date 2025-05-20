@@ -101,7 +101,9 @@ static inline BOOL is_arm64ec(void)
 /* thread private data, stored in NtCurrentTeb()->GdiTebBatch */
 struct ntdll_thread_data
 {
-    void              *cpu_data[16];  /* reserved for CPU-specific data */
+    void                     *cpu_data[16];  /* 1d4/02f0 reserved for CPU-specific data */
+    SYSTEM_SERVICE_TABLE     *syscall_table; /* 214/0370 syscall table */
+    struct syscall_frame     *syscall_frame; /* 218/0378 current syscall frame */
     void              *kernel_stack;  /* stack for thread startup and kernel syscalls */
     int                esync_apc_fd;  /* fd to wait on for user APCs */
     int               *fsync_apc_futex;
@@ -118,10 +120,22 @@ struct ntdll_thread_data
 };
 
 C_ASSERT( sizeof(struct ntdll_thread_data) <= sizeof(((TEB *)0)->GdiTebBatch) );
+#ifdef _WIN64
+C_ASSERT( offsetof( TEB, GdiTebBatch ) + offsetof( struct ntdll_thread_data, syscall_table ) == 0x370 );
+C_ASSERT( offsetof( TEB, GdiTebBatch ) + offsetof( struct ntdll_thread_data, syscall_frame ) == 0x378 );
+#else
+C_ASSERT( offsetof( TEB, GdiTebBatch ) + offsetof( struct ntdll_thread_data, syscall_table ) == 0x214 );
+C_ASSERT( offsetof( TEB, GdiTebBatch ) + offsetof( struct ntdll_thread_data, syscall_frame ) == 0x218 );
+#endif
 
 static inline struct ntdll_thread_data *ntdll_get_thread_data(void)
 {
     return (struct ntdll_thread_data *)&NtCurrentTeb()->GdiTebBatch;
+}
+
+static inline struct syscall_frame *get_syscall_frame(void)
+{
+    return ntdll_get_thread_data()->syscall_frame;
 }
 
 /* returns TRUE if the async is complete; FALSE if it should be restarted */
