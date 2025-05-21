@@ -86,6 +86,7 @@
 WINE_DEFAULT_DEBUG_CHANNEL(server);
 WINE_DECLARE_DEBUG_CHANNEL(client);
 WINE_DECLARE_DEBUG_CHANNEL(ftrace);
+WINE_DECLARE_DEBUG_CHANNEL(syscall);
 
 #ifndef MSG_CMSG_CLOEXEC
 #define MSG_CMSG_CLOEXEC 0
@@ -1703,6 +1704,7 @@ void server_init_process_done(void)
      * is sent by init_process_done */
     signal_init_process();
     thread_data->syscall_table = KeServiceDescriptorTable;
+    thread_data->syscall_trace = TRACE_ON(syscall);
 
     /* always send the native TEB */
     if (!(teb = NtCurrentTeb64())) teb = NtCurrentTeb();
