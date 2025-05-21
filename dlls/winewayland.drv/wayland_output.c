@@ -141,8 +141,7 @@ static void wayland_output_done(struct wayland_output *output)
         RB_FOR_EACH_ENTRY(mode, &output->pending.modes, struct wayland_output_mode, entry)
         {
             /* Need to flip w,h when the output is transformed by 90 or 270 degrees */
-            if (output->pending.transform == WL_OUTPUT_TRANSFORM_270 ||
-                output->pending.transform == WL_OUTPUT_TRANSFORM_90)
+            if (output->pending.transform & WL_OUTPUT_TRANSFORM_90)
             {
                 const int32_t temp = mode->width;
                 mode->width = mode->height;
