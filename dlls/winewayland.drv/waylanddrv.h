@@ -202,6 +202,7 @@ struct wayland_output_state
     struct rb_tree modes;
     struct wayland_output_mode *current_mode;
     char *name;
+    int resolved_x, resolved_y; /* store positions post overlap correction */
     int logical_x, logical_y;
     int logical_w, logical_h;
     int transform;
@@ -435,6 +436,11 @@ static inline BOOL intersect_rect(RECT *dst, const RECT *src1, const RECT *src2)
     dst->right = min(src1->right, src2->right);
     dst->bottom = min(src1->bottom, src2->bottom);
     return !IsRectEmpty(dst);
+}
+
+static inline LONG area_rect(const RECT *rect)
+{
+    return (rect->bottom - rect->top) * (rect->right - rect->left);
 }
 
 static inline LRESULT send_message(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
