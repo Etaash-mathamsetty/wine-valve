@@ -138,7 +138,7 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener =
     xdg_toplevel_handle_close
 };
 
-void wp_fractional_scale_handle_scale(void *user_data,
+static void wp_fractional_scale_handle_scale(void *user_data,
         struct wp_fractional_scale_v1 *fractional_scale_v1, uint32_t scale)
 {
     struct wayland_win_data *data;
