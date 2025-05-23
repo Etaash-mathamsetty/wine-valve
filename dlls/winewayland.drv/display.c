@@ -180,6 +180,13 @@ static void output_info_array_arrange_physical_coords(struct wl_array *output_in
            ++steps < num_outputs)
         continue;
 
+    /* Initialize resolved coordinates with updated coordinates */
+    wl_array_for_each(info, output_info_array)
+    {
+        info->output->resolved_x = info->x;
+        info->output->resolved_y = info->y;
+    }
+
     /* Now that we have our physical pixel coordinates, sort from physical left
      * to right, but ensure the primary output is first. */
     qsort(output_info_array->data, num_outputs, sizeof(struct output_info),
