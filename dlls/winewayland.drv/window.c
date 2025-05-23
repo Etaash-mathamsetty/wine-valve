@@ -239,6 +239,42 @@ static BOOL wayland_win_data_create_wayland_surface(struct wayland_win_data *dat
     return TRUE;
 }
 
+static struct wl_output *wayland_surface_get_best_output(struct wayland_surface *surface)
+{
+    struct wayland_output *output;
+    struct wl_output *best = NULL;
+    RECT output_rect, temp, intersect = {0};
+    const RECT *window_rect = &surface->window.rect;
+
+    wl_list_for_each(output, &process_wayland.output_list, link)
+    {
+        SetRect(&output_rect, 0, 0,
+                output->current.current_mode->width,
+                output->current.current_mode->height);
+        OffsetRect(&output_rect,
+                output->current.resolved_x,
+                output->current.resolved_y);
+
+        TRACE("output %s, %s window %s\n",
+              output->current.name,
+              wine_dbgstr_rect(&output_rect),
+              wine_dbgstr_rect(window_rect));
+
+        if (intersect_rect(&temp, window_rect, &output_rect) &&
+                area_rect(&temp) > area_rect(&intersect))
+        {
+            intersect = temp;
+            best = output->wl_output;
+        }
+    }
+
+    if (!best)
+        WARN("Could not find associated wl_output for rect %s!\n",
+             wine_dbgstr_rect(window_rect));
+
+    return best;
+}
+
 static void wayland_surface_update_state_toplevel(struct wayland_surface *surface)
 {
     BOOL processing_config = surface->processing.serial &&
@@ -274,7 +310,10 @@ static void wayland_surface_update_state_toplevel(struct wayland_surface *surfac
         if ((surface->window.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN) &&
            !(surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN))
         {
-            xdg_toplevel_set_fullscreen(surface->xdg_toplevel, NULL);
+            pthread_mutex_lock(&process_wayland.output_mutex);
+            xdg_toplevel_set_fullscreen(surface->xdg_toplevel,
+                        wayland_surface_get_best_output(surface));
+            pthread_mutex_unlock(&process_wayland.output_mutex);
         }
     }
     else
