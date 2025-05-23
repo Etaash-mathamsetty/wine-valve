@@ -347,6 +347,7 @@ static BOOL is_special_env_var( const char *var )
             STARTS_WITH( var, "TMP=" ) ||
             STARTS_WITH( var, "QT_" ) ||
             STARTS_WITH( var, "SDL_AUDIODRIVER=" ) ||
+            STARTS_WITH( var, "SDL_VIDEODRIVER=" ) || /* the only allowed video driver on windows is windows */
             STARTS_WITH( var, "VK_" ) ||
             STARTS_WITH( var, "XR_" ) ||
             STARTS_WITH( var, "XDG_SESSION_TYPE=" ));
