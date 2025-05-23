@@ -166,6 +166,66 @@ static const struct wp_fractional_scale_v1_listener wp_fractional_scale_listener
     wp_fractional_scale_handle_scale
 };
 
+static void wl_surface_handle_enter(void *user_data, struct wl_surface *wl_surface, struct wl_output *wl_output)
+{
+    struct wayland_win_data *data;
+    struct wayland_output *output;
+    HWND hwnd = user_data;
+
+    if ((data = wayland_win_data_get(hwnd)))
+    {
+        if (data->wayland_surface)
+        {
+            pthread_mutex_lock(&process_wayland.output_mutex);
+            wl_list_for_each(output, &process_wayland.output_list, link)
+            {
+                if (output->wl_output == wl_output)
+                {
+                    TRACE("Setting output %p for surface %p\n", wl_output, data->wayland_surface);
+                    data->wayland_surface->wl_output = wl_output;
+                    break;
+                }
+            }
+            pthread_mutex_unlock(&process_wayland.output_mutex);
+        }
+
+        wayland_win_data_release(data);
+    }
+}
+
+static void wl_surface_handle_leave(void *user_data, struct wl_surface *surface, struct wl_output *wl_output)
+{
+    struct wayland_win_data *data;
+    struct wayland_output *output;
+    HWND hwnd = user_data;
+
+    if ((data = wayland_win_data_get(hwnd)))
+    {
+        if (data->wayland_surface)
+        {
+            pthread_mutex_lock(&process_wayland.output_mutex);
+            wl_list_for_each(output, &process_wayland.output_list, link)
+            {
+                if (output->wl_output == wl_output)
+                {
+                    TRACE("Clearing output %p for surface %p\n", wl_output, data->wayland_surface);
+                    data->wayland_surface->wl_output = NULL;
+                    break;
+                }
+            }
+            pthread_mutex_unlock(&process_wayland.output_mutex);
+        }
+
+        wayland_win_data_release(data);
+    }
+}
+
+static const struct wl_surface_listener wl_surface_listener =
+{
+    wl_surface_handle_enter,
+    wl_surface_handle_leave
+};
+
 /**********************************************************************
  *          wayland_surface_create
  *
@@ -191,6 +251,7 @@ struct wayland_surface *wayland_surface_create(HWND hwnd)
         ERR("Failed to create wl_surface Wayland surface\n");
         goto err;
     }
+    wl_surface_add_listener(surface->wl_surface, &wl_surface_listener, hwnd);
     wl_surface_set_user_data(surface->wl_surface, hwnd);
 
     surface->wp_viewport =
@@ -550,6 +611,42 @@ static void wayland_surface_get_rect_in_monitor(struct wayland_surface *surface,
     OffsetRect(rect, -surface->window.rect.left, -surface->window.rect.top);
 }
 
+struct wl_output *wayland_surface_get_best_output(struct wayland_surface *surface)
+{
+    struct wayland_output *output;
+    struct wl_output *best = NULL;
+    RECT output_rect, temp, intersect = {0};
+    const RECT *window_rect = &surface->window.rect;
+
+    wl_list_for_each(output, &process_wayland.output_list, link)
+    {
+        SetRect(&output_rect, 0, 0,
+                output->current.current_mode->width,
+                output->current.current_mode->height);
+        OffsetRect(&output_rect,
+                output->current.resolved_x,
+                output->current.resolved_y);
+
+        TRACE("output %s: %s, window %s\n",
+              output->current.name,
+              wine_dbgstr_rect(&output_rect),
+              wine_dbgstr_rect(window_rect));
+
+        if (intersect_rect(&temp, window_rect, &output_rect) &&
+                area_rect(&temp) > area_rect(&intersect))
+        {
+            intersect = temp;
+            best = output->wl_output;
+        }
+    }
+
+    if (!best)
+        WARN("Could not find associated wl_output for rect %s!\n",
+             wine_dbgstr_rect(window_rect));
+
+    return best;
+}
+
 /**********************************************************************
  *          wayland_surface_reconfigure_geometry
  *
@@ -601,6 +698,23 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
                                         rect.left, rect.top,
                                         rect.right - rect.left,
                                         rect.bottom - rect.top);
+        /* HACK: reset fullscreen state to ensure surface is on correct output */
+        if (surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN
+            && wayland_surface_is_toplevel(surface))
+        {
+            struct wl_output *output;
+            pthread_mutex_lock(&process_wayland.output_mutex);
+            output = wayland_surface_get_best_output(surface);
+            if (output != surface->wl_output)
+            {
+                TRACE("Resetting fullscreen state: output %p surface output %p\n",
+                      output, surface->wl_output);
+                xdg_toplevel_unset_fullscreen(surface->xdg_toplevel);
+                wl_display_flush(process_wayland.wl_display);
+                xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
+            }
+            pthread_mutex_unlock(&process_wayland.output_mutex);
+        }
     }
 }
 
