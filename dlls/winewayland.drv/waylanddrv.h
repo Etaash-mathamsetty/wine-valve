@@ -268,6 +268,7 @@ struct wayland_surface
     HWND hwnd;
 
     struct wl_surface *wl_surface;
+    struct wl_output *wl_output;
     struct wp_viewport *wp_viewport;
     struct wp_fractional_scale_v1 *wp_fractional_scale_v1;
 
@@ -340,6 +341,7 @@ void wayland_client_surface_detach(struct wayland_client_surface *client);
 void wayland_surface_ensure_contents(struct wayland_surface *surface);
 void wayland_surface_set_title(struct wayland_surface *surface, LPCWSTR title);
 void wayland_surface_set_icon(struct wayland_surface *surface, UINT type, ICONINFO *ii);
+struct wl_output *wayland_surface_get_best_output(struct wayland_surface *surface);
 
 static inline BOOL wayland_surface_is_toplevel(struct wayland_surface *surface)
 {
