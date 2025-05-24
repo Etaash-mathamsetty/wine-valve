@@ -205,6 +205,12 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
             wl_registry_bind(registry, id, &wp_cursor_shape_manager_v1_interface,
                              version < 2 ? version : 2);
     }
+    else if (strcmp(interface, "xdg_system_bell_v1") == 0)
+    {
+        process_wayland.xdg_system_bell_v1 =
+            wl_registry_bind(registry, id, &xdg_system_bell_v1_interface,
+                             1);
+    }
 }
 
 static void registry_handle_global_remove(void *data, struct wl_registry *registry,
@@ -340,6 +346,9 @@ BOOL wayland_process_init(void)
 
     if (!process_wayland.wp_fractional_scale_manager_v1)
         ERR("Wayland compositor doesn't support wp_fractional_scale_manager_v1 (fractional scaling will be broken)\n");
+
+    if (!process_wayland.xdg_system_bell_v1)
+        ERR("Wayland compositor doesn't xdg_system_bell_v1! (Beep support will not work)\n");
 
     process_wayland.initialized = TRUE;
 

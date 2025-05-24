@@ -40,6 +40,7 @@
 #include "fractional-scale-v1-client-protocol.h"
 #include "tablet-v2-client-protocol.h"
 #include "cursor-shape-v1-client-protocol.h"
+#include "xdg-system-bell-v1-client-protocol.h"
 
 #include "windef.h"
 #include "winbase.h"
@@ -182,6 +183,7 @@ struct wayland
     struct wl_data_device_manager *wl_data_device_manager;
     struct xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager_v1;
     struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1;
+    struct xdg_system_bell_v1 *xdg_system_bell_v1;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;
@@ -460,7 +462,7 @@ RGNDATA *get_region_data(HRGN region);
 /**********************************************************************
  *          USER driver functions
  */
-
+void WAYLAND_Beep(void);
 LRESULT WAYLAND_ClipboardWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 BOOL WAYLAND_ClipCursor(const RECT *clip, BOOL reset);
 LRESULT WAYLAND_DesktopWindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
