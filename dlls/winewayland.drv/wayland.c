@@ -210,6 +210,12 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
         process_wayland.wp_color_manager_v1 =
             wl_registry_bind(registry, id, &wp_color_manager_v1_interface, 1);
     }
+    else if (strcmp(interface, "xdg_system_bell_v1") == 0)
+    {
+        process_wayland.xdg_system_bell_v1 =
+            wl_registry_bind(registry, id, &xdg_system_bell_v1_interface,
+                             1);
+    }
 }
 
 static void registry_handle_global_remove(void *data, struct wl_registry *registry,
@@ -348,6 +354,9 @@ BOOL wayland_process_init(void)
 
     if (!process_wayland.wp_color_manager_v1)
         ERR("Wayland compositor doesn't support wp_color_manager_v1 (HDR will not be supported)\n");
+
+    if (!process_wayland.xdg_system_bell_v1)
+        ERR("Wayland compositor doesn't xdg_system_bell_v1! (Beep will not be supported)\n");
 
     process_wayland.initialized = TRUE;
 
