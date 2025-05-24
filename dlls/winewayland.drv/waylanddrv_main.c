@@ -39,6 +39,7 @@ BOOL option_use_system_cursors = TRUE;
 
 static const struct user_driver_funcs waylanddrv_funcs =
 {
+    .pBeep = WAYLAND_Beep,
     .pClipboardWindowProc = WAYLAND_ClipboardWindowProc,
     .pClipCursor = WAYLAND_ClipCursor,
     .pDesktopWindowProc = WAYLAND_DesktopWindowProc,
