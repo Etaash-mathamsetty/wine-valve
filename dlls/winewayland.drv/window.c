@@ -781,6 +781,19 @@ LRESULT WAYLAND_SysCommand(HWND hwnd, WPARAM wparam, LPARAM lparam, const POINT 
 }
 
 /**********************************************************************
+ *          WAYLAND_Beep
+ */
+void WAYLAND_Beep(void)
+{
+    if (!process_wayland.xdg_system_bell_v1) return;
+
+    TRACE("\n");
+
+    xdg_system_bell_v1_ring(process_wayland.xdg_system_bell_v1, NULL);
+    wl_display_flush(process_wayland.wl_display);
+}
+
+/**********************************************************************
  *          get_client_surface
  */
 struct wayland_client_surface *get_client_surface(HWND hwnd)
