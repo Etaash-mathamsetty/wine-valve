@@ -209,6 +209,7 @@ int mediaconv_demuxer_open( AVFormatContext **ctx, struct stream_context *contex
         WARN( "Failed to find decoder for stream %u, codec %#x %s\n", i, par->codec_id, avcodec_get_name(par->codec_id) );
         avio_context_free( &(*ctx)->pb );
         avformat_free_context( *ctx );
+        *ctx = NULL;
     }
 
     if (!(buffer = calloc( 1, HASH_CHUNK_SIZE ))) return AVERROR(ENOMEM);
@@ -258,6 +259,7 @@ int mediaconv_demuxer_open( AVFormatContext **ctx, struct stream_context *contex
                                                NULL, mediaconv_demuxer_seek_callback )))
         {
             avformat_free_context( *ctx );
+            *ctx = NULL;
             return AVERROR(ENOMEM);
         }
     }
@@ -273,6 +275,7 @@ int mediaconv_demuxer_open( AVFormatContext **ctx, struct stream_context *contex
         if ((ret = avio_open( &(*ctx)->pb, blank_path, AVIO_FLAG_READ )) < 0)
         {
             avformat_free_context( *ctx );
+            *ctx = NULL;
             return ret;
         }
     }
