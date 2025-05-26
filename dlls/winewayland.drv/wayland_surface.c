@@ -712,6 +712,10 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
                 xdg_toplevel_unset_fullscreen(surface->xdg_toplevel);
                 wl_display_flush(process_wayland.wl_display);
                 xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
+                /* In case we don't get enter event from compositor
+                   happens on sway for instance
+                */
+                surface->wl_output = output;
             }
             pthread_mutex_unlock(&process_wayland.output_mutex);
         }
