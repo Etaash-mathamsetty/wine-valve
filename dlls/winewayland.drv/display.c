@@ -219,6 +219,7 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     unsigned int i, mwidth, mheight;
     unsigned char c;
     struct wayland_output_mode *mode = output_info->output->current_mode;
+    const struct wayland_primaries *primaries = &output_info->output->primaries;
 
     /* assume ~150 dpi */
     mwidth = mode->width / 60;
@@ -236,10 +237,22 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     data[21] = mwidth;
     data[22] = mheight;
     data[24] = 0x6;
+    data[25] = ((primaries->r_x & 0x3) << 6) | ((primaries->r_y & 0x3) << 4) |
+               ((primaries->g_x & 0x3) << 2) | (primaries->g_y & 0x3);
+    data[26] = ((primaries->b_x & 0x3) << 6) | ((primaries->b_y & 0x3) << 4) |
+               ((primaries->w_x & 0x3) << 2) | (primaries->w_y & 0x3);
+    data[27] = (primaries->r_x & 0x3fc) >> 2;
+    data[28] = (primaries->r_y & 0x3fc) >> 2;
+    data[29] = (primaries->g_x & 0x3fc) >> 2;
+    data[30] = (primaries->g_y & 0x3fc) >> 2;
+    data[31] = (primaries->b_x & 0x3fc) >> 2;
+    data[32] = (primaries->b_y & 0x3fc) >> 2;
+    data[33] = (primaries->w_x & 0x3fc) >> 2;
+    data[34] = (primaries->w_y & 0x3fc) >> 2;
 
     p = data + 54;
 
-    *(uint16_t*)&p[0] = 0x0; /* reserved */
+    *(uint16_t*)&p[0] = 0x0; /* 0 = reserved */
 
     /* assume blanking time is 0 */
     p[2] = mode->width;
