@@ -346,6 +346,9 @@ BOOL wayland_process_init(void)
     if (!process_wayland.wp_fractional_scale_manager_v1)
         ERR("Wayland compositor doesn't support wp_fractional_scale_manager_v1 (fractional scaling will be broken)\n");
 
+    if (!process_wayland.wp_color_manager_v1)
+        ERR("Wayland compositor doesn't support wp_color_manager_v1 (HDR will not be supported)\n");
+
     process_wayland.initialized = TRUE;
 
     return TRUE;
