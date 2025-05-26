@@ -38,6 +38,7 @@
 #include "wlr-data-control-unstable-v1-client-protocol.h"
 #include "xdg-toplevel-icon-v1-client-protocol.h"
 #include "fractional-scale-v1-client-protocol.h"
+#include "color-management-v1-client-protocol.h"
 
 #include "windef.h"
 #include "winbase.h"
@@ -177,6 +178,11 @@ struct wayland
     struct zwlr_data_control_manager_v1 *zwlr_data_control_manager_v1;
     struct wl_data_device_manager *wl_data_device_manager;
     struct xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager_v1;
+<<<<<<< HEAD
+=======
+    struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1;
+    struct wp_color_manager_v1 *wp_color_manager_v1;
+>>>>>>> c010dd3fde0 (winewayland: Set edid chromaticity values)
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;
@@ -196,11 +202,26 @@ struct wayland_output_mode
     int32_t refresh;
 };
 
+struct wayland_primaries
+{
+    int32_t r_x;
+    int32_t r_y;
+    int32_t g_x;
+    int32_t g_y;
+    int32_t b_x;
+    int32_t b_y;
+    int32_t w_x;
+    int32_t w_y;
+};
+
 struct wayland_output_state
 {
     int modes_count;
     struct rb_tree modes;
     struct wayland_output_mode *current_mode;
+    struct wayland_primaries primaries;
+    uint32_t max_luminance;
+    uint32_t min_luminance;
     char *name;
     int resolved_x, resolved_y; /* store positions post overlap correction */
     int logical_x, logical_y;
@@ -213,6 +234,9 @@ struct wayland_output
     struct wl_list link;
     struct wl_output *wl_output;
     struct zxdg_output_v1 *zxdg_output_v1;
+    struct wp_color_management_output_v1 *wp_color_management_output_v1;
+    struct wp_image_description_v1 *wp_image_description_v1;
+    struct wp_image_description_info_v1 *wp_image_description_info_v1;
     uint32_t global_id;
     unsigned int pending_flags;
     struct wayland_output_state pending;
