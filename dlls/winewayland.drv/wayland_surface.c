@@ -226,6 +226,36 @@ static const struct wl_surface_listener wl_surface_listener =
     wl_surface_handle_leave
 };
 
+static void zxdg_toplevel_decoration_v1_configure(void *user_data,
+                                struct zxdg_toplevel_decoration_v1 *decoration,
+                                uint32_t mode)
+{
+
+    struct wayland_win_data *data;
+    struct wayland_surface *surface;
+    HWND hwnd = user_data;
+
+    if ((data = wayland_win_data_get(hwnd)))
+    {
+        if ((surface = data->wayland_surface) && wayland_surface_is_toplevel(surface))
+        {
+            if (mode == ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE ||
+                mode == ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE)
+            {
+                TRACE("Set mode %u\n", mode);
+                surface->processing.configured_mode = mode;
+            }
+            else ERR("Recieved invalid mode %u\n", mode);
+        }
+        wayland_win_data_release(data);
+    }
+}
+
+static const struct zxdg_toplevel_decoration_v1_listener zxdg_toplevel_decoration_listener =
+{
+    zxdg_toplevel_decoration_v1_configure
+};
+
 /**********************************************************************
  *          wayland_surface_create
  *
@@ -367,6 +397,20 @@ void wayland_surface_make_toplevel(struct wayland_surface *surface)
     if (process_name)
         xdg_toplevel_set_app_id(surface->xdg_toplevel, process_name);
 
+    if (process_wayland.zxdg_decoration_manager_v1)
+    {
+        surface->zxdg_toplevel_decoration_v1 = zxdg_decoration_manager_v1_get_toplevel_decoration(
+            process_wayland.zxdg_decoration_manager_v1,
+            surface->xdg_toplevel);
+        if (surface->zxdg_toplevel_decoration_v1)
+            zxdg_toplevel_decoration_v1_add_listener(
+            surface->zxdg_toplevel_decoration_v1,
+            &zxdg_toplevel_decoration_listener,
+            surface->hwnd);
+    }
+
+    surface->current.configured_mode = ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE;
+
     wl_surface_commit(surface->wl_surface);
     wl_display_flush(process_wayland.wl_display);
 
@@ -464,6 +508,15 @@ void wayland_surface_clear_role(struct wayland_surface *surface)
         {
             xdg_surface_destroy(surface->xdg_surface);
             surface->xdg_surface = NULL;
+        }
+
+        if (surface->zxdg_toplevel_decoration_v1)
+        {
+            zxdg_toplevel_decoration_v1_destroy(
+                surface->zxdg_toplevel_decoration_v1
+            );
+            surface->zxdg_toplevel_decoration_v1 = NULL;
+            surface->current.configured_mode = ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE;
         }
         break;
 
@@ -647,6 +700,14 @@ struct wl_output *wayland_surface_get_best_output(struct wayland_surface *surfac
     return best;
 }
 
+static bool is_window_resizable(struct wayland_surface *surface, DWORD style)
+{
+    if (style & WS_THICKFRAME) return TRUE;
+
+    /* Some games need window to be resizable for them to go fullscreen */
+    return surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN;
+}
+
 /**********************************************************************
  *          wayland_surface_reconfigure_geometry
  *
@@ -656,6 +717,7 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
                                                  int width, int height)
 {
     RECT rect;
+    DWORD style = NtUserGetWindowLongW(surface->hwnd, GWL_STYLE);
 
     /* If the window size is bigger than the current state accepts, use the
      * largest visible (from Windows' perspective) subregion of the window. */
@@ -698,26 +760,44 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
                                         rect.left, rect.top,
                                         rect.right - rect.left,
                                         rect.bottom - rect.top);
-        /* HACK: reset fullscreen state to ensure surface is on correct output */
-        if (surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN
-            && wayland_surface_is_toplevel(surface))
+
+        if (wayland_surface_is_toplevel(surface))
         {
-            struct wl_output *output;
-            pthread_mutex_lock(&process_wayland.output_mutex);
-            output = wayland_surface_get_best_output(surface);
-            if (output != surface->wl_output)
+            /* HACK: update minimum and maximum size */
+            if (!is_window_resizable(surface, style))
             {
-                TRACE("Resetting fullscreen state: output %p surface output %p\n",
-                      output, surface->wl_output);
-                xdg_toplevel_unset_fullscreen(surface->xdg_toplevel);
-                wl_display_flush(process_wayland.wl_display);
-                xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
-                /* In case we don't get enter event from compositor
-                   happens on sway for instance
-                */
-                surface->wl_output = output;
+                xdg_toplevel_set_min_size(
+                    surface->xdg_toplevel,
+                    rect.right - rect.left,
+                    rect.bottom - rect.top
+                );
+                xdg_toplevel_set_max_size(
+                    surface->xdg_toplevel,
+                    rect.right - rect.left,
+                    rect.bottom - rect.top
+                );
             }
-            pthread_mutex_unlock(&process_wayland.output_mutex);
+            /* HACK: reset fullscreen state to ensure surface is on correct output */
+            if (surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN)
+            {
+                struct wl_output *output;
+                pthread_mutex_lock(&process_wayland.output_mutex);
+                output = wayland_surface_get_best_output(surface);
+                if (output != surface->wl_output)
+                {
+                    TRACE("Resetting fullscreen state: output %p surface output %p\n",
+                        output, surface->wl_output);
+                    xdg_toplevel_unset_fullscreen(surface->xdg_toplevel);
+                    wl_display_flush(process_wayland.wl_display);
+                    xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
+                    /*
+                        In case we don't get enter event from compositor.
+                        happens on sway for instance
+                    */
+                    surface->wl_output = output;
+                }
+                pthread_mutex_unlock(&process_wayland.output_mutex);
+            }
         }
     }
 }

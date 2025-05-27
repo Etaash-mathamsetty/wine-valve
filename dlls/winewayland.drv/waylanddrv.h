@@ -41,6 +41,7 @@
 #include "tablet-v2-client-protocol.h"
 #include "cursor-shape-v1-client-protocol.h"
 #include "color-management-v1-client-protocol.h"
+#include "xdg-decoration-unstable-v1-client-protocol.h"
 
 #include "windef.h"
 #include "winbase.h"
@@ -184,6 +185,7 @@ struct wayland
     struct xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager_v1;
     struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1;
     struct wp_color_manager_v1 *wp_color_manager_v1;
+    struct zxdg_decoration_manager_v1 *zxdg_decoration_manager_v1;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;
@@ -248,6 +250,7 @@ struct wayland_surface_config
 {
     int32_t width, height;
     enum wayland_surface_config_state state;
+    enum zxdg_toplevel_decoration_v1_mode configured_mode;
     uint32_t serial;
     BOOL processed;
 };
@@ -307,6 +310,7 @@ struct wayland_surface
             struct xdg_toplevel_icon_v1 *xdg_toplevel_icon;
             struct wayland_shm_buffer *small_icon_buffer;
             struct wayland_shm_buffer *big_icon_buffer;
+            struct zxdg_toplevel_decoration_v1 *zxdg_toplevel_decoration_v1;
         };
         struct
         {
@@ -497,6 +501,7 @@ void WAYLAND_WindowPosChanged(HWND hwnd, HWND insert_after, HWND owner_hint, UIN
                               const struct window_rects *new_rects, struct window_surface *surface);
 BOOL WAYLAND_WindowPosChanging(HWND hwnd, UINT swp_flags, BOOL shaped, const struct window_rects *rects);
 BOOL WAYLAND_CreateWindowSurface(HWND hwnd, BOOL layered, const RECT *surface_rect, struct window_surface **surface);
+BOOL WAYLAND_GetWindowStyleMasks(HWND hwnd,  UINT style, UINT ex_style, UINT *style_mask, UINT *ex_style_mask);
 BOOL WAYLAND_HasWindowManager(const char *name);
 UINT WAYLAND_VulkanInit(UINT version, void *vulkan_handle, const struct vulkan_driver_funcs **driver_funcs);
 struct opengl_funcs *WAYLAND_wine_get_wgl_driver(UINT version);
