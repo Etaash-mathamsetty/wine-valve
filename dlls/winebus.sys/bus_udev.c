@@ -1652,6 +1652,13 @@ static void udev_add_device(struct udev_device *dev, int fd)
 
     if (desc.vid == 0x28de && desc.pid == 0x11ff && !strcmp(subsystem, "input"))
     {
+        char *env = getenv("PROTON_PREFER_SDL");
+        if (env && !strcmp(env, "1"))
+        {
+            TRACE("evdev %s: gnoring steam input virtual controller\n", debugstr_a(devnode));
+            close(fd);
+            return;
+        }
         TRACE("evdev %s: detected steam input virtual controller\n", debugstr_a(devnode));
         desc.is_gamepad = TRUE;
         desc.version = 0; /* keep version fixed as 0 so we can hardcode it in ntdll rawinput pipe redirection */
