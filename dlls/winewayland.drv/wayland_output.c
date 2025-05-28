@@ -191,8 +191,6 @@ static void wayland_output_done(struct wayland_output *output)
         output->current.logical_x = output->pending.logical_x;
         output->current.logical_y = output->pending.logical_y;
         apply_user_coord_offset(&output->current.logical_x, &output->current.logical_y);
-        output->current.resolved_x = output->current.logical_x;
-        output->current.resolved_y = output->current.logical_y;
     }
 
     if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_LOGICAL_WH)
