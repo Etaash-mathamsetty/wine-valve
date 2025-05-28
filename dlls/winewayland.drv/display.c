@@ -40,6 +40,7 @@ struct output_info
 {
     int x, y;
     struct wayland_output_state *output;
+    struct wl_output *wl_output; /* FIXME: find a better place to store this */
 };
 
 static int output_info_cmp_primary_x_y(const void *va, const void *vb)
@@ -179,13 +180,6 @@ static void output_info_array_arrange_physical_coords(struct wl_array *output_in
     while (output_info_array_resolve_overlaps(output_info_array) &&
            ++steps < num_outputs)
         continue;
-
-    /* Initialize resolved coordinates with updated coordinates */
-    wl_array_for_each(info, output_info_array)
-    {
-        info->output->resolved_x = info->x;
-        info->output->resolved_y = info->y;
-    }
 
     /* Now that we have our physical pixel coordinates, sort from physical left
      * to right, but ensure the primary output is first. */
@@ -338,6 +332,62 @@ static void wayland_add_device_modes(const struct gdi_device_manager *device_man
 
     device_manager->add_modes(&current, modes_count, modes, param);
     free(modes);
+}
+
+/* Locking is done externally to ensure wl_output remains valid */
+struct wl_output *wayland_get_best_output_for_rect(const RECT *window_rect)
+{
+    struct wayland_output *output;
+    struct wl_output *best = NULL;
+    RECT output_rect, temp, intersect = {0};
+    struct wl_array output_info_array;
+    struct output_info *output_info;
+
+    wl_array_init(&output_info_array);
+
+    wl_list_for_each(output, &process_wayland.output_list, link)
+    {
+        if (!output->current.current_mode) continue;
+        output_info = wl_array_add(&output_info_array, sizeof(*output_info));
+        if (output_info)
+        {
+            output_info->output = &output->current;
+            output_info->wl_output = output->wl_output;
+        }
+        else ERR("Failed to allocate space for output_info\n");
+    }
+
+    output_info_array_arrange_physical_coords(&output_info_array);
+
+    wl_array_for_each(output_info, &output_info_array)
+    {
+        SetRect(&output_rect, 0, 0,
+                output_info->output->current_mode->width,
+                output_info->output->current_mode->height);
+        OffsetRect(&output_rect,
+                output_info->x,
+                output_info->y);
+
+        TRACE("output %s: %s, window %s\n",
+              debugstr_a(output_info->output->name),
+              wine_dbgstr_rect(&output_rect),
+              wine_dbgstr_rect(window_rect));
+
+        if (intersect_rect(&temp, window_rect, &output_rect) &&
+                area_rect(&temp) > area_rect(&intersect))
+        {
+            intersect = temp;
+            best = output_info->wl_output;
+        }
+    }
+
+    wl_array_release(&output_info_array);
+
+    if (!best)
+        WARN("Could not find associated wl_output for rect %s!\n",
+             wine_dbgstr_rect(window_rect));
+
+    return best;
 }
 
 /***********************************************************************

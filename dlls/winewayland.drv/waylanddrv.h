@@ -223,7 +223,6 @@ struct wayland_output_state
     uint32_t max_luminance;
     uint32_t min_luminance;
     char *name;
-    int resolved_x, resolved_y; /* store positions post overlap correction */
     int logical_x, logical_y;
     int logical_w, logical_h;
     int transform;
@@ -334,6 +333,7 @@ BOOL wayland_process_init(void);
 BOOL wayland_output_create(uint32_t id, uint32_t version);
 void wayland_output_destroy(struct wayland_output *output);
 void wayland_output_use_xdg_extension(struct wayland_output *output);
+struct wl_output *wayland_get_best_output_for_rect(const RECT *window_rect);
 
 /**********************************************************************
  *          Wayland surface
@@ -365,7 +365,6 @@ void wayland_client_surface_detach(struct wayland_client_surface *client);
 void wayland_surface_ensure_contents(struct wayland_surface *surface);
 void wayland_surface_set_title(struct wayland_surface *surface, LPCWSTR title);
 void wayland_surface_set_icon(struct wayland_surface *surface, UINT type, ICONINFO *ii);
-struct wl_output *wayland_surface_get_best_output(struct wayland_surface *surface);
 
 static inline BOOL wayland_surface_is_toplevel(struct wayland_surface *surface)
 {
