@@ -423,40 +423,6 @@ static void wine_phys_dev_cleanup(struct wine_phys_dev *phys_dev)
     free(phys_dev->extensions);
 }
 
-static void parse_xr_extensions(struct conversion_context *ctx, const char **extra_extensions, unsigned int *extra_count);
-
-static BOOL is_openxr_extension_supported(VkExtensionProperties *host_prop, uint32_t host_prop_count)
-{
-    unsigned int xr_count = 0, i, j;
-    const char *xr_extensions[64];
-    struct conversion_context ctx;
-
-    if (!getenv("__WINE_OPENXR_VK_DEVICE_EXTENSIONS"))
-    {
-        TRACE("no __WINE_OPENXR_VK_DEVICE_EXTENSIONS.\n");
-        return FALSE;
-    }
-
-    init_conversion_context(&ctx);
-    parse_xr_extensions(&ctx, xr_extensions, &xr_count);
-    for (i = 0; i < xr_count; ++i)
-    {
-        for (j = 0; j < host_prop_count; ++j)
-        {
-            if (!strcmp(host_prop[j].extensionName, xr_extensions[i]))
-                break;
-        }
-        if (j == host_prop_count)
-        {
-            TRACE("no %s.\n", xr_extensions[i]);
-            break;
-        }
-    }
-    free_conversion_context(&ctx);
-    TRACE("supported %d.\n", i == xr_count);
-    return i == xr_count;
-}
-
 static VkResult wine_vk_physical_device_init(struct wine_phys_dev *object, VkPhysicalDevice host_physical_device,
         VkPhysicalDevice client_physical_device, struct vulkan_instance *instance)
 {
@@ -465,7 +431,6 @@ static VkResult wine_vk_physical_device_init(struct wine_phys_dev *object, VkPhy
     VkExtensionProperties *host_properties = NULL;
     VkPhysicalDeviceProperties physdev_properties;
     BOOL have_external_memory_host = FALSE, have_external_memory_fd = FALSE, have_external_semaphore_fd = FALSE;
-    BOOL xr_extensions_supported;
     VkResult res;
     unsigned int i, j;
 
@@ -499,8 +464,6 @@ static VkResult wine_vk_physical_device_init(struct wine_phys_dev *object, VkPhy
         ERR("Failed to enumerate device extensions, res=%d\n", res);
         goto err;
     }
-
-    xr_extensions_supported = is_openxr_extension_supported(host_properties, num_host_properties);
 
     /* Count list of extensions for which we have an implementation.
      * TODO: perform translation for platform specific extensions.
@@ -547,7 +510,10 @@ static VkResult wine_vk_physical_device_init(struct wine_phys_dev *object, VkPhy
         ++num_properties; /* VK_KHR_win32_keyed_mutex */
 
     ++num_properties; /* VK_WINE_openxr_device_extensions */
+<<<<<<< HEAD
     ++num_properties; /* VK_WINE_openvr_device_extensions */
+=======
+>>>>>>> 9d8f0cad948 (fixup! winevulkan: HACK: Advertise VK_WINE_openxr_device_extensions.)
 
     if (!(object->extensions = calloc(num_properties, sizeof(*object->extensions))))
     {
@@ -574,9 +540,12 @@ static VkResult wine_vk_physical_device_init(struct wine_phys_dev *object, VkPhy
     strcpy(object->extensions[j].extensionName, "VK_WINE_openxr_device_extensions");
     TRACE("Enabling extension '%s' for physical device %p\n", object->extensions[j].extensionName, object);
     ++j;
+<<<<<<< HEAD
     strcpy(object->extensions[j].extensionName, "VK_WINE_openvr_device_extensions");
     TRACE("Enabling extension '%s' for physical device %p\n", object->extensions[j].extensionName, object);
     ++j;
+=======
+>>>>>>> 9d8f0cad948 (fixup! winevulkan: HACK: Advertise VK_WINE_openxr_device_extensions.)
 
     object->extension_count = num_properties;
     TRACE("Host supported extensions %u, Wine supported extensions %u\n", num_host_properties, num_properties);
