@@ -611,42 +611,6 @@ static void wayland_surface_get_rect_in_monitor(struct wayland_surface *surface,
     OffsetRect(rect, -surface->window.rect.left, -surface->window.rect.top);
 }
 
-struct wl_output *wayland_surface_get_best_output(struct wayland_surface *surface)
-{
-    struct wayland_output *output;
-    struct wl_output *best = NULL;
-    RECT output_rect, temp, intersect = {0};
-    const RECT *window_rect = &surface->window.rect;
-
-    wl_list_for_each(output, &process_wayland.output_list, link)
-    {
-        SetRect(&output_rect, 0, 0,
-                output->current.current_mode->width,
-                output->current.current_mode->height);
-        OffsetRect(&output_rect,
-                output->current.resolved_x,
-                output->current.resolved_y);
-
-        TRACE("output %s: %s, window %s\n",
-              output->current.name,
-              wine_dbgstr_rect(&output_rect),
-              wine_dbgstr_rect(window_rect));
-
-        if (intersect_rect(&temp, window_rect, &output_rect) &&
-                area_rect(&temp) > area_rect(&intersect))
-        {
-            intersect = temp;
-            best = output->wl_output;
-        }
-    }
-
-    if (!best)
-        WARN("Could not find associated wl_output for rect %s!\n",
-             wine_dbgstr_rect(window_rect));
-
-    return best;
-}
-
 /**********************************************************************
  *          wayland_surface_reconfigure_geometry
  *
@@ -704,7 +668,7 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
         {
             struct wl_output *output;
             pthread_mutex_lock(&process_wayland.output_mutex);
-            output = wayland_surface_get_best_output(surface);
+            output = wayland_get_best_output_for_rect(&surface->window.rect);
             if (output != surface->wl_output)
             {
                 TRACE("Resetting fullscreen state: output %p surface output %p\n",
