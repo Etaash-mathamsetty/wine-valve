@@ -274,9 +274,11 @@ static void wayland_surface_update_state_toplevel(struct wayland_surface *surfac
         if ((surface->window.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN) &&
            !(surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN))
         {
+            struct wl_output *output;
             pthread_mutex_lock(&process_wayland.output_mutex);
-            xdg_toplevel_set_fullscreen(surface->xdg_toplevel,
-                        wayland_surface_get_best_output(surface));
+            output = wayland_get_best_output_for_rect(&surface->window.rect);
+            xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
+            surface->wl_output = output;
             pthread_mutex_unlock(&process_wayland.output_mutex);
         }
     }
