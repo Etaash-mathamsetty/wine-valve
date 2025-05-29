@@ -19,6 +19,7 @@
  */
 
 #include <stdarg.h>
+#include <math.h>
 
 #include "ntstatus.h"
 #include "winerror.h"
@@ -122,6 +123,9 @@ struct AMDAntiLag2
 {
     IAmdExtAntiLagApi IAmdExtAntiLagApi_iface;
     LONG ref;
+    unsigned int maxFPS;
+    unsigned int eMode;
+    ULONG64 last_sleep;
 };
 
 static struct AMDAntiLag2* impl_from_IAmdExtAntiLagApi(IAmdExtAntiLagApi *iface)
@@ -149,25 +153,79 @@ HRESULT STDMETHODCALLTYPE AMDAntiLag2_QueryInterface(IAmdExtAntiLagApi *iface, R
     return E_NOINTERFACE;
 }
 
+static inline ULONG64 get_os_counter(void)
+{
+    LARGE_INTEGER counter;
+
+    QueryPerformanceCounter(&counter);
+
+    return counter.QuadPart;
+}
+
+static inline ULONG64 get_os_frequency(void)
+{
+    static LARGE_INTEGER f;
+
+    if (!f.QuadPart) QueryPerformanceFrequency(&f);
+
+    return f.QuadPart;
+}
+
+/*
+    Implement based on
+    https://gitlab.freedesktop.org/daniel-schuermann/mesa/-/commit/76cf04b632123fd7fb71d7d821394c52e94db35e
+*/
 HRESULT STDMETHODCALLTYPE AMDAntiLag2_UpdateAntiLagState(IAmdExtAntiLagApi *iface, void* data)
 {
     union {
         struct APIData_v1 *v1;
         struct APIData_v2 *v2;
     } apidata = {data};
+    struct AMDAntiLag2 *this = impl_from_IAmdExtAntiLagApi(iface);
     TRACE("(%p %p)!\n", iface, data);
 
     if (!data) {
-        /* perform sleep */
+        /* perform sleep when anti lag is enabled */
+        if (this->eMode == 1)
+        {
+            ULONG64 time = get_os_counter();
+            if (time - this->last_sleep > 10 * get_os_frequency()) goto done_sleep;
+
+            if (this->maxFPS)
+            {
+                double target_frametime = 1.0 / this->maxFPS;
+                while (get_os_counter() <
+                        (this->last_sleep + round(target_frametime * get_os_frequency())))
+                {
+                    /* do nothing :) */
+                }
+
+            } else {
+                /* conservative target */
+                ULONG64 target = this->last_sleep + (time - this->last_sleep) / 2;
+
+                while (get_os_counter() < target)
+                {
+                    /* do nothing :) */
+                }
+            }
+
+            done_sleep:
+            this->last_sleep = get_os_counter();
+        }
     } else if(apidata.v1->uiVersion == 1) {
         /* access apidata v1 */
-        if(apidata.v1->uiSize != sizeof(struct APIData_v1)) return E_INVALIDARG;
+        if (apidata.v1->uiSize != sizeof(struct APIData_v1)) return E_INVALIDARG;
+        this->maxFPS = apidata.v1->maxFPS;
+        this->eMode = apidata.v1->eMode;
+        if (apidata.v1->sControlStr) FIXME("unsupported control string %s\n",
+                                           debugstr_a(apidata.v1->sControlStr));
     } else if(apidata.v1->uiVersion == 2) {
         /* access apidata v2 */
         if(apidata.v2->uiSize != sizeof(struct APIData_v2)) return E_INVALIDARG;
     }
 
-    return E_NOTIMPL;
+    return S_OK;
 }
 
 static const struct IAmdExtAntiLagApiVtbl AMDANTILAG_vtable = {
