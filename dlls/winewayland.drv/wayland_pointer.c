@@ -54,6 +54,7 @@ static void pointer_handle_motion_internal(wl_fixed_t sx, wl_fixed_t sy)
     POINT screen;
     struct wayland_surface *surface;
     struct wayland_win_data *data;
+    struct wayland_pointer *pointer = &process_wayland.pointer;
 
     if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
     if (!(data = wayland_win_data_get(hwnd))) return;
@@ -88,6 +89,25 @@ static void pointer_handle_motion_internal(wl_fixed_t sx, wl_fixed_t sy)
     TRACE("hwnd=%p wayland_xy=%.2f,%.2f screen_xy=%d,%d\n",
           hwnd, wl_fixed_to_double(sx), wl_fixed_to_double(sy),
           (int)screen.x, (int)screen.y);
+
+    if (InterlockedCompareExchange(&pointer->confinement_updated, FALSE, TRUE))
+    {
+        TRACE("Ignoring, confinement was updated recently!\n");
+        pointer->last_x = screen.x;
+        pointer->last_y = screen.y;
+        return;
+    }
+
+    NtUserSendHardwareInput(hwnd, 0, &input, 0);
+
+    input.mi.dx -= pointer->last_x;
+    input.mi.dy -= pointer->last_y;
+    input.mi.dwFlags = MOUSEEVENTF_MOVE;
+
+    TRACE("relative=%d,%d\n", input.mi.dx, input.mi.dy);
+
+    pointer->last_x = screen.x;
+    pointer->last_y = screen.y;
 
     NtUserSendHardwareInput(hwnd, 0, &input, 0);
 }
@@ -875,6 +895,8 @@ static void wayland_pointer_update_constraint(struct wl_surface *wl_surface,
         pointer->zwp_relative_pointer_v1 = NULL;
         TRACE("Disabling relative motion\n");
     }
+
+    InterlockedExchange(&pointer->confinement_updated, TRUE);
 }
 
 void wayland_pointer_clear_constraint(void)

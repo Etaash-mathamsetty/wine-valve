@@ -111,8 +111,11 @@ struct wayland_pointer
     HWND focused_hwnd;
     HWND constraint_hwnd;
     BOOL pending_warp;
+    BOOL confinement_updated;
     uint32_t enter_serial;
     uint32_t button_serial;
+    LONG last_x;
+    LONG last_y;
     struct wayland_cursor cursor;
     double accum_x;
     double accum_y;
