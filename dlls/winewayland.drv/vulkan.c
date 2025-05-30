@@ -75,7 +75,7 @@ static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_ins
 
     TRACE("%p %p %p %p\n", hwnd, instance, surface, private);
 
-    if (!(client = get_client_surface(hwnd)))
+    if (!(client = wayland_client_surface_create(hwnd)))
     {
         ERR("Failed to create client surface for hwnd=%p\n", hwnd);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
@@ -103,6 +103,7 @@ static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_ins
         return res;
     }
 
+    set_client_surface(hwnd, client);
     *private = client;
 
     TRACE("Created surface=0x%s, private=%p\n", wine_dbgstr_longlong(*surface), *private);
@@ -128,8 +129,10 @@ static void wayland_vulkan_surface_update(HWND hwnd, void *private)
 
 static void wayland_vulkan_surface_presented(HWND hwnd, void *private, VkResult result)
 {
+    struct wayland_client_surface *client = private;
     HWND toplevel = NtUserGetAncestor(hwnd, GA_ROOT);
     ensure_window_surface_contents(toplevel);
+    set_client_surface(hwnd, client);
 }
 
 static BOOL wayland_vulkan_surface_enable_fshack(HWND hwnd, void *private)
