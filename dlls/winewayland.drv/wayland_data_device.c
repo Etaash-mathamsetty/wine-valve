@@ -585,11 +585,19 @@ static void data_control_device_finished(
 {
 }
 
+static void data_control_device_primary_selection(
+    void *data, struct zwlr_data_control_device_v1 *zwlr_data_control_device_v1,
+    struct zwlr_data_control_offer_v1 *id
+)
+{
+}
+
 static const struct zwlr_data_control_device_v1_listener data_control_device_listener =
 {
     data_control_device_data_offer,
     data_control_device_selection,
     data_control_device_finished,
+    data_control_device_primary_selection
 };
 
 /**********************************************************************
