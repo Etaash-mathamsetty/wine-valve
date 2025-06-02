@@ -162,11 +162,32 @@ static BOOL output_info_array_resolve_overlaps(struct wl_array *output_info_arra
     return found_overlap;
 }
 
+/* Grab offset based on the user specified monitor name */
+static void get_user_named_offset(int* x, int *y, struct wl_array* output_info_array)
+{
+    struct output_info *info = NULL;
+    char *env = getenv("WAYLANDDRV_PRIMARY_MONITOR");
+    *x = *y = 0;
+
+    if (!env) return;
+
+    wl_array_for_each(info, output_info_array)
+    {
+        if (!strcmp(info->output->name, env))
+        {
+            *x = info->x;
+            *y = info->y;
+            break;
+        }
+    }
+}
+
 static void output_info_array_arrange_physical_coords(struct wl_array *output_info_array)
 {
     struct output_info *info;
     size_t num_outputs = output_info_array->size / sizeof(struct output_info);
     int steps = 0;
+    int x_offset, y_offset;
 
     /* Set the initial physical pixel coordinates. */
     wl_array_for_each(info, output_info_array)
@@ -180,6 +201,14 @@ static void output_info_array_arrange_physical_coords(struct wl_array *output_in
     while (output_info_array_resolve_overlaps(output_info_array) &&
            ++steps < num_outputs)
         continue;
+
+    get_user_named_offset(&x_offset, &y_offset, output_info_array);
+
+    wl_array_for_each(info, output_info_array)
+    {
+        info->x -= x_offset;
+        info->y -= y_offset;
+    }
 
     /* Now that we have our physical pixel coordinates, sort from physical left
      * to right, but ensure the primary output is first. */
