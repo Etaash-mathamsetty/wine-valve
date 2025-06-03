@@ -273,6 +273,8 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     data[33] = (primaries->w_x & 0x3fc) >> 2;
     data[34] = (primaries->w_y & 0x3fc) >> 2;
 
+    for (i = 0; i < 16; ++i) data[38 + i] = 1;
+
     p = data + 54;
 
     *(uint16_t*)&p[0] = 0x0; /* 0 = reserved */
