@@ -380,7 +380,7 @@ static void relative_pointer_v1_relative_motion(void *private,
     pointer->accum_y += screen_y;
 
     input.type = INPUT_MOUSE;
-    input.mi.time = time_us / 1000;
+    input.mi.time = round(time_us / 1000.0);
     input.mi.dx = round(pointer->accum_x);
     input.mi.dy = round(pointer->accum_y);
     input.mi.dwFlags = MOUSEEVENTF_MOVE;
