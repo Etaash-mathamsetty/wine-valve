@@ -343,11 +343,14 @@ NTSTATUS wg_init_gstreamer(void *arg)
         }
     }
 
+/*
+ *  don't enable media converter in these builds since we enable all codecs
     if (!media_converter_init())
     {
         GST_ERROR("Failed to init media converter.");
         return STATUS_UNSUCCESSFUL;
     }
+*/
 
     if (!GST_ELEMENT_REGISTER(winegstreamerstepper, NULL))
         GST_ERROR("Failed to register the stepper element");
