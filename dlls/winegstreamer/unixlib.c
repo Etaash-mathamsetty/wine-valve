@@ -267,7 +267,7 @@ NTSTATUS wg_init_gstreamer(void *arg)
     char *args[] = {arg0, arg1, NULL};
     int argc = ARRAY_SIZE(args) - 1;
     char **argv = args;
-    const char *e;
+    const char *e, *env;
     GError *err;
     DWORD_PTR process_mask;
 
@@ -343,14 +343,15 @@ NTSTATUS wg_init_gstreamer(void *arg)
         }
     }
 
-/*
- *  don't enable media converter in these builds since we enable all codecs
-    if (!media_converter_init())
+    env = getenv("PROTON_ENABLE_MEDIACONV");
+
+    /*  don't enable media converter by default since we enable all codecs */
+    if (env && !strcmp(env, "1") && !media_converter_init())
     {
         GST_ERROR("Failed to init media converter.");
         return STATUS_UNSUCCESSFUL;
     }
-*/
+
 
     if (!GST_ELEMENT_REGISTER(winegstreamerstepper, NULL))
         GST_ERROR("Failed to register the stepper element");
