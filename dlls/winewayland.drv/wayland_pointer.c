@@ -99,7 +99,7 @@ static void pointer_handle_motion_internal(wl_fixed_t sx, wl_fixed_t sy, uint32_
         return;
     }
 
-    NtUserSendHardwareInput(hwnd, 0, &input, 0);
+    NtUserSendHardwareInput(hwnd, SEND_HWMSG_NO_RAW, &input, 0);
 
     input.mi.dx -= pointer->last_x;
     input.mi.dy -= pointer->last_y;
