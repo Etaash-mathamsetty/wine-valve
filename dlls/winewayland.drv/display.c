@@ -163,7 +163,7 @@ static BOOL output_info_array_resolve_overlaps(struct wl_array *output_info_arra
 }
 
 /* Grab offset based on the user specified monitor name */
-static void get_user_named_offset(int* x, int *y, struct wl_array* output_info_array)
+static void get_user_named_offset(struct wl_array *output_info_array, int *x, int *y)
 {
     struct output_info *info = NULL;
     char *env = getenv("WAYLANDDRV_PRIMARY_MONITOR");
@@ -202,7 +202,7 @@ static void output_info_array_arrange_physical_coords(struct wl_array *output_in
            ++steps < num_outputs)
         continue;
 
-    get_user_named_offset(&x_offset, &y_offset, output_info_array);
+    get_user_named_offset(output_info_array, &x_offset, &y_offset);
 
     wl_array_for_each(info, output_info_array)
     {
