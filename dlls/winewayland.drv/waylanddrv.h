@@ -85,6 +85,20 @@ enum wayland_surface_role
     WAYLAND_SURFACE_ROLE_SUBSURFACE,
 };
 
+enum wayland_pointer_frame_flags
+{
+    WAYLAND_POINTER_FRAME_ABS = (1 << 0),
+    WAYLAND_POINTER_FRAME_REL = (1 << 1),
+    WAYLAND_POINTER_FRAME_WHEEL = (1 << 2),
+    WAYLAND_POINTER_FRAME_WHEELH = (1 << 3)
+};
+
+enum wayland_pointer_axis_stop_flags
+{
+    WAYLAND_POINTER_AXIS_STOP_VERTICAL = (1 << 0),
+    WAYLAND_POINTER_AXIS_STOP_HORIZONTAL = (1 << 1)
+};
+
 struct wayland_keyboard
 {
     struct wl_keyboard *wl_keyboard;
@@ -112,16 +126,20 @@ struct wayland_pointer
     HWND constraint_hwnd;
     BOOL pending_warp;
     BOOL confinement_updated;
+    BOOL relative_only;
     uint32_t enter_serial;
     uint32_t button_serial;
-    LONG last_x;
-    LONG last_y;
     struct wayland_cursor cursor;
-    double accum_x;
-    double accum_y;
-    double accum_wheel;
-    double accum_wheelH;
-    LONG discrete_event_handled;
+    struct
+    {
+        LONG discrete_event_handled;
+        int x, y;
+        double dx, dy;
+        double dx_unaccel, dy_unaccel;
+        double wheel, wheelH;
+        unsigned int flags;
+        unsigned int axis_stop;
+    } pointer_frame;
     pthread_mutex_t mutex;
 };
 
