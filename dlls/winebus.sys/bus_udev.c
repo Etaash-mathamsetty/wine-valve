@@ -1743,7 +1743,7 @@ static void udev_add_device(struct udev_device *dev, int fd)
         char *env = getenv("PROTON_NO_STEAMINPUT");
         if (env && !strcmp(env, "1"))
         {
-            TRACE("evdev %s: gnoring steam input virtual controller\n", debugstr_a(devnode));
+            TRACE("evdev %s: ignoring steam input virtual controller\n", debugstr_a(devnode));
             close(fd);
             return;
         }
