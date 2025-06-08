@@ -129,8 +129,6 @@ static void pointer_handle_enter(void *data, struct wl_pointer *wl_pointer,
     /* reset all accumulators */
     pointer->pointer_frame.dx = 0;
     pointer->pointer_frame.dy = 0;
-    pointer->pointer_frame.dx_unaccel = 0;
-    pointer->pointer_frame.dy_unaccel = 0;
     pointer->pointer_frame.wheel = 0;
     pointer->pointer_frame.wheelH = 0;
     pthread_mutex_unlock(&pointer->mutex);
@@ -287,30 +285,20 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
         input.mi.dy = pointer->pointer_frame.y;
         input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
         NtUserSendHardwareInput(hwnd, SEND_HWMSG_NO_RAW, &input, 0);
+    }
 
-        if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_REL)
-        {
-            input.mi.dx = round(pointer->pointer_frame.dx);
-            input.mi.dy = round(pointer->pointer_frame.dy);
-            pointer->pointer_frame.dx -= input.mi.dx;
-            pointer->pointer_frame.dy -= input.mi.dy;
-            pointer->pointer_frame.dx_unaccel
-                -= round(pointer->pointer_frame.dx_unaccel);
-            pointer->pointer_frame.dy_unaccel
-                -= round(pointer->pointer_frame.dy_unaccel);
-            input.mi.dwFlags = MOUSEEVENTF_MOVE;
-            NtUserSendHardwareInput(hwnd, SEND_HWMSG_NO_MSG, &input, 0);
-        }
-    } else if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_REL) {
-        /* HACK: use raw input when there is only relative motion */
-        input.mi.dx = round(pointer->pointer_frame.dx_unaccel);
-        input.mi.dy = round(pointer->pointer_frame.dy_unaccel);
-        pointer->pointer_frame.dx_unaccel -= input.mi.dx;
-        pointer->pointer_frame.dy_unaccel -= input.mi.dy;
-        pointer->pointer_frame.dx -= round(pointer->pointer_frame.dx);
-        pointer->pointer_frame.dy -= round(pointer->pointer_frame.dy);
+    /*
+     * Always send raw input
+     * FIXME: is this correct behavior?
+    */
+    if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_REL) {
+        input.mi.dx = round(pointer->pointer_frame.dx);
+        input.mi.dy = round(pointer->pointer_frame.dy);
+        pointer->pointer_frame.dx -= input.mi.dx;
+        pointer->pointer_frame.dy -= input.mi.dy;
         input.mi.dwFlags = MOUSEEVENTF_MOVE;
-        NtUserSendHardwareInput(hwnd, 0, &input, 0); /* FIXME: flags ? */
+        if (input.mi.dx != 0 || input.mi.dy != 0)
+            NtUserSendHardwareInput(hwnd, SEND_HWMSG_NO_MSG, &input, 0);
     }
 
     /* zero these values just in case */
@@ -474,25 +462,22 @@ static void relative_pointer_v1_relative_motion(void *private,
 
     pthread_mutex_lock(&pointer->mutex);
 
-    pointer->pointer_frame.dx_unaccel += f_dxu;
-    pointer->pointer_frame.dy_unaccel += f_dyu;
-    pointer->pointer_frame.dx += f_dx;
-    pointer->pointer_frame.dy += f_dy;
 
     if (is_rawinput_disabled())
     {
-        pointer->pointer_frame.dx_unaccel = pointer->pointer_frame.dx;
-        pointer->pointer_frame.dy_unaccel = pointer->pointer_frame.dy;
+        pointer->pointer_frame.dx += f_dx;
+        pointer->pointer_frame.dy += f_dy;
+    } else {
+        pointer->pointer_frame.dx += f_dxu;
+        pointer->pointer_frame.dy += f_dyu;
     }
 
     pointer->pointer_frame.flags |= WAYLAND_POINTER_FRAME_REL;
 
-    TRACE("hwnd=%p dxdy=%.2f,%.2f dxdy_raw=%.2f,%.2f\n",
+    TRACE("hwnd=%p dxdy=%.2f,%.2f\n",
           hwnd,
           pointer->pointer_frame.dx,
-          pointer->pointer_frame.dy,
-          pointer->pointer_frame.dx_unaccel,
-          pointer->pointer_frame.dy_unaccel);
+          pointer->pointer_frame.dy);
 
     pthread_mutex_unlock(&pointer->mutex);
 }
@@ -1003,8 +988,6 @@ static void wayland_pointer_update_constraint(struct wl_surface *wl_surface,
     {
         pointer->pointer_frame.dx = 0;
         pointer->pointer_frame.dy = 0;
-        pointer->pointer_frame.dx_unaccel = 0;
-        pointer->pointer_frame.dy_unaccel = 0;
         TRACE("Enabling relative only motion\n");
     }
     else if (!needs_relative && pointer->relative_only)

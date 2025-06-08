@@ -135,7 +135,6 @@ struct wayland_pointer
         LONG discrete_event_handled;
         int x, y;
         double dx, dy;
-        double dx_unaccel, dy_unaccel;
         double wheel, wheelH;
         unsigned int flags;
         unsigned int axis_stop;
