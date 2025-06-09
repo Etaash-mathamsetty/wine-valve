@@ -213,8 +213,12 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
     else if (strcmp(interface, "xdg_system_bell_v1") == 0)
     {
         process_wayland.xdg_system_bell_v1 =
-            wl_registry_bind(registry, id, &xdg_system_bell_v1_interface,
-                             1);
+            wl_registry_bind(registry, id, &xdg_system_bell_v1_interface, 1);
+    }
+    else if (strcmp(interface, "xdg_activation_v1") == 0)
+    {
+        process_wayland.xdg_activation_v1 =
+            wl_registry_bind(registry, id, &xdg_activation_v1_interface, 1);
     }
 }
 
@@ -357,6 +361,9 @@ BOOL wayland_process_init(void)
 
     if (!process_wayland.xdg_system_bell_v1)
         ERR("Wayland compositor doesn't xdg_system_bell_v1! (Beep will not be supported)\n");
+
+    if (!process_wayland.xdg_activation_v1)
+        ERR("Wayland compositor doesn't support xdg_activation_v1! (Flash Window will not be supported)\n");
 
     process_wayland.initialized = TRUE;
 
