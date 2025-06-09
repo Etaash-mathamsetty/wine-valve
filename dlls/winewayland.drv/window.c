@@ -794,6 +794,23 @@ void WAYLAND_Beep(void)
 }
 
 /**********************************************************************
+ *          WAYLAND_FlashWindowEx
+ */
+void WAYLAND_FlashWindowEx(FLASHWINFO *info)
+{
+    struct wayland_win_data *data;
+
+    TRACE("%p\n", info);
+
+    if ((data = wayland_win_data_get(info->hwnd)))
+    {
+        if (data->wayland_surface)
+            wayland_surface_set_activation(data->wayland_surface, info->dwFlags);
+        wayland_win_data_release(data);
+    }
+}
+
+/**********************************************************************
  *          get_client_surface
  */
 struct wayland_client_surface *get_client_surface(HWND hwnd)
