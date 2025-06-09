@@ -46,7 +46,7 @@ static HWND wayland_pointer_get_focused_hwnd(void)
     return hwnd;
 }
 
-static void pointer_handle_motion_internal(wl_fixed_t sx, wl_fixed_t sy)
+static void pointer_handle_motion_internal(wl_fixed_t sx, wl_fixed_t sy, BOOL send_input)
 {
     RECT *window_rect;
     HWND hwnd;
@@ -80,14 +80,26 @@ static void pointer_handle_motion_internal(wl_fixed_t sx, wl_fixed_t sy)
 
     wayland_win_data_release(data);
 
-    pthread_mutex_lock(&pointer->mutex);
+    if (!send_input)
+    {
+        pthread_mutex_lock(&pointer->mutex);
 
-    pointer->pointer_frame.x = screen.x;
-    pointer->pointer_frame.y = screen.y;
+        pointer->pointer_frame.x = screen.x;
+        pointer->pointer_frame.y = screen.y;
 
-    pointer->pointer_frame.flags |= WAYLAND_POINTER_FRAME_ABS;
+        pointer->pointer_frame.flags |= WAYLAND_POINTER_FRAME_ABS;
 
-    pthread_mutex_unlock(&pointer->mutex);
+        pthread_mutex_unlock(&pointer->mutex);
+    } else {
+        INPUT input = {0};
+
+        input.type = INPUT_MOUSE;
+        input.mi.dx = screen.x;
+        input.mi.dy = screen.y;
+        input.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
+
+        NtUserSendHardwareInput(hwnd, SEND_HWMSG_NO_RAW, &input, 0);
+    }
 
     TRACE("hwnd=%p wayland_xy=%.2f,%.2f screen_xy=%d,%d\n",
                  hwnd, wl_fixed_to_double(sx), wl_fixed_to_double(sy),
@@ -102,7 +114,7 @@ static void pointer_handle_motion(void *data, struct wl_pointer *wl_pointer,
     /* Ignore absolute motion events if in relative mode. */
     if (pointer->relative_only) return;
 
-    pointer_handle_motion_internal(sx, sy);
+    pointer_handle_motion_internal(sx, sy, FALSE);
 }
 
 static void wayland_set_cursor(HWND hwnd, HCURSOR hcursor, BOOL use_hcursor);
@@ -140,7 +152,7 @@ static void pointer_handle_enter(void *data, struct wl_pointer *wl_pointer,
     /* Handle the enter as a motion, to account for cases where the
      * window first appears beneath the pointer and won't get a separate
      * motion event. */
-    pointer_handle_motion_internal(sx, sy);
+    pointer_handle_motion_internal(sx, sy, TRUE);
 }
 
 static void pointer_handle_leave(void *data, struct wl_pointer *wl_pointer,
