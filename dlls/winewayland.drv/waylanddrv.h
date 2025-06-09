@@ -40,6 +40,7 @@
 #include "fractional-scale-v1-client-protocol.h"
 #include "color-management-v1-client-protocol.h"
 #include "xdg-system-bell-v1-client-protocol.h"
+#include "xdg-activation-v1-client-protocol.h"
 
 #include "windef.h"
 #include "winbase.h"
@@ -201,6 +202,7 @@ struct wayland
     struct xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager_v1;
     struct wp_color_manager_v1 *wp_color_manager_v1;
     struct xdg_system_bell_v1 *xdg_system_bell_v1;
+    struct xdg_activation_v1 *xdg_activation_v1;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;
@@ -312,6 +314,8 @@ struct wayland_surface
     struct wl_output *wl_output;
     struct wp_viewport *wp_viewport;
     struct wp_fractional_scale_v1 *wp_fractional_scale_v1;
+    /* FIXME: should this be moved? */
+    struct xdg_activation_token_v1 *xdg_activation_token_v1;
 
     enum wayland_surface_role role;
     union
@@ -383,6 +387,7 @@ void wayland_client_surface_detach(struct wayland_client_surface *client);
 void wayland_surface_ensure_contents(struct wayland_surface *surface);
 void wayland_surface_set_title(struct wayland_surface *surface, LPCWSTR title);
 void wayland_surface_set_icon(struct wayland_surface *surface, UINT type, ICONINFO *ii);
+void wayland_surface_set_activation(struct wayland_surface *surface, BOOL activation);
 
 static inline BOOL wayland_surface_is_toplevel(struct wayland_surface *surface)
 {
@@ -501,6 +506,7 @@ LRESULT WAYLAND_ClipboardWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 BOOL WAYLAND_ClipCursor(const RECT *clip, BOOL reset);
 LRESULT WAYLAND_DesktopWindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 void WAYLAND_DestroyWindow(HWND hwnd);
+void WAYLAND_FlashWindowEx(FLASHWINFO *info);
 BOOL WAYLAND_SetIMECompositionRect(HWND hwnd, RECT rect);
 void WAYLAND_SetCursor(HWND hwnd, HCURSOR hcursor);
 BOOL WAYLAND_SetCursorPos(INT x, INT y);
