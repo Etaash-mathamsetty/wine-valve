@@ -1068,6 +1068,15 @@ BOOL WAYLAND_ClipCursor(const RECT *clip, BOOL reset)
     NtUserGetCursorPos(&cursor_pos);
     hwnd = NtUserGetForegroundWindow();
 
+    /* HACK: confine to parent surface on KWin */
+    if (WAYLAND_HasWindowManager("KDE"))
+    {
+        HWND old = hwnd;
+        hwnd = NtUserGetAncestor(hwnd, GA_ROOT);
+        if (old != hwnd)
+            WARN("Confining to parent surface!\n");
+    }
+
     if (!(data = wayland_win_data_get(hwnd))) return FALSE;
     if ((surface = data->wayland_surface))
     {
