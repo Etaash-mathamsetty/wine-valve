@@ -800,7 +800,7 @@ void WAYLAND_FlashWindowEx(FLASHWINFO *info)
 {
     struct wayland_win_data *data;
 
-    TRACE("%p\n", info);
+    TRACE("hwnd=%p\n", info->hwnd);
 
     if ((data = wayland_win_data_get(info->hwnd)))
     {
@@ -815,9 +815,9 @@ void WAYLAND_FlashWindowEx(FLASHWINFO *info)
  */
 struct wayland_client_surface *get_client_surface(HWND hwnd)
 {
-    HWND toplevel = NtUserGetAncestor(hwnd, GA_ROOT);
     struct wayland_client_surface *client;
     struct wayland_win_data *data;
+    HWND toplevel = NtUserGetAncestor(hwnd, GA_ROOT);
 
     if ((data = wayland_win_data_get(hwnd)))
     {
