@@ -1417,7 +1417,7 @@ void wayland_surface_set_icon(struct wayland_surface *surface, UINT type, ICONIN
                                             surface->small_icon_buffer->wl_buffer, 1);
         }
 
-        xdg_toplevel_icon_v1_set_name(surface->xdg_toplevel_icon, "");
+        xdg_toplevel_icon_v1_set_name(surface->xdg_toplevel_icon, process_name ? process_name : "");
 
         xdg_toplevel_icon_manager_v1_set_icon(process_wayland.xdg_toplevel_icon_manager_v1,
                                               surface->xdg_toplevel, surface->xdg_toplevel_icon);
