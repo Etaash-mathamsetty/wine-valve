@@ -7559,8 +7559,10 @@ NTSTATUS WINAPI NtUserDisplayConfigGetDeviceInfo( DISPLAYCONFIG_DEVICE_INFO_HEAD
     {
         DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO *info = (DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO *)packet;
         const char *env;
+        static int once;
 
-        FIXME( "DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO semi-stub.\n" );
+        if (!once++)
+            FIXME( "DISPLAYCONFIG_DEVICE_INFO_GET_ADVANCED_COLOR_INFO semi-stub.\n" );
 
         if (packet->size < sizeof(*info))
             return STATUS_INVALID_PARAMETER;
