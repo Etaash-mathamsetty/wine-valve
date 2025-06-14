@@ -240,8 +240,8 @@ struct wayland_output_state
     struct rb_tree modes;
     struct wayland_output_mode *current_mode;
     struct wayland_primaries primaries;
-    uint32_t max_luminance;
-    uint32_t min_luminance;
+    uint32_t max_fall;
+    uint32_t max_cll;
     char *name;
     int logical_x, logical_y;
     int logical_w, logical_h;
