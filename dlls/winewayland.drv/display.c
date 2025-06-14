@@ -235,9 +235,19 @@ static void wayland_add_device_source(const struct gdi_device_manager *device_ma
     device_manager->add_source(output_info->output->name, state_flags, dpi, param);
 }
 
+/* We love gamescope */
+static uint8_t encode_max_luminance(float nits)
+{
+    if (nits == 0.0f)
+        return 0;
+
+    return ceilf((logf(nits / 50.0f) / logf(2.0f)) * 32.0f);
+}
+
 /* emulate some edid data */
 static UINT get_edid(const struct output_info *output_info, unsigned char **data_out)
 {
+    const unsigned int edid_size = 256;
     unsigned char *data, *p;
     unsigned int i, mwidth, mheight;
     unsigned char c;
@@ -248,7 +258,8 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     mwidth = mode->width / 60;
     mheight = mode->height / 60;
 
-    *data_out = calloc( 1, 128 );
+    /* another 128 bytes needed for CTA-861 extension */
+    *data_out = calloc( 1, edid_size );
     data = *data_out;
 
     if (!data) return 0;
@@ -299,11 +310,39 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     p[3] = 0x10;
 
     c = 0;
+    data[126] = 1; /* one extension */
     for (i = 0; i < 127; ++i)
         c += data[i];
     data[127] = 256 - c;
 
-    return 128;
+    p = data + 128;
+
+    p[0] = 2;
+    p[1] = 3;
+    p[2] = 0xa; /* FIXME: is this correct?  */
+
+    p += 4;
+
+    p[0] = (0x7 << 5) | 0x5; /* HDR static metadata size */
+    p[1] = 6;
+
+    /* HDR static metadata block */
+
+    p[2] = 0x7; /* ST2084 | SDR | HDR */
+    p[3] = 1;
+    p[4] = encode_max_luminance(output_info->output->max_cll);
+    p[5] = encode_max_luminance(output_info->output->max_fall);
+    p[6] = 0; /* assume undefined */
+
+    /* reset p to beginning of the CTA block */
+    p = data + 128;
+    c = 0;
+
+    for (i = 0; i < 127; ++i)
+        c += p[i];
+    p[127] = 256 - c;
+
+    return edid_size;
 }
 
 static void wayland_add_device_monitor(const struct gdi_device_manager *device_manager,

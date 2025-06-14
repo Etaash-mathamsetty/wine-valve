@@ -41,7 +41,8 @@ static uint32_t next_output_id = 0;
 #define WAYLAND_OUTPUT_CHANGED_LOGICAL_WH 0x08
 #define WAYLAND_OUTPUT_CHANGED_TRANSFORM  0x10
 #define WAYLAND_OUTPUT_CHANGED_PRIMARIES  0x20
-#define WAYLAND_OUTPUT_CHANGED_LUMINANCE  0x40
+#define WAYLAND_OUTPUT_CHANGED_FALL       0x40
+#define WAYLAND_OUTPUT_CHANGED_CLL        0x80
 
 /**********************************************************************
  *          Output handling
@@ -204,17 +205,21 @@ static void wayland_output_done(struct wayland_output *output)
         output->current.transform = output->pending.transform;
     }
 
+
+    /* Copy here as well in case this gets called first */
     if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_PRIMARIES)
     {
-        /* Copy here as well in case this gets called first */
         output->current.primaries = output->pending.primaries;
     }
 
-    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_LUMINANCE)
+    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_FALL)
     {
-        output->current.max_luminance = output->pending.max_luminance;
-        output->current.min_luminance = output->pending.min_luminance;
+        output->current.max_fall = output->pending.max_fall;
+    }
 
+    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_CLL)
+    {
+        output->current.max_cll = output->pending.max_cll;
     }
 
     output->pending_flags = 0;
@@ -366,11 +371,16 @@ static void wp_image_description_info_v1_done(void *data,
         output->pending_flags &= ~WAYLAND_OUTPUT_CHANGED_PRIMARIES;
     }
 
-    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_LUMINANCE)
+    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_FALL)
     {
-        output->current.max_luminance = output->pending.max_luminance;
-        output->current.min_luminance = output->pending.min_luminance;
-        output->pending_flags &= ~WAYLAND_OUTPUT_CHANGED_LUMINANCE;
+        output->current.max_fall = output->pending.max_fall;
+        output->pending_flags &= ~WAYLAND_OUTPUT_CHANGED_FALL;
+    }
+
+    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_CLL)
+    {
+        output->current.max_cll = output->pending.max_cll;
+        output->pending_flags &= ~WAYLAND_OUTPUT_CHANGED_CLL;
     }
 
     TRACE("%p\n", output);
@@ -441,19 +451,10 @@ static void wayland_image_description_info_v1_luminance(void *data,
                             struct wp_image_description_info_v1 *info,
                             uint32_t min, uint32_t max, uint32_t ref)
 {
-    struct wayland_output *output = data;
-    pthread_mutex_lock(&process_wayland.output_mutex);
-
-    output->pending.max_luminance = max;
-    output->pending.min_luminance = min;
-    output->pending_flags |= WAYLAND_OUTPUT_CHANGED_LUMINANCE;
-
-    TRACE("min %lf max %u ref %u\n", min * 1e-4, max, ref);
-
-    pthread_mutex_unlock(&process_wayland.output_mutex);
 
 }
 
+/* FIXME: Make use of this event */
 static void wayland_image_description_info_v1_target_primaries(void *data,
 				 struct wp_image_description_info_v1 *info,
 				 int32_t r_x,
@@ -479,14 +480,33 @@ static void wayland_image_description_info_v1_target_max_cll(void *data,
 				            struct wp_image_description_info_v1 *info,
 				            uint32_t max)
 {
+    struct wayland_output *output = data;
 
+    pthread_mutex_lock(&process_wayland.output_mutex);
+
+
+    TRACE("Max CLL: %u\n", max);
+
+    output->pending.max_cll = max;
+    output->pending_flags |= WAYLAND_OUTPUT_CHANGED_CLL;
+
+    pthread_mutex_unlock(&process_wayland.output_mutex);
 }
 
 static void wayland_image_description_info_v1_target_max_fall(void *data,
 				            struct wp_image_description_info_v1 *info,
 				            uint32_t max)
 {
+    struct wayland_output *output = data;
 
+    pthread_mutex_lock(&process_wayland.output_mutex);
+
+    TRACE("Max FALL: %u\n", max);
+
+    output->pending.max_fall = max;
+    output->pending_flags |= WAYLAND_OUTPUT_CHANGED_FALL;
+
+    pthread_mutex_unlock(&process_wayland.output_mutex);
 }
 
 static const struct wp_image_description_info_v1_listener image_description_info_listener = {
