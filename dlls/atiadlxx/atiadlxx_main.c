@@ -833,7 +833,6 @@ int AMDAPI ADL2_Display_DDCInfo2_Get(ADL_CONTEXT *context, int index, int displa
     if (desc.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020)
     {
         TRACE("Reporting monitor %s as HDR10 supported.\n", debugstr_a((char*)devmode.dmDeviceName));
-        /* FIXME check if freesync is supported */
         info->iSupportedHDR = ADL_HDR_CEA861_3;
 
         if(caps.iCaps & ADL_FREESYNC_CAP_SUPPORTED)
