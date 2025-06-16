@@ -104,6 +104,14 @@ DWORD WINAPI DECLSPEC_HOTPATCH GetTickCount(void)
 }
 
 /***********************************************************************
+ *           timeGetTime       (KERNEL32.@)
+ */
+DWORD WINAPI DECLSPEC_HOTPATCH timeGetTime(void)
+{
+    return user_shared_data->TickCount.LowPart;
+}
+
+/***********************************************************************
  *           RegisterWaitForSingleObject   (KERNEL32.@)
  */
 BOOL WINAPI RegisterWaitForSingleObject( HANDLE *wait, HANDLE object, WAITORTIMERCALLBACK callback,
