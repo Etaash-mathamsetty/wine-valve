@@ -1717,6 +1717,7 @@
 @ stdcall -import lstrlen(str)
 @ stdcall -import lstrlenA(str)
 @ stdcall -import lstrlenW(wstr)
+@ stdcall timeGetTime()
 
 ################################################################
 # Wine internal extensions
