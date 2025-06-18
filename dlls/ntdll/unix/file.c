@@ -3899,7 +3899,7 @@ static NTSTATUS nt_to_unix_file_name_no_root( const UNICODE_STRING *nameW, char 
  * element doesn't have to exist; in that case STATUS_NO_SUCH_FILE is
  * returned, but the unix name is still filled in properly.
  */
-NTSTATUS nt_to_unix_file_name_internal( const OBJECT_ATTRIBUTES *attr, char **name_ret, UINT disposition )
+static NTSTATUS nt_to_unix_file_name_internal( const OBJECT_ATTRIBUTES *attr, char **name_ret, UINT disposition )
 {
     enum server_fd_type type;
     int root_fd, needs_close;
@@ -4026,7 +4026,7 @@ static NTSTATUS nt_to_dos_device( WCHAR *name, size_t length, WCHAR *device_ret 
  * element doesn't have to exist; in that case STATUS_NO_SUCH_FILE is
  * returned, but the unix name is still filled in properly.
  */
-NTSTATUS nt_to_unix_file_name( const OBJECT_ATTRIBUTES *attr, char **name_ret, UINT disposition )
+static NTSTATUS nt_to_unix_file_name( const OBJECT_ATTRIBUTES *attr, char **name_ret, UINT disposition )
 {
     static const WCHAR systemrootW[] = {'\\','S','y','s','t','e','m','R','o','o','t','\\',0};
     static const WCHAR dosprefixW[] = {'\\','?','?','\\'};
@@ -4096,13 +4096,11 @@ NTSTATUS WINAPI wine_nt_to_unix_file_name( const OBJECT_ATTRIBUTES *attr, char *
 {
     char *buffer = NULL;
     NTSTATUS status;
-    UNICODE_STRING redir;
+    UNICODE_STRING nt_name;
     OBJECT_ATTRIBUTES new_attr = *attr;
 
-    get_redirect( &new_attr, &redir );
-    status = nt_to_unix_file_name( &new_attr, &buffer, disposition );
-
-    if (buffer)
+    status = get_nt_and_unix_names( &new_attr, &nt_name, &buffer, disposition );
+    if (!status || status == STATUS_NO_SUCH_FILE)
     {
         struct stat st1, st2;
         char *name = buffer;
@@ -4122,9 +4120,9 @@ NTSTATUS WINAPI wine_nt_to_unix_file_name( const OBJECT_ATTRIBUTES *attr, char *
         if (*size > strlen(name)) strcpy( nameA, name );
         else status = STATUS_BUFFER_TOO_SMALL;
         *size = strlen(name) + 1;
-        free( buffer );
     }
-    free( redir.Buffer );
+    free( buffer );
+    free( nt_name.Buffer );
     return status;
 }
 
@@ -4261,6 +4259,39 @@ NTSTATUS WINAPI wine_unix_to_nt_file_name( const char *name, WCHAR *buffer, ULON
         *size = wcslen(nt_name) + 1;
         free( nt_name );
     }
+    return status;
+}
+
+
+/***********************************************************************
+ *           get_nt_and_unix_names
+ *
+ * Get the true NT name (potentially after wow64 redirection) and the
+ * Unix name to open a file.
+ *
+ * If disposition is not FILE_OPEN or FILE_OVERWRITE, the last path
+ * element doesn't have to exist; in that case STATUS_NO_SUCH_FILE is
+ * returned, but the names are still filled in properly.
+ *
+ * nt_name.Buffer and unix_name must be freed by caller in all cases.
+ */
+NTSTATUS get_nt_and_unix_names( OBJECT_ATTRIBUTES *attr, UNICODE_STRING *nt_name,
+                                char **unix_name_ret, UINT disposition )
+{
+    UNICODE_STRING *orig = attr->ObjectName;
+    NTSTATUS status;
+
+    nt_name->Buffer = NULL;
+    *unix_name_ret = NULL;
+
+    get_redirect( attr, nt_name );
+    status = nt_to_unix_file_name( attr, unix_name_ret, disposition );
+
+    if (status && status != STATUS_NO_SUCH_FILE)
+        TRACE( "%s -> ret %x\n", debugstr_us(orig), status );
+    else
+        TRACE( "%s -> ret %x nt %s unix %s\n", debugstr_us(orig),
+               status, debugstr_us(attr->ObjectName), debugstr_a(*unix_name_ret) );
     return status;
 }
 
@@ -4422,7 +4453,7 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
 {
     OBJECT_ATTRIBUTES new_attr;
     UNICODE_STRING nt_name;
-    char *unix_name;
+    char *unix_name = NULL;
     BOOL name_hidden = FALSE;
     BOOL created = FALSE;
     unsigned int status;
@@ -4444,18 +4475,13 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
         status = file_id_to_unix_file_name( &new_attr, &unix_name, &nt_name );
         if (!status) new_attr.ObjectName = &nt_name;
     }
-    else
-    {
-        get_redirect( &new_attr, &nt_name );
-        status = nt_to_unix_file_name( &new_attr, &unix_name, disposition );
-    }
+    else status = get_nt_and_unix_names( &new_attr, &nt_name, &unix_name, disposition );
 
     if (status == STATUS_BAD_DEVICE_TYPE)
     {
         status = server_open_file_object( handle, access, &new_attr, sharing, options );
         if (status == STATUS_SUCCESS) io->Information = FILE_OPENED;
-        free( nt_name.Buffer );
-        return io->Status = status;
+        goto done;
     }
 
     if (status == STATUS_NO_SUCH_FILE && disposition != FILE_OPEN && disposition != FILE_OVERWRITE)
@@ -4469,7 +4495,6 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
         name_hidden = is_hidden_file( unix_name );
         status = open_unix_file( handle, unix_name, access, &new_attr, attributes,
                                  sharing, disposition, options, ea_buffer, ea_length );
-        free( unix_name );
     }
     else WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), status );
 
@@ -4515,6 +4540,8 @@ NTSTATUS WINAPI NtCreateFile( HANDLE *handle, ACCESS_MASK access, OBJECT_ATTRIBU
         if (!once++) ERR_(winediag)( "Too many open files, ulimit -n probably needs to be increased\n" );
     }
 
+ done:
+    free( unix_name );
     free( nt_name.Buffer );
     return io->Status = status;
 }
@@ -4629,15 +4656,14 @@ NTSTATUS WINAPI NtDeleteFile( OBJECT_ATTRIBUTES *attr )
     UNICODE_STRING nt_name;
     OBJECT_ATTRIBUTES new_attr = *attr;
 
-    get_redirect( &new_attr, &nt_name );
-    if (!(status = nt_to_unix_file_name( &new_attr, &unix_name, FILE_OPEN )))
+    if (!(status = get_nt_and_unix_names( &new_attr, &nt_name, &unix_name, FILE_OPEN )))
     {
         if (!(status = open_unix_file( &handle, unix_name, GENERIC_READ | GENERIC_WRITE | DELETE, &new_attr,
                                        0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN,
                                        FILE_DELETE_ON_CLOSE, NULL, 0 )))
             NtClose( handle );
-        free( unix_name );
     }
+    free( unix_name );
     free( nt_name.Buffer );
     return status;
 }
@@ -4651,11 +4677,10 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
 {
     char *unix_name;
     unsigned int status;
-    UNICODE_STRING redir;
+    UNICODE_STRING nt_name;
     OBJECT_ATTRIBUTES new_attr = *attr;
 
-    get_redirect( &new_attr, &redir );
-    if (!(status = nt_to_unix_file_name( &new_attr, &unix_name, FILE_OPEN )))
+    if (!(status = get_nt_and_unix_names( &new_attr, &nt_name, &unix_name, FILE_OPEN )))
     {
         ULONG attributes;
         struct stat st;
@@ -4666,10 +4691,10 @@ NTSTATUS WINAPI NtQueryFullAttributesFile( const OBJECT_ATTRIBUTES *attr,
             status = STATUS_INVALID_INFO_CLASS;
         else
             fill_file_info( &st, attributes, info, FileNetworkOpenInformation );
-        free( unix_name );
     }
     else WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), status );
-    free( redir.Buffer );
+    free( unix_name );
+    free( nt_name.Buffer );
     return status;
 }
 
@@ -4681,11 +4706,10 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
 {
     char *unix_name;
     unsigned int status;
-    UNICODE_STRING redir;
+    UNICODE_STRING nt_name;
     OBJECT_ATTRIBUTES new_attr = *attr;
 
-    get_redirect( &new_attr, &redir );
-    if (!(status = nt_to_unix_file_name( &new_attr, &unix_name, FILE_OPEN )))
+    if (!(status = get_nt_and_unix_names( &new_attr, &nt_name, &unix_name, FILE_OPEN )))
     {
         ULONG attributes;
         struct stat st;
@@ -4696,10 +4720,10 @@ NTSTATUS WINAPI NtQueryAttributesFile( const OBJECT_ATTRIBUTES *attr, FILE_BASIC
             status = STATUS_INVALID_INFO_CLASS;
         else
             status = fill_file_info( &st, attributes, info, FileBasicInformation );
-        free( unix_name );
     }
     else WARN( "%s not found (%x)\n", debugstr_us(attr->ObjectName), status );
-    free( redir.Buffer );
+    free( unix_name );
+    free( nt_name.Buffer );
     return status;
 }
 
@@ -5197,7 +5221,7 @@ NTSTATUS WINAPI NtSetInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
         {
             FILE_RENAME_INFORMATION *info = ptr;
             unsigned int flags;
-            UNICODE_STRING name_str, redir;
+            UNICODE_STRING name_str, nt_name;
             OBJECT_ATTRIBUTES attr;
             char *unix_name;
 
@@ -5213,9 +5237,7 @@ NTSTATUS WINAPI NtSetInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
             name_str.Length = info->FileNameLength;
             name_str.MaximumLength = info->FileNameLength + sizeof(WCHAR);
             InitializeObjectAttributes( &attr, &name_str, OBJ_CASE_INSENSITIVE, info->RootDirectory, NULL );
-            get_redirect( &attr, &redir );
-
-            status = nt_to_unix_file_name( &attr, &unix_name, FILE_OPEN_IF );
+            status = get_nt_and_unix_names( &attr, &nt_name, &unix_name, FILE_OPEN_IF );
             if (status == STATUS_SUCCESS || status == STATUS_NO_SUCH_FILE)
             {
                 SERVER_START_REQ( set_fd_name_info )
@@ -5231,9 +5253,9 @@ NTSTATUS WINAPI NtSetInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
                 }
                 SERVER_END_REQ;
 
-                free( unix_name );
             }
-            free( redir.Buffer );
+            free( unix_name );
+            free( nt_name.Buffer );
         }
         else status = STATUS_INVALID_PARAMETER_3;
         break;
@@ -5244,7 +5266,7 @@ NTSTATUS WINAPI NtSetInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
         {
             FILE_LINK_INFORMATION *info = ptr;
             unsigned int flags;
-            UNICODE_STRING name_str, redir;
+            UNICODE_STRING name_str, nt_name;
             OBJECT_ATTRIBUTES attr;
             char *unix_name;
 
@@ -5260,9 +5282,7 @@ NTSTATUS WINAPI NtSetInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
             name_str.Length = info->FileNameLength;
             name_str.MaximumLength = info->FileNameLength + sizeof(WCHAR);
             InitializeObjectAttributes( &attr, &name_str, OBJ_CASE_INSENSITIVE, info->RootDirectory, NULL );
-            get_redirect( &attr, &redir );
-
-            status = nt_to_unix_file_name( &attr, &unix_name, FILE_OPEN_IF );
+            status = get_nt_and_unix_names( &attr, &nt_name, &unix_name, FILE_OPEN_IF );
             if (status == STATUS_SUCCESS || status == STATUS_NO_SUCH_FILE)
             {
                 SERVER_START_REQ( set_fd_name_info )
@@ -5278,9 +5298,9 @@ NTSTATUS WINAPI NtSetInformationFile( HANDLE handle, IO_STATUS_BLOCK *io,
                 }
                 SERVER_END_REQ;
 
-                free( unix_name );
             }
-            free( redir.Buffer );
+            free( unix_name );
+            free( nt_name.Buffer );
         }
         else status = STATUS_INVALID_PARAMETER_3;
         break;
