@@ -1009,7 +1009,9 @@ static void wayland_pointer_update_constraint(struct wl_surface *wl_surface,
 
     pointer->relative_only = needs_relative;
 
-    InterlockedExchange(&pointer->confinement_updated, TRUE);
+    /* we don't need to drop pointer frames when in relative only mode */
+    if (!pointer->relative_only)
+        InterlockedExchange(&pointer->confinement_updated, TRUE);
 }
 
 void wayland_pointer_clear_constraint(void)
