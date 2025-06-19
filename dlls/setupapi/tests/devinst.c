@@ -2751,35 +2751,35 @@ static void test_device_interface_properties(void)
 
     ret = SetupDiSetDeviceInterfacePropertyW(NULL, NULL, NULL, DEVPROP_TYPE_STRING, NULL, 0, 0);
     err = GetLastError();
-    todo_wine ok(!ret && err == ERROR_INVALID_HANDLE, "%lu != %d\n", err, ERROR_INVALID_HANDLE);
+    ok(!ret && err == ERROR_INVALID_HANDLE, "%lu != %d\n", err, ERROR_INVALID_HANDLE);
 
     ret = SetupDiSetDeviceInterfacePropertyW(set, NULL, NULL, DEVPROP_TYPE_STRING, NULL, 0, 0);
     err = GetLastError();
-    todo_wine ok(!ret && err == ERROR_INVALID_PARAMETER, "%lu != %d\n", err, ERROR_INVALID_PARAMETER);
+    ok(!ret && err == ERROR_INVALID_PARAMETER, "%lu != %d\n", err, ERROR_INVALID_PARAMETER);
 
     ret = SetupDiSetDeviceInterfacePropertyW(set, &iface, NULL, DEVPROP_TYPE_STRING, NULL, 0, 0);
     err = GetLastError();
-    todo_wine ok(!ret && err == ERROR_INVALID_DATA, "%lu != %d\n", err, ERROR_INVALID_DATA);
+    ok(!ret && err == ERROR_INVALID_DATA, "%lu != %d\n", err, ERROR_INVALID_DATA);
 
     ret = SetupDiSetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_FriendlyName, DEVPROP_TYPE_STRING,
                                              NULL, 0, 0);
     err = GetLastError();
-    todo_wine ok(!ret && err == ERROR_INVALID_DATA, "%lu != %d\n", err, ERROR_INVALID_DATA);
+    ok(!ret && err == ERROR_INVALID_DATA, "%lu != %d\n", err, ERROR_INVALID_DATA);
 
     ret = SetupDiSetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_FriendlyName, DEVPROP_TYPE_STRING,
                                              (BYTE *)str, 0, 0);
     err = GetLastError();
-    todo_wine ok(!ret && err == ERROR_INVALID_DATA, "%lu != %d\n", err, ERROR_INVALID_DATA);
+    ok(!ret && err == ERROR_INVALID_DATA, "%lu != %d\n", err, ERROR_INVALID_DATA);
 
     ret = SetupDiSetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_FriendlyName, DEVPROP_TYPE_STRING,
                                              NULL, 1, 0);
     err = GetLastError();
-    todo_wine ok(!ret && err == ERROR_INVALID_USER_BUFFER, "%lu != %d\n", err, ERROR_INVALID_USER_BUFFER);
+    ok(!ret && err == ERROR_INVALID_USER_BUFFER, "%lu != %d\n", err, ERROR_INVALID_USER_BUFFER);
 
     ret = SetupDiSetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_FriendlyName, DEVPROP_TYPE_STRING,
                                              (BYTE *)str, sizeof(str), 1);
     err = GetLastError();
-    todo_wine ok(!ret && err == ERROR_INVALID_FLAGS, "%lu != %d\n", err, ERROR_INVALID_FLAGS);
+    ok(!ret && err == ERROR_INVALID_FLAGS, "%lu != %d\n", err, ERROR_INVALID_FLAGS);
 
     ret = SetupDiGetDeviceInterfacePropertyW(NULL, NULL, NULL, NULL, NULL, 0, NULL, 0);
     err = GetLastError();
@@ -2816,7 +2816,7 @@ static void test_device_interface_properties(void)
     ret = SetupDiSetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_FriendlyName, DEVPROP_TYPE_STRING,
                                              (const BYTE *)str, sizeof(str), 0);
     err = GetLastError();
-    todo_wine ok(ret, "SetupDiSetDeviceInterfacePropertyW failed: %lu\n", err);
+    ok(ret, "SetupDiSetDeviceInterfacePropertyW failed: %lu\n", err);
 
     ret = SetupDiGetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_FriendlyName, &type, NULL, 0, &req, 0);
     err = GetLastError();
@@ -2834,7 +2834,7 @@ static void test_device_interface_properties(void)
     ret = SetupDiSetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_FriendlyName, DEVPROP_TYPE_EMPTY,
                                              NULL, 0, 0);
     err = GetLastError();
-    todo_wine ok(ret, "SetupDiSetDeviceInterfacePropertyW failed: %lu\n", err);
+    ok(ret, "SetupDiSetDeviceInterfacePropertyW failed: %lu\n", err);
 
     /* DEVPKEY_DeviceInterface_Enabled is a "special" key, as it does not seem to be actually stored in the registry. */
     ret = SetupDiGetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_Enabled, &type, (BYTE *)&boolean,
@@ -2849,26 +2849,26 @@ static void test_device_interface_properties(void)
     ret = SetupDiSetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_Enabled, DEVPROP_TYPE_BOOLEAN,
                                              (const BYTE *)&boolean, sizeof(boolean), 0);
     err = GetLastError();
-    todo_wine ok(!ret && err == ERROR_ACCESS_DENIED, "%lu != %d\n", err, ERROR_ACCESS_DENIED);
+    ok(!ret && err == ERROR_ACCESS_DENIED, "%lu != %d\n", err, ERROR_ACCESS_DENIED);
 
     /* Nor can it be set to anything that's not a DEVPROP_TYPE_BOOLEAN. */
     ret = SetupDiSetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_Enabled, DEVPROP_TYPE_STRING,
                                              (const BYTE *)str, sizeof(str), 0);
     err = GetLastError();
-    todo_wine ok(!ret && err == ERROR_INVALID_DATA, "%lu != %d\n", err, ERROR_INVALID_DATA);
+    ok(!ret && err == ERROR_INVALID_DATA, "%lu != %d\n", err, ERROR_INVALID_DATA);
 
     /* It can however, be "set" to to its current value, i.e whether the interface is enabled. This seems to be a no-op. */
     boolean = DEVPROP_FALSE;
     ret = SetupDiSetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_Enabled, DEVPROP_TYPE_BOOLEAN,
                                              (const BYTE *)&boolean, sizeof(boolean), 0);
     err = GetLastError();
-    todo_wine ok(ret, "SetupDiGetDeviceInterfacePropertyW failed: %lu\n", err);
+    ok(ret, "SetupDiGetDeviceInterfacePropertyW failed: %lu\n", err);
 
     boolean = 0xde;
     ret = SetupDiSetDeviceInterfacePropertyW(set, &iface, &DEVPKEY_DeviceInterface_Enabled, DEVPROP_TYPE_BOOLEAN,
                                              (const BYTE *)&boolean, sizeof(boolean), 0);
     err = GetLastError();
-    todo_wine ok(!ret && err == ERROR_INVALID_DATA, "%lu != %d\n", err, ERROR_INVALID_DATA);
+    ok(!ret && err == ERROR_INVALID_DATA, "%lu != %d\n", err, ERROR_INVALID_DATA);
 
     ret = SetupDiRemoveDeviceInterface(set, &iface);
     ok(ret, "Failed to remove device interface, error %#lx.\n", GetLastError());
