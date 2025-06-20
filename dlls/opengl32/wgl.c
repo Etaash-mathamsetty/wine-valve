@@ -1674,6 +1674,31 @@ static void *get_named_buffer_pointer( GLint buffer )
     p_glGetNamedBufferPointerv( buffer, GL_BUFFER_MAP_POINTER, &ptr );
     return ptr;
 }
+
+/* if this code gets called we are in wow64 mode */
+static void *allocate_mapping( SIZE_T length )
+{
+    NTSTATUS status;
+    MEM_EXTENDED_PARAMETER param;
+    void *ret = NULL;
+    MEM_ADDRESS_REQUIREMENTS req = {0};
+
+    req.Alignment = 0x10000;
+    param.Type = MemExtendedParameterAddressRequirements;
+    param.Pointer = &req;
+
+    status = NtAllocateVirtualMemoryEx(NtCurrentProcess(), &ret, &length,
+                                       MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE, &param, 1);
+    if (status) ret = NULL;
+
+    return ret;
+}
+
+static void free_mapping( void *ptr )
+{
+    SIZE_T size = 0;
+    NtFreeVirtualMemory(NtCurrentProcess(), &ptr, &size, MEM_RELEASE);
+}
 #endif
 
 static void *gl_map_buffer( enum unix_funcs code, GLenum target, GLenum access )
@@ -1693,9 +1718,9 @@ static void *gl_map_buffer( enum unix_funcs code, GLenum target, GLenum access )
     if (status == STATUS_INVALID_ADDRESS)
     {
         TRACE( "Unable to map wow64 buffer directly, using copy buffer!\n" );
-        if (!(args.ret = _aligned_malloc( (size_t)args.ret, 16 ))) status = STATUS_NO_MEMORY;
+        if (!(args.ret = allocate_mapping( (SIZE_T)args.ret ))) status = STATUS_NO_MEMORY;
         else if (!(status = WINE_UNIX_CALL( code, &args ))) return args.ret;
-        _aligned_free( args.ret );
+        free_mapping( args.ret );
     }
 #endif
     WARN( "glMapBuffer returned %#lx\n", status );
@@ -1731,9 +1756,9 @@ void * WINAPI glMapBufferRange( GLenum target, GLintptr offset, GLsizeiptr lengt
     if (status == STATUS_INVALID_ADDRESS)
     {
         TRACE( "Unable to map wow64 buffer directly, using copy buffer!\n" );
-        if (!(args.ret = _aligned_malloc( length, 16 ))) status = STATUS_NO_MEMORY;
+        if (!(args.ret = allocate_mapping( (SIZE_T)args.ret ))) status = STATUS_NO_MEMORY;
         else if (!(status = UNIX_CALL( glMapBufferRange, &args ))) return args.ret;
-        _aligned_free( args.ret );
+        free_mapping( args.ret );
     }
 #endif
     WARN( "glMapBufferRange returned %#lx\n", status );
@@ -1757,9 +1782,9 @@ static void *gl_map_named_buffer( enum unix_funcs code, GLuint buffer, GLenum ac
     if (status == STATUS_INVALID_ADDRESS)
     {
         TRACE( "Unable to map wow64 buffer directly, using copy buffer!\n" );
-        if (!(args.ret = _aligned_malloc( (size_t)args.ret, 16 ))) status = STATUS_NO_MEMORY;
+        if (!(args.ret = allocate_mapping( (SIZE_T)args.ret ))) status = STATUS_NO_MEMORY;
         else if (!(status = WINE_UNIX_CALL( code, &args ))) return args.ret;
-        _aligned_free( args.ret );
+        free_mapping( args.ret );
     }
 #endif
     WARN( "glMapNamedBuffer returned %#lx\n", status );
@@ -1795,9 +1820,9 @@ static void *gl_map_named_buffer_range( enum unix_funcs code, GLuint buffer, GLi
     if (status == STATUS_INVALID_ADDRESS)
     {
         TRACE( "Unable to map wow64 buffer directly, using copy buffer!\n" );
-        if (!(args.ret = _aligned_malloc( length, 16 ))) status = STATUS_NO_MEMORY;
+        if (!(args.ret = allocate_mapping( (SIZE_T)args.ret ))) status = STATUS_NO_MEMORY;
         else if (!(status = WINE_UNIX_CALL( code, &args ))) return args.ret;
-        _aligned_free( args.ret );
+        free_mapping( args.ret );
     }
 #endif
     WARN( "glMapNamedBufferRange returned %#lx\n", status );
@@ -1833,7 +1858,7 @@ static GLboolean gl_unmap_buffer( enum unix_funcs code, GLenum target )
     if (status == STATUS_INVALID_ADDRESS)
     {
         TRACE( "Releasing wow64 copy buffer %p\n", ptr );
-        _aligned_free( ptr );
+        free_mapping( ptr );
         return args.ret;
     }
 #endif
@@ -1870,7 +1895,7 @@ static GLboolean gl_unmap_named_buffer( enum unix_funcs code, GLuint buffer )
     if (status == STATUS_INVALID_ADDRESS)
     {
         TRACE( "Releasing wow64 copy buffer %p\n", ptr );
-        _aligned_free( ptr );
+        free_mapping( ptr );
         return args.ret;
     }
 #endif
