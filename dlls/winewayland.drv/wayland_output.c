@@ -541,6 +541,36 @@ static const struct wp_image_description_info_v1_listener image_description_info
     wayland_image_description_info_v1_target_max_fall
 };
 
+static void wayland_color_management_output_image_description_changed(void *user_data, struct wp_color_management_output_v1 *wp_color_management_output_v1)
+{
+    struct wayland_output *output = user_data;
+
+    pthread_mutex_lock(&process_wayland.output_mutex);
+
+    if (output->wp_image_description_v1)
+        wp_image_description_v1_destroy(output->wp_image_description_v1);
+
+    if (output->wp_image_description_info_v1)
+        wp_image_description_info_v1_destroy(output->wp_image_description_info_v1);
+
+
+    output->wp_image_description_v1 =
+        wp_color_management_output_v1_get_image_description(
+            output->wp_color_management_output_v1);
+    output->wp_image_description_info_v1 =
+        wp_image_description_v1_get_information(
+            output->wp_image_description_v1);
+    wp_image_description_info_v1_add_listener(
+        output->wp_image_description_info_v1,
+        &image_description_info_listener, output);
+
+    pthread_mutex_unlock(&process_wayland.output_mutex);
+}
+
+static const struct wp_color_management_output_v1_listener color_management_output_listener = {
+    wayland_color_management_output_image_description_changed
+};
+
 /**********************************************************************
  *          wayland_output_create
  *
@@ -590,14 +620,15 @@ BOOL wayland_output_create(uint32_t id, uint32_t version)
             wp_color_manager_v1_get_output(
                         process_wayland.wp_color_manager_v1,
                                      output->wl_output);
+        wp_color_management_output_v1_add_listener(
+            output->wp_color_management_output_v1,
+            &color_management_output_listener, output);
         output->wp_image_description_v1 =
             wp_color_management_output_v1_get_image_description(
-                output->wp_color_management_output_v1
-            );
+                output->wp_color_management_output_v1);
         output->wp_image_description_info_v1 =
             wp_image_description_v1_get_information(
-                output->wp_image_description_v1
-            );
+                output->wp_image_description_v1);
         wp_image_description_info_v1_add_listener(
             output->wp_image_description_info_v1,
             &image_description_info_listener, output);
