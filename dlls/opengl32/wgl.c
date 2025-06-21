@@ -1688,10 +1688,7 @@ static LONG count;
 /* if this code gets called we are in wow64 mode */
 static void *allocate_mapping( SIZE_T length )
 {
-    NTSTATUS status;
-    MEM_EXTENDED_PARAMETER param;
     void *ret = NULL;
-    MEM_ADDRESS_REQUIREMENTS req = {0};
     struct mem_desc *slot = NULL;
 
     /* an array is easy to implement but may not be the best option */
@@ -1713,21 +1710,17 @@ static void *allocate_mapping( SIZE_T length )
         {
             if (!mappings[i].active)
             {
+                VirtualFree(mappings[i].addr, 0, MEM_RELEASE);
                 mappings[i].size = 0;
-                NtFreeVirtualMemory(NtCurrentProcess(), &mappings[i].addr, &mappings[i].size, MEM_RELEASE);
                 mappings[i].addr = NULL;
                 slot = &mappings[i];
             }
         }
     }
 
-    req.Alignment = 0x10000;
-    param.Type = MemExtendedParameterAddressRequirements;
-    param.Pointer = &req;
+    ret = VirtualAlloc(NULL, length, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
-    status = NtAllocateVirtualMemoryEx(NtCurrentProcess(), &ret, &length,
-                                       MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE, &param, 1);
-    if (status) ret = NULL;
+    if (!ret) return ret;
 
     if (!slot) slot = &mappings[count++];
 
