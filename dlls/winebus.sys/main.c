@@ -200,6 +200,22 @@ static WCHAR *get_instance_id(DEVICE_OBJECT *device)
     return dst;
 }
 
+static WCHAR *get_container_id(DEVICE_OBJECT *device)
+{
+    struct device_extension *ext = (struct device_extension *)device->DeviceExtension;
+    const GUID empty = {0};
+    UNICODE_STRING dst;
+
+    if (IsEqualGUID(&ext->desc.container_id, &empty)) {
+        return NULL;
+    }
+
+    RtlZeroMemory(&dst, sizeof(dst));
+    RtlStringFromGUID(&ext->desc.container_id, &dst);
+
+    return dst.Buffer;
+}
+
 static WCHAR *get_device_id(DEVICE_OBJECT *device)
 {
     static const WCHAR input_format[] = L"&MI_%02u";
@@ -726,6 +742,10 @@ static NTSTATUS handle_IRP_MN_QUERY_ID(DEVICE_OBJECT *device, IRP *irp)
         case BusQueryInstanceID:
             TRACE("BusQueryInstanceID\n");
             irp->IoStatus.Information = (ULONG_PTR)get_instance_id(device);
+            break;
+        case BusQueryContainerID:
+            TRACE("BusQueryContainerID\n");
+            irp->IoStatus.Information = (ULONG_PTR)get_container_id(device);
             break;
         default:
             WARN("Unhandled type %08x\n", type);
