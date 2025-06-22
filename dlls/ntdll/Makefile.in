@@ -46,6 +46,7 @@ SOURCES = \
 	threadpool.c \
 	time.c \
 	unix/cdrom.c \
+	unix/containerid.c \
 	unix/debug.c \
 	unix/env.c \
 	unix/esync.c \
