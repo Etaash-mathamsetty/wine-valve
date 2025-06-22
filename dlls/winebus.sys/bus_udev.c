@@ -73,6 +73,7 @@
 #include "ddk/hidtypes.h"
 #include "ddk/hidsdi.h"
 
+#include "wine/containerid.h"
 #include "wine/debug.h"
 #include "wine/hid.h"
 #include "wine/unixlib.h"
@@ -1563,6 +1564,30 @@ static void get_device_subsystem_info(struct udev_device *dev, const char *subsy
     }
 }
 
+static const char *get_device_syspath(struct udev_device *dev)
+{
+    struct udev_device *parent;
+
+    if ((parent = udev_device_get_parent_with_subsystem_devtype(dev, "hid", NULL)))
+        return udev_device_get_syspath(parent);
+
+    if ((parent = udev_device_get_parent_with_subsystem_devtype(dev, "usb", "usb_device")))
+        return udev_device_get_syspath(parent);
+
+    return udev_device_get_syspath(dev);
+}
+
+void get_container_id(struct udev_device *dev, struct device_desc *desc)
+{
+    const char *sysfs_path = get_device_syspath(dev);
+
+    memset(&desc->container_id, 0, sizeof(GUID));
+    if (!sysfs_path || sysfs_path[0] == 0) {
+        return;
+    }
+    container_id_for_sysfs(sysfs_path, &desc->container_id);
+}
+
 static void udev_add_device(struct udev_device *dev, int fd)
 {
     struct device_desc desc =
@@ -1587,6 +1612,8 @@ static void udev_add_device(struct udev_device *dev, int fd)
     }
 
     TRACE("udev %s syspath %s\n", debugstr_a(devnode), udev_device_get_syspath(dev));
+
+    get_container_id(dev, &desc);
 
     get_device_subsystem_info(dev, "hid", NULL, &desc, &bus);
     get_device_subsystem_info(dev, "input", NULL, &desc, &bus);
