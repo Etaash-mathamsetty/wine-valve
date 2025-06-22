@@ -3276,8 +3276,29 @@ BOOL WINAPI SetupDiGetDeviceInterfacePropertyW( HDEVINFO devinfo, SP_DEVICE_INTE
             ret = ERROR_INSUFFICIENT_BUFFER;
         if (req_size)
             *req_size = sizeof( DEVPROP_BOOLEAN );
-    }
-    else
+    } else if (IsEqualDevPropKey( *key, DEVPKEY_Device_InstanceId )) {
+        struct device *device;
+
+        ret = ERROR_SUCCESS;
+
+        if ((device = iface->device))
+        {
+            DWORD len = wcslen(device->instanceId) + 1;
+            len *= sizeof(WCHAR); /* it is in units of bytes */
+
+            if (req_size) *req_size = len;
+
+            if (buf_size >= len)
+            {
+                wcscpy((WCHAR *)buf, device->instanceId);
+                *type = DEVPROP_TYPE_STRING;
+            }
+            else
+                ret = ERROR_INSUFFICIENT_BUFFER;
+        }
+        else
+            ret = ERROR_INVALID_PARAMETER;
+    } else
         ret = get_device_reg_property( iface->refstr_key, key, type, buf, buf_size, req_size, flags );
 
     SetLastError( ret );
