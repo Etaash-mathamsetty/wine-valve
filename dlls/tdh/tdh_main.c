@@ -38,3 +38,38 @@ ULONG WINAPI TdhLoadManifestFromBinary(LPWSTR binary)
     FIXME("(%s): stub\n", debugstr_w(binary));
     return STATUS_SUCCESS;
 }
+
+/* FIXME: Move this */
+
+typedef struct _TRACE_PROVIDER_INFO {
+    GUID  ProviderGuid;
+    ULONG SchemaSource;
+    ULONG ProviderNameOffset;
+} TRACE_PROVIDER_INFO;
+
+typedef struct _PROVIDER_ENUMERATION_INFO {
+    ULONG               NumberOfProviders;
+    ULONG               Reserved;
+    TRACE_PROVIDER_INFO TraceProviderInfoArray[ANYSIZE_ARRAY];
+} PROVIDER_ENUMERATION_INFO;
+
+ULONG WINAPI TdhEnumerateProviders(PROVIDER_ENUMERATION_INFO *buffer, ULONG *size)
+{
+    FIXME("%p %p stub!\n", buffer, size);
+
+    if (!size) return ERROR_INVALID_PARAMETER;
+
+    if (!buffer)
+    {
+        *size = sizeof(PROVIDER_ENUMERATION_INFO);
+        return ERROR_SUCCESS;
+    }
+
+    if (*size < sizeof(PROVIDER_ENUMERATION_INFO))
+        return ERROR_INSUFFICIENT_BUFFER;
+
+    buffer->NumberOfProviders = 0;
+    buffer->Reserved = 0;
+
+    return ERROR_SUCCESS;
+}
