@@ -747,6 +747,8 @@ static void keyboard_handle_enter(void *private, struct wl_keyboard *wl_keyboard
 
     InterlockedExchange(&process_wayland.input_serial, serial);
 
+    TRACE("surface=%p\n", wl_surface);
+
     if (!wl_surface) return;
 
     /* The wl_surface user data remains valid and immutable for the whole
@@ -783,6 +785,8 @@ static void keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
     HWND hwnd;
 
     InterlockedExchange(&process_wayland.input_serial, serial);
+
+    TRACE("surface=%p\n", wl_surface);
 
     if (!wl_surface) return;
 
