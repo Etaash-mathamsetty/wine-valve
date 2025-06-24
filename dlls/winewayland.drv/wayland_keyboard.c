@@ -814,7 +814,7 @@ static void send_right_control(HWND hwnd, uint32_t state)
     input.ki.wScan = 0xe000 | (key2scan(KEY_RIGHTCTRL) & 0xff);
     input.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_EXTENDEDKEY;
     if (state == WL_KEYBOARD_KEY_STATE_RELEASED) input.ki.dwFlags |= KEYEVENTF_KEYUP;
-    NtUserSendHardwareInput(hwnd, SEND_HWMSG_NO_RAW, &input, 0);
+    NtUserSendHardwareInput(hwnd, 0, &input, 0);
 }
 
 static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
@@ -840,7 +840,7 @@ static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     if (scan & ~0xff) input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
 
     if (state == WL_KEYBOARD_KEY_STATE_RELEASED) input.ki.dwFlags |= KEYEVENTF_KEYUP;
-    NtUserSendHardwareInput(hwnd, SEND_HWMSG_NO_RAW, &input, 0);
+    NtUserSendHardwareInput(hwnd, 0, &input, 0);
 }
 
 static void keyboard_handle_modifiers(void *data, struct wl_keyboard *wl_keyboard,
