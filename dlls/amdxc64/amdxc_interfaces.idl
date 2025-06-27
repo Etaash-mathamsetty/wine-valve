@@ -20,39 +20,6 @@
 import "wtypes.idl";
 import "unknwn.idl";
 
-/* Structure version 1 for Anti-Lag 2.0: */
-struct APIData_v1
-{
-    unsigned int    uiSize;
-    unsigned int    uiVersion;
-    unsigned int    eMode;
-    const char*     sControlStr;
-    unsigned int    uiControlStrLength;
-    unsigned int    maxFPS;
-};
-
-/* Structure version 2 for Anti-Lag 2.0: */
-struct APIData_v2
-{
-    unsigned int    uiSize;
-    unsigned int    uiVersion;
-    struct Flags
-    {
-        unsigned int unused0               : 1;
-        unsigned int unused1               : 1;
-
-        unsigned int signalFgFrameType     : 1;
-        unsigned int isInterpolatedFrame   : 1;
-
-        unsigned int signalGetUserInputIdx : 1;
-        unsigned int signalEndOfFrameIdx   : 1;
-
-        unsigned int reserved              :26;
-    }               flags;
-    unsigned __int64    iiFrameIdx;
-    unsigned __int64    uiiReserved[19];
-};
-
 [
     object,
     uuid(b58d6601-7401-4234-8180-6febfc0e484c),
