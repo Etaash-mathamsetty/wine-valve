@@ -29,20 +29,11 @@
 #include "wine/debug.h"
 #include "wine/heap.h"
 
-#include "wine/vulkan.h"
-#include "wine/asm.h"
-
 #define COBJMACROS
 #include "initguid.h"
-#include "d3d11.h"
 #include "d3d12.h"
 
-#include "dxgi1_6.h"
-
-#include "dxvk_interfaces.h"
 #include "amdxc_interfaces.h"
-
-#include <wingdi.h>
 
 WINE_DEFAULT_DEBUG_CHANNEL(amdxc);
 
@@ -91,7 +82,7 @@ HRESULT STDMETHODCALLTYPE AMDFSR4FFX_UpdateFfxApiProvider(IAmdExtFfxApi *iface, 
 
     env = getenv("FSR4_UPGRADE");
 
-    if(env && !strcmp(env, "1"))
+    if (env && !strcmp(env, "1"))
     {
         amdffx = LoadLibraryA("amdxcffx64");
         if (!amdffx)
@@ -102,10 +93,9 @@ HRESULT STDMETHODCALLTYPE AMDFSR4FFX_UpdateFfxApiProvider(IAmdExtFfxApi *iface, 
 
         pfn = (updateffxapi_pfn)GetProcAddress(amdffx, "UpdateFfxApiProvider");
 
-        if(pfn)
+        if (pfn)
         {
-            if (!once++)
-                FIXME("Replaced FSR3 with FSR4!\n");
+            if (!once++) WARN("Replaced FSR3 with FSR4!\n");
             return pfn(data, size);
         }
     }
