@@ -6,5 +6,4 @@ EXTRADLLFLAGS = -mno-cygwin
 
 SOURCES = \
 	main.c \
-	dxvk_interfaces.idl \
 	amdxc_interfaces.idl \
