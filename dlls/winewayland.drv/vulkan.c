@@ -69,6 +69,7 @@ static void wine_vk_surface_destroy(struct wayland_client_surface *client)
 static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_instance *instance, VkSurfaceKHR *surface, void **private)
 {
     VkResult res;
+    DWORD pid, tid;
     VkWaylandSurfaceCreateInfoKHR create_info_host;
     struct wayland_client_surface *client;
 
@@ -78,6 +79,12 @@ static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_ins
     {
         ERR("Failed to create client surface for hwnd=%p\n", hwnd);
         return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+
+    tid = NtUserGetWindowThread(hwnd, &pid);
+    if (tid && pid != GetCurrentProcessId())
+    {
+        ERR("Cross process rendering is not supported!\n");
     }
 
     create_info_host.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
