@@ -2117,15 +2117,24 @@ static BOOL apply_window_pos( HWND hwnd, HWND insert_after, UINT swp_flags, stru
         {
             LONG offset_x = 0, offset_y = 0;
 
-            if (adjusted.window.bottom > virtual_screen.bottom)
-                offset_y = virtual_screen.bottom - adjusted.window.bottom;
-            else if (virtual_screen.top > adjusted.window.top)
-                offset_y = virtual_screen.top - adjusted.window.top;
+            if (adjusted.window.bottom - adjusted.window.top <=
+                virtual_screen.bottom - virtual_screen.top)
+            {
+                if (adjusted.window.bottom > virtual_screen.bottom)
+                    offset_y = virtual_screen.bottom - adjusted.window.bottom;
+                else if (virtual_screen.top > adjusted.window.top)
+                    offset_y = virtual_screen.top - adjusted.window.top;
+            }
 
-            if (adjusted.window.right > virtual_screen.right)
-                offset_x = virtual_screen.right - adjusted.window.right;
-            else if (virtual_screen.left > adjusted.window.left)
-                offset_x = virtual_screen.left - adjusted.window.left;
+            if (adjusted.window.right - adjusted.window.left <=
+                virtual_screen.right - virtual_screen.left)
+            {
+                if (adjusted.window.right > virtual_screen.right)
+                    offset_x = virtual_screen.right - adjusted.window.right;
+                else if (virtual_screen.left > adjusted.window.left)
+                    offset_x = virtual_screen.left - adjusted.window.left;
+            }
+
 
             OffsetRect(&adjusted.client, offset_x, offset_y);
             OffsetRect(&adjusted.visible, offset_x, offset_y);
