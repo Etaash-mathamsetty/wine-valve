@@ -628,13 +628,23 @@ HRESULT CDECL AmdDxExtCreate11(ID3D11Device *device, IAmdDxExt **ext)
     HRESULT ret;
     AmdDxExt *obj;
     ID3D11VkExtDevice *ext_device;
+    UINT64 id;
     TRACE("%p %p\n", device, ext);
 
-    if((ret = load_d3d11()) != S_OK)
+    if (!ext) return E_INVALIDARG;
+
+    id = (ULONG_PTR)*ext;
+
+    if (id == 0xbf380ebc5ab4d0a6ull)
+    {
+        ERR("D3D11 Anti-Lag 2 is not supported!\n");
+        return E_NOTIMPL;
+    }
+
+    if ((ret = load_d3d11()))
         return ret;
 
-    obj = malloc(sizeof(AmdDxExt));
-    if(!obj)
+    if (!(obj = malloc(sizeof(AmdDxExt))))
         return E_OUTOFMEMORY;
 
     obj->device = device;
