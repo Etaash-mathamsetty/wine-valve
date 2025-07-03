@@ -4254,3 +4254,7 @@ enum fsync_type
     unsigned int shm_idx;
 @REPLY
 @END
+
+/* Obtain a fd for the ntsync device */
+@REQ(get_linux_sync_device)
+@END

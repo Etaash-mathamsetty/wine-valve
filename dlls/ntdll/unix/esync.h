@@ -55,7 +55,10 @@ extern NTSTATUS esync_signal_and_wait( HANDLE signal, HANDLE wait, BOOLEAN alert
  * don't race with theirs. It looks weird, I know.
  *
  * If we weren't trying to avoid touching the code I'd rename the mutex to
- * "server_fd_mutex" or something similar. */
-extern pthread_mutex_t fd_cache_mutex;
+ * "server_fd_mutex" or something similar.
+ *
+ * Moved to unix_private.h
+ */
+/*extern pthread_mutex_t fd_cache_mutex;*/
 
 extern int receive_fd( obj_handle_t *handle );
