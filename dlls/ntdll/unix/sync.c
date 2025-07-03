@@ -57,8 +57,8 @@
 #ifdef HAVE_KQUEUE
 # include <sys/event.h>
 #endif
-#ifdef HAVE_LINUX_NTSYNC_H
-# include <linux/ntsync.h>
+#ifdef HAVE_LINUX_TYPES_H
+# include "wine/ntsync.h"
 #endif
 
 #include "ntstatus.h"
@@ -329,7 +329,7 @@ static int get_linux_sync_device(void)
             {
                 if (!(ret = wine_server_call( req )))
                 {
-                    fd = wine_server_receive_fd( &handle );
+                    fd = receive_fd( &handle );
                     assert( !handle );
                 }
             }
