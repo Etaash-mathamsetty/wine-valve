@@ -33,8 +33,8 @@
 #include "request.h"
 #include "thread.h"
 
-#ifdef HAVE_LINUX_NTSYNC_H
-# include <linux/ntsync.h>
+#ifdef HAVE_LINUX_TYPES_H
+# include "wine/ntsync.h"
 #endif
 
 #ifdef NTSYNC_IOC_EVENT_READ

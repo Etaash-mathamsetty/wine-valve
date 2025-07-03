@@ -4256,6 +4256,18 @@ enum fsync_type
 @REPLY
 @END
 
+enum inproc_sync_type
+{
+    INPROC_SYNC_UNKNOWN,
+    INPROC_SYNC_AUTO_EVENT,
+    INPROC_SYNC_MANUAL_EVENT,
+    INPROC_SYNC_SEMAPHORE,
+    INPROC_SYNC_MUTEX,
+    INPROC_SYNC_AUTO_SERVER,
+    INPROC_SYNC_MANUAL_SERVER,
+    INPROC_SYNC_QUEUE,
+};
+
 /* Obtain a fd for the ntsync device */
 @REQ(get_linux_sync_device)
 @END
