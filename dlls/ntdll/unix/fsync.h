@@ -50,5 +50,8 @@ extern NTSTATUS fsync_signal_and_wait( HANDLE signal, HANDLE wait,
 
 /* We have to synchronize on the fd cache mutex so that fsync_close(), close_handle() sequence 
  * called from NtClose() doesn't race with get_fsync_idx(), add_to_list() sequence called
- * from get_object(). */
-extern pthread_mutex_t fd_cache_mutex;
+ * from get_object().
+ *
+ * Moved to unix_private.h
+ */
+/* extern pthread_mutex_t fd_cache_mutex; */
