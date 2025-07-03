@@ -42,6 +42,7 @@ struct async;
 struct async_queue;
 struct winstation;
 struct object_type;
+struct inproc_sync;
 
 
 struct unicode_str
@@ -107,6 +108,8 @@ struct object_ops
                                 unsigned int options);
     /* return list of kernel objects */
     struct list *(*get_kernel_obj_list)(struct object *);
+    /* get a client-waitable in-process synchronization fd for this object */
+    int (*get_inproc_sync)(struct object *, enum inproc_sync_type *type);
     /* close a handle to this object */
     int (*close_handle)(struct object *,struct process *,obj_handle_t);
     /* destroy on refcount == 0 */
@@ -234,6 +237,10 @@ extern void reset_event( struct event *event );
 /* mutex functions */
 
 extern void abandon_mutexes( struct thread *thread );
+
+/* in-process synchronization functions */
+
+extern int no_get_inproc_sync( struct object *obj, enum inproc_sync_type *type );
 
 /* serial functions */
 
