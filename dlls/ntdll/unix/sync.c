@@ -57,6 +57,9 @@
 #ifdef HAVE_KQUEUE
 # include <sys/event.h>
 #endif
+#ifdef HAVE_LINUX_NTSYNC_H
+# include <linux/ntsync.h>
+#endif
 
 #include "ntstatus.h"
 #define WIN32_NO_STATUS
@@ -302,6 +305,108 @@ static unsigned int validate_open_object_attributes( const OBJECT_ATTRIBUTES *at
     return STATUS_SUCCESS;
 }
 
+#ifdef NTSYNC_IOC_EVENT_READ
+
+static int get_linux_sync_device(void)
+{
+    static LONG device = -2;
+
+    if (device == -2)
+    {
+        obj_handle_t handle;
+        sigset_t sigset;
+        NTSTATUS ret;
+        int fd = -1;
+
+        /* We need to use fd_cache_mutex here to protect against races with
+         * other threads trying to receive fds for the fd cache,
+         * and we need to use an uninterrupted section to prevent reentrancy. */
+        server_enter_uninterrupted_section( &fd_cache_mutex, &sigset );
+
+        if (device == -2)
+        {
+            SERVER_START_REQ( get_linux_sync_device )
+            {
+                if (!(ret = wine_server_call( req )))
+                {
+                    fd = wine_server_receive_fd( &handle );
+                    assert( !handle );
+                }
+            }
+            SERVER_END_REQ;
+
+            device = fd;
+        }
+
+        server_leave_uninterrupted_section( &fd_cache_mutex, &sigset );
+    }
+    return device;
+}
+
+static NTSTATUS inproc_release_semaphore( HANDLE handle, ULONG count, ULONG *prev_count )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_query_semaphore( HANDLE handle, SEMAPHORE_BASIC_INFORMATION *info )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_set_event( HANDLE handle, LONG *prev_state )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_reset_event( HANDLE handle, LONG *prev_state )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_pulse_event( HANDLE handle, LONG *prev_state )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_query_event( HANDLE handle, EVENT_BASIC_INFORMATION *info )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_release_mutex( HANDLE handle, LONG *prev_count )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_query_mutex( HANDLE handle, MUTANT_BASIC_INFORMATION *info )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_wait( DWORD count, const HANDLE *handles, BOOLEAN wait_any,
+                             BOOLEAN alertable, const LARGE_INTEGER *timeout )
+{
+    int device;
+
+    if ((device = get_linux_sync_device()) < 0)
+        return STATUS_NOT_IMPLEMENTED;
+
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_signal_and_wait( HANDLE signal, HANDLE wait,
+                                        BOOLEAN alertable, const LARGE_INTEGER *timeout )
+{
+    int device;
+
+    if ((device = get_linux_sync_device()) < 0)
+        return STATUS_NOT_IMPLEMENTED;
+
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+#else
+
 static NTSTATUS inproc_release_semaphore( HANDLE handle, ULONG count, ULONG *prev_count )
 {
     return STATUS_NOT_IMPLEMENTED;
@@ -354,7 +459,7 @@ static NTSTATUS inproc_signal_and_wait( HANDLE signal, HANDLE wait,
     return STATUS_NOT_IMPLEMENTED;
 }
 
-
+#endif
 
 /******************************************************************************
  *              NtCreateSemaphore (NTDLL.@)
