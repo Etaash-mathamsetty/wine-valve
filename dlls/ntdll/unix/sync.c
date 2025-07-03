@@ -302,6 +302,59 @@ static unsigned int validate_open_object_attributes( const OBJECT_ATTRIBUTES *at
     return STATUS_SUCCESS;
 }
 
+static NTSTATUS inproc_release_semaphore( HANDLE handle, ULONG count, ULONG *prev_count )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_query_semaphore( HANDLE handle, SEMAPHORE_BASIC_INFORMATION *info )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_set_event( HANDLE handle, LONG *prev_state )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_reset_event( HANDLE handle, LONG *prev_state )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_pulse_event( HANDLE handle, LONG *prev_state )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_query_event( HANDLE handle, EVENT_BASIC_INFORMATION *info )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_release_mutex( HANDLE handle, LONG *prev_count )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_query_mutex( HANDLE handle, MUTANT_BASIC_INFORMATION *info )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_wait( DWORD count, const HANDLE *handles, BOOLEAN wait_any,
+                             BOOLEAN alertable, const LARGE_INTEGER *timeout )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+static NTSTATUS inproc_signal_and_wait( HANDLE signal, HANDLE wait,
+                                        BOOLEAN alertable, const LARGE_INTEGER *timeout )
+{
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+
 
 /******************************************************************************
  *              NtCreateSemaphore (NTDLL.@)
@@ -396,6 +449,12 @@ NTSTATUS WINAPI NtQuerySemaphore( HANDLE handle, SEMAPHORE_INFORMATION_CLASS cla
 
     if (len != sizeof(SEMAPHORE_BASIC_INFORMATION)) return STATUS_INFO_LENGTH_MISMATCH;
 
+    if ((ret = inproc_query_semaphore( handle, out )) != STATUS_NOT_IMPLEMENTED)
+    {
+        if (!ret && ret_len) *ret_len = sizeof(SEMAPHORE_BASIC_INFORMATION);
+        return ret;
+    }
+
     if (do_fsync())
         return fsync_query_semaphore( handle, info, ret_len );
 
@@ -425,6 +484,9 @@ NTSTATUS WINAPI NtReleaseSemaphore( HANDLE handle, ULONG count, ULONG *previous 
     unsigned int ret;
 
     TRACE( "handle %p, count %u, prev_count %p\n", handle, (int)count, previous );
+
+    if ((ret = inproc_release_semaphore( handle, count, previous )) != STATUS_NOT_IMPLEMENTED)
+        return ret;
 
     if (do_fsync())
         return fsync_release_semaphore( handle, count, previous );
@@ -529,6 +591,9 @@ NTSTATUS WINAPI NtSetEvent( HANDLE handle, LONG *prev_state )
 
     TRACE( "handle %p, prev_state %p\n", handle, prev_state );
 
+    if ((ret = inproc_set_event( handle, prev_state )) != STATUS_NOT_IMPLEMENTED)
+        return ret;
+
     if (do_fsync())
         return fsync_set_event( handle, prev_state );
 
@@ -556,6 +621,9 @@ NTSTATUS WINAPI NtResetEvent( HANDLE handle, LONG *prev_state )
     unsigned int ret;
 
     TRACE( "handle %p, prev_state %p\n", handle, prev_state );
+
+    if ((ret = inproc_reset_event( handle, prev_state )) != STATUS_NOT_IMPLEMENTED)
+        return ret;
 
     if (do_fsync())
         return fsync_reset_event( handle, prev_state );
@@ -595,6 +663,9 @@ NTSTATUS WINAPI NtPulseEvent( HANDLE handle, LONG *prev_state )
 
     TRACE( "handle %p, prev_state %p\n", handle, prev_state );
 
+    if ((ret = inproc_pulse_event( handle, prev_state )) != STATUS_NOT_IMPLEMENTED)
+        return ret;
+
     if (do_fsync())
         return fsync_pulse_event( handle, prev_state );
 
@@ -631,6 +702,12 @@ NTSTATUS WINAPI NtQueryEvent( HANDLE handle, EVENT_INFORMATION_CLASS class,
     }
 
     if (len != sizeof(EVENT_BASIC_INFORMATION)) return STATUS_INFO_LENGTH_MISMATCH;
+
+    if ((ret = inproc_query_event( handle, out )) != STATUS_NOT_IMPLEMENTED)
+    {
+        if (!ret && ret_len) *ret_len = sizeof(EVENT_BASIC_INFORMATION);
+        return ret;
+    }
 
     if (do_fsync())
         return fsync_query_event( handle, info, ret_len );
@@ -733,6 +810,9 @@ NTSTATUS WINAPI NtReleaseMutant( HANDLE handle, LONG *prev_count )
 
     TRACE( "handle %p, prev_count %p\n", handle, prev_count );
 
+    if ((ret = inproc_release_mutex( handle, prev_count )) != STATUS_NOT_IMPLEMENTED)
+        return ret;
+
     if (do_fsync())
         return fsync_release_mutex( handle, prev_count );
 
@@ -768,6 +848,12 @@ NTSTATUS WINAPI NtQueryMutant( HANDLE handle, MUTANT_INFORMATION_CLASS class,
     }
 
     if (len != sizeof(MUTANT_BASIC_INFORMATION)) return STATUS_INFO_LENGTH_MISMATCH;
+
+    if ((ret = inproc_query_mutex( handle, out )) != STATUS_NOT_IMPLEMENTED)
+    {
+        if (!ret && ret_len) *ret_len = sizeof(MUTANT_BASIC_INFORMATION);
+        return ret;
+    }
 
     if (do_fsync())
         return fsync_query_mutex( handle, info, ret_len );
@@ -1710,6 +1796,12 @@ NTSTATUS WINAPI NtWaitForMultipleObjects( DWORD count, const HANDLE *handles, BO
         TRACE( "}, timeout %s\n", debugstr_timeout(timeout) );
     }
 
+    if ((ret = inproc_wait( count, handles, wait_any, alertable, timeout )) != STATUS_NOT_IMPLEMENTED)
+    {
+        TRACE( "-> %#x\n", ret );
+        return ret;
+    }
+
     if (do_fsync())
     {
         NTSTATUS ret = fsync_wait_objects( count, handles, wait_any, alertable, timeout );
@@ -1758,18 +1850,22 @@ NTSTATUS wait_internal_server( HANDLE handle, BOOLEAN alertable, const LARGE_INT
 NTSTATUS WINAPI NtSignalAndWaitForSingleObject( HANDLE signal, HANDLE wait,
                                                 BOOLEAN alertable, const LARGE_INTEGER *timeout )
 {
+    NTSTATUS ret;
     union select_op select_op;
     UINT flags = SELECT_INTERRUPTIBLE;
 
     TRACE( "signal %p, wait %p, alertable %u, timeout %s\n", signal, wait, alertable, debugstr_timeout(timeout) );
+
+    if (!signal) return STATUS_INVALID_HANDLE;
+
+    if ((ret = inproc_signal_and_wait( signal, wait, alertable, timeout )) != STATUS_NOT_IMPLEMENTED)
+        return ret;
 
     if (do_fsync())
         return fsync_signal_and_wait( signal, wait, alertable, timeout );
 
     if (do_esync())
         return esync_signal_and_wait( signal, wait, alertable, timeout );
-
-    if (!signal) return STATUS_INVALID_HANDLE;
 
     if (alertable) flags |= SELECT_ALERTABLE;
     select_op.signal_and_wait.op = SELECT_SIGNAL_AND_WAIT;
