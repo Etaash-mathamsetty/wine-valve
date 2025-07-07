@@ -468,6 +468,7 @@ struct wayland_win_data
     BOOL is_fullscreen;
     BOOL force_below_hack;
     BOOL managed;
+    BOOL layered_attribs_set;
 };
 
 struct wayland_win_data *wayland_win_data_get(HWND hwnd);
@@ -566,7 +567,9 @@ void WAYLAND_FlashWindowEx(FLASHWINFO *info);
 BOOL WAYLAND_SetIMECompositionRect(HWND hwnd, RECT rect);
 void WAYLAND_SetCursor(HWND hwnd, HCURSOR hcursor);
 BOOL WAYLAND_SetCursorPos(INT x, INT y);
+void WAYLAND_SetLayeredWindowAttributes(HWND hwnd, COLORREF key, BYTE alpha, DWORD flags);
 void WAYLAND_SetWindowIcon(HWND hwnd, UINT type, HICON icon);
+void WAYLAND_SetWindowStyle(HWND hwnd, INT offset, STYLESTRUCT *style);
 void WAYLAND_SetWindowText(HWND hwnd, LPCWSTR text);
 LRESULT WAYLAND_SysCommand(HWND hwnd, WPARAM wparam, LPARAM lparam, const POINT *pos);
 UINT WAYLAND_UpdateDisplayDevices(const struct gdi_device_manager *device_manager, void *param);
