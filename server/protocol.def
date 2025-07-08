@@ -4271,3 +4271,26 @@ enum inproc_sync_type
 /* Obtain a fd for the ntsync device */
 @REQ(get_linux_sync_device)
 @END
+
+/* Get the in-process synchronization fd associated with the waitable handle */
+@REQ(get_linux_sync_obj)
+    obj_handle_t handle;        /* handle to the object */
+@REPLY
+    int type;                   /* object type */
+    unsigned int access;        /* handle access rights */
+@END
+
+/* Begin a client-side wait on a message queue */
+@REQ(select_inproc_queue)
+@END
+
+/* End a client-side wait on a message queue */
+@REQ(unselect_inproc_queue)
+    int          signaled;        /* was the queue signaled? */
+@END
+
+/* Get an event handle to be used for thread alerts with in-process synchronization */
+@REQ(get_inproc_alert_event)
+@REPLY
+    obj_handle_t handle;          /* handle to the event */
+@END
