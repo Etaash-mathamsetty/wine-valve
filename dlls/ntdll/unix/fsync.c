@@ -171,7 +171,7 @@ int do_fsync(void)
     if (do_fsync_cached == -1)
     {
         syscall( __NR_futex_waitv, NULL, 0, 0, NULL, 0 );
-        do_fsync_cached = getenv("WINEFSYNC") && atoi(getenv("WINEFSYNC")) && errno != ENOSYS && errno != EPERM;
+        do_fsync_cached = getenv("WINEFSYNC") && atoi(getenv("WINEFSYNC")) && errno != ENOSYS && errno != EPERM && get_linux_sync_device() < 0;
     }
 
     return do_fsync_cached;

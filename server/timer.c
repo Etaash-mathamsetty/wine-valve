@@ -26,6 +26,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 #include "ntstatus.h"
 #define WIN32_NO_STATUS
@@ -65,6 +66,7 @@ struct timer
     client_ptr_t         arg;       /* callback argument */
     int                  esync_fd;  /* esync file descriptor */
     unsigned int         fsync_idx; /* fsync shm index */
+    int                  inproc_sync; /* in-process synchronization object */
 };
 
 static void timer_dump( struct object *obj, int verbose );
@@ -72,6 +74,7 @@ static int timer_signaled( struct object *obj, struct wait_queue_entry *entry );
 static int timer_get_esync_fd( struct object *obj, enum esync_type *type );
 static unsigned int timer_get_fsync_idx( struct object *obj, enum fsync_type *type );
 static void timer_satisfied( struct object *obj, struct wait_queue_entry *entry );
+static int timer_get_inproc_sync( struct object *obj, enum inproc_sync_type *type );
 static void timer_destroy( struct object *obj );
 
 static const struct object_ops timer_ops =
@@ -96,7 +99,7 @@ static const struct object_ops timer_ops =
     default_unlink_name,       /* unlink_name */
     no_open_file,              /* open_file */
     no_kernel_obj_list,        /* get_kernel_obj_list */
-    no_get_inproc_sync,        /* get_inproc_sync */
+    timer_get_inproc_sync,     /* get_inproc_sync */
     no_close_handle,           /* close_handle */
     timer_destroy              /* destroy */
 };
@@ -121,6 +124,7 @@ static struct timer *create_timer( struct object *root, const struct unicode_str
             timer->thread   = NULL;
             timer->esync_fd = -1;
             timer->fsync_idx = 0;
+            timer->inproc_sync = create_inproc_event( manual, FALSE );
 
             if (do_fsync())
                 timer->fsync_idx = fsync_alloc_shm( 0, 0 );
@@ -168,6 +172,7 @@ static void timer_callback( void *private )
     /* wake up waiters */
     timer->signaled = 1;
     wake_up( &timer->obj, 0 );
+    set_inproc_event( timer->inproc_sync );
 }
 
 /* cancel a running timer */
@@ -198,6 +203,8 @@ static int set_timer( struct timer *timer, timeout_t expire, unsigned int period
     {
         period = 0;  /* period doesn't make any sense for a manual timer */
         timer->signaled = 0;
+
+        reset_inproc_event( timer->inproc_sync );
 
         if (do_fsync())
             fsync_clear( &timer->obj );
@@ -252,6 +259,14 @@ static void timer_satisfied( struct object *obj, struct wait_queue_entry *entry 
     if (!timer->manual) timer->signaled = 0;
 }
 
+static int timer_get_inproc_sync( struct object *obj, enum inproc_sync_type *type )
+{
+    struct timer *timer = (struct timer *)obj;
+
+    *type = timer->manual ? INPROC_SYNC_MANUAL_SERVER : INPROC_SYNC_AUTO_SERVER;
+    return timer->inproc_sync;
+}
+
 static void timer_destroy( struct object *obj )
 {
     struct timer *timer = (struct timer *)obj;
@@ -259,6 +274,7 @@ static void timer_destroy( struct object *obj )
 
     if (timer->timeout) remove_timeout_user( timer->timeout );
     if (timer->thread) release_object( timer->thread );
+    if (use_inproc_sync()) close( timer->inproc_sync );
     if (do_esync()) close( timer->esync_fd );
     if (timer->fsync_idx) fsync_free_shm_idx( timer->fsync_idx );
 }
