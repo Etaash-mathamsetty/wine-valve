@@ -232,13 +232,16 @@ int main( int argc, char *argv[] )
     sock_init();
     open_master_socket();
 
+    if (use_inproc_sync())
+        fprintf( stderr, "wineserver: using ntsync synchronization.\n" );
+
     if (do_fsync())
         fsync_init();
 
     if (do_esync())
         esync_init();
 
-    if (!do_fsync() && !do_esync())
+    if (!do_fsync() && !do_esync() && !use_inproc_sync())
         fprintf( stderr, "wineserver: using server-side synchronization.\n" );
 
     if (debug_level) fprintf( stderr, "wineserver: starting (pid=%ld)\n", (long) getpid() );
