@@ -166,6 +166,7 @@ struct fd
     unsigned int         comp_flags;  /* completion flags */
     int                  esync_fd;    /* esync file descriptor */
     unsigned int         fsync_idx;   /* fsync shm index */
+    int                  inproc_sync; /* in-process synchronization object */
 };
 
 static void fd_dump( struct object *obj, int verbose );
@@ -1610,6 +1611,7 @@ static void fd_destroy( struct object *obj )
         free( fd->unix_name );
     }
 
+    if (use_inproc_sync()) close( fd->inproc_sync );
     if (do_esync())
         close( fd->esync_fd );
     if (fd->fsync_idx) fsync_free_shm_idx( fd->fsync_idx );
@@ -1733,6 +1735,7 @@ static struct fd *alloc_fd_object(void)
     fd->comp_flags = 0;
     fd->esync_fd   = -1;
     fd->fsync_idx  = 0;
+    fd->inproc_sync = create_inproc_event( TRUE, fd->signaled );
     init_async_queue( &fd->read_q );
     init_async_queue( &fd->write_q );
     init_async_queue( &fd->wait_q );
@@ -1782,6 +1785,7 @@ struct fd *alloc_pseudo_fd( const struct fd_ops *fd_user_ops, struct object *use
     fd->no_fd_status = STATUS_BAD_DEVICE_TYPE;
     fd->esync_fd   = -1;
     fd->fsync_idx  = 0;
+    fd->inproc_sync = create_inproc_event( TRUE, fd->inproc_sync );
     init_async_queue( &fd->read_q );
     init_async_queue( &fd->write_q );
     init_async_queue( &fd->wait_q );
@@ -2237,13 +2241,18 @@ void set_fd_signaled( struct fd *fd, int signaled )
 {
     if (fd->comp_flags & FILE_SKIP_SET_EVENT_ON_HANDLE) return;
     fd->signaled = signaled;
-    if (signaled) wake_up( fd->user, 0 );
+    if (signaled)
+    {
+        wake_up( fd->user, 0 );
+        set_inproc_event( fd->inproc_sync );
+    }
+    else
+    {
+        reset_inproc_event( fd->inproc_sync );
 
-    if (do_fsync() && !signaled)
-        fsync_clear( fd->user );
-
-    if (do_esync() && !signaled)
-        esync_clear( fd->esync_fd );
+        if (do_fsync()) fsync_clear( fd->user );
+        if (do_esync()) esync_clear( fd->esync_fd );
+    }
 }
 
 /* check if events are pending and if yes return which one(s) */
@@ -2258,6 +2267,17 @@ int check_fd_events( struct fd *fd, int events )
     pfd.events = events;
     if (poll( &pfd, 1, 0 ) <= 0) return 0;
     return pfd.revents;
+}
+
+int default_fd_get_inproc_sync( struct object *obj, enum inproc_sync_type *type )
+{
+    struct fd *fd = get_obj_fd( obj );
+    int ret;
+
+    *type = INPROC_SYNC_MANUAL_SERVER;
+    ret = fd->inproc_sync;
+    release_object( fd );
+    return ret;
 }
 
 /* default signaled() routine for objects that poll() on an fd */
