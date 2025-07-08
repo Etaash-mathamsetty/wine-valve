@@ -56,6 +56,7 @@ struct console
 {
     struct object                obj;           /* object header */
     int                          signaled;      /* is console signaled */
+    int                          inproc_sync;   /* in-process synchronization object */
     struct thread               *renderer;      /* console renderer thread */
     struct screen_buffer        *active;        /* active screen buffer */
     struct console_server       *server;        /* console server object */
@@ -73,6 +74,7 @@ static struct object *console_lookup_name( struct object *obj, struct unicode_st
                                            unsigned int attr, struct object *root );
 static struct object *console_open_file( struct object *obj, unsigned int access,
                                          unsigned int sharing, unsigned int options );
+static int console_get_inproc_sync( struct object *obj, enum inproc_sync_type *type );
 static int console_add_queue( struct object *obj, struct wait_queue_entry *entry );
 
 static const struct object_ops console_ops =
@@ -97,7 +99,7 @@ static const struct object_ops console_ops =
     NULL,                             /* unlink_name */
     console_open_file,                /* open_file */
     no_kernel_obj_list,               /* get_kernel_obj_list */
-    no_get_inproc_sync,               /* get_inproc_sync */
+    console_get_inproc_sync,          /* get_inproc_sync */
     no_close_handle,                  /* close_handle */
     console_destroy                   /* destroy */
 };
@@ -144,6 +146,7 @@ struct console_server
     unsigned int          once_input : 1; /* flag if input thread has already been requested */
     int                   term_fd;     /* UNIX terminal fd */
     struct termios        termios;     /* original termios */
+    int                   inproc_sync; /* in-process synchronization object */
     int                   esync_fd;
     unsigned int          fsync_idx;
 };
@@ -158,6 +161,7 @@ static struct object *console_server_lookup_name( struct object *obj, struct uni
                                                 unsigned int attr, struct object *root );
 static struct object *console_server_open_file( struct object *obj, unsigned int access,
                                                 unsigned int sharing, unsigned int options );
+static int console_server_get_inproc_sync( struct object *obj, enum inproc_sync_type *type );
 
 static const struct object_ops console_server_ops =
 {
@@ -181,7 +185,7 @@ static const struct object_ops console_server_ops =
     NULL,                             /* unlink_name */
     console_server_open_file,         /* open_file */
     no_kernel_obj_list,               /* get_kernel_obj_list */
-    no_get_inproc_sync,               /* get_inproc_sync */
+    console_server_get_inproc_sync,   /* get_inproc_sync */
     no_close_handle,                  /* close_handle */
     console_server_destroy            /* destroy */
 };
@@ -562,6 +566,7 @@ static struct object *create_console(void)
 
     console->renderer      = NULL;
     console->signaled      = 0;
+    console->inproc_sync   = create_inproc_event( TRUE, console->signaled );
     console->active        = NULL;
     console->server        = NULL;
     console->fd            = NULL;
@@ -605,6 +610,7 @@ static int queue_host_ioctl( struct console_server *server, unsigned int code, u
     }
     list_add_tail( &server->queue, &ioctl->entry );
     wake_up( &server->obj, 0 );
+    set_inproc_event( server->inproc_sync );
     if (async) set_error( STATUS_PENDING );
     return 1;
 }
@@ -641,6 +647,7 @@ static void disconnect_console_server( struct console_server *server )
         server->console->server = NULL;
         server->console = NULL;
         wake_up( &server->obj, 0 );
+        set_inproc_event( server->inproc_sync );
     }
 }
 
@@ -795,6 +802,7 @@ static void console_destroy( struct object *obj )
     free_async_queue( &console->read_q );
     if (console->fd)
         release_object( console->fd );
+    if (use_inproc_sync()) close( console->inproc_sync );
 }
 
 static struct object *create_console_connection( struct console *console )
@@ -818,6 +826,22 @@ static struct object *create_console_connection( struct console *console )
         current->process->console = (struct console *)grab_object( console );
 
     return &connection->obj;
+}
+
+static int console_get_inproc_sync( struct object *obj, enum inproc_sync_type *type )
+{
+    struct console *console = (struct console *)obj;
+
+    /* cf. console_add_queue() */
+    if (console->server && !console->server->once_input)
+    {
+        console->server->once_input = 1;
+        if (console->server->term_fd == -1)
+            queue_host_ioctl( console->server, IOCTL_CONDRV_PEEK, 0, NULL, NULL );
+    }
+
+    *type = INPROC_SYNC_MANUAL_SERVER;
+    return console->inproc_sync;
 }
 
 static struct object *console_lookup_name( struct object *obj, struct unicode_str *name,
@@ -909,6 +933,7 @@ static void console_server_destroy( struct object *obj )
     assert( obj->ops == &console_server_ops );
     disconnect_console_server( server );
     if (server->fd) release_object( server->fd );
+    if (use_inproc_sync()) close( server->inproc_sync );
     if (do_esync()) close( server->esync_fd );
     if (server->fsync_idx) fsync_free_shm_idx( server->fsync_idx );
 }
@@ -985,6 +1010,14 @@ static struct object *console_server_open_file( struct object *obj, unsigned int
     return grab_object( obj );
 }
 
+static int console_server_get_inproc_sync( struct object *obj, enum inproc_sync_type *type )
+{
+    struct console_server *server = (struct console_server*)obj;
+
+    *type = INPROC_SYNC_MANUAL_SERVER;
+    return server->inproc_sync;
+}
+
 static struct object *create_console_server( void )
 {
     struct console_server *server;
@@ -994,6 +1027,7 @@ static struct object *create_console_server( void )
     server->busy       = 0;
     server->once_input = 0;
     server->term_fd    = -1;
+    server->inproc_sync = create_inproc_event( TRUE, TRUE );
     list_init( &server->queue );
     list_init( &server->read_queue );
     server->fd = alloc_pseudo_fd( &console_server_fd_ops, &server->obj, FILE_SYNCHRONOUS_IO_NONALERT );
@@ -1598,11 +1632,27 @@ DECL_HANDLER(get_next_console_request)
 
     if (!server->console->renderer) server->console->renderer = current;
 
-    if (!req->signal) server->console->signaled = 0;
+    if (!req->signal)
+    {
+        server->console->signaled = 0;
+        reset_inproc_event( server->console->inproc_sync );
+    }
     else if (!server->console->signaled)
     {
         server->console->signaled = 1;
         wake_up( &server->console->obj, 0 );
+        set_inproc_event( server->console->inproc_sync );
+        /* FIXME: backport other console changes from upstream */
+        /*
+         *          LIST_FOR_EACH_ENTRY( screen_buffer, &server->console->screen_buffers, struct screen_buffer, entry )
+         +        {                                                                                     *
+         wake_up( &screen_buffer->obj, 0 );
+         +            set_inproc_event( screen_buffer->inproc_sync );
+         +        }
+         LIST_FOR_EACH_ENTRY( input, &server->console->inputs, struct console_input, entry )
+         wake_up( &input->obj, 0 );
+         LIST_FOR_EACH_ENTRY( output, &server->console->outputs, struct console_output, entry )
+         */
     }
 
     if (req->read)
@@ -1629,6 +1679,9 @@ DECL_HANDLER(get_next_console_request)
         if (do_esync() && list_empty( &server->queue ))
             esync_clear( server->esync_fd );
     }
+
+    if (list_empty( &server->queue ))
+        reset_inproc_event( server->inproc_sync );
 
     if (ioctl)
     {
@@ -1717,6 +1770,8 @@ DECL_HANDLER(get_next_console_request)
         fsync_clear( &server->obj );
     if (do_esync() && list_empty( &server->queue ))
         esync_clear( server->esync_fd );
+    if (list_empty( &server->queue ))
+        reset_inproc_event( server->inproc_sync );
 
     release_object( server );
 }
