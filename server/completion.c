@@ -25,6 +25,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "ntstatus.h"
 #define WIN32_NO_STATUS
@@ -79,8 +80,9 @@ struct completion
     struct list    wait_queue;
     unsigned int   depth;
     int            closed;
-    int                esync_fd;
-    unsigned int       fsync_idx;
+    int            inproc_sync;
+    int            esync_fd;
+    unsigned int   fsync_idx;
 };
 
 static void completion_wait_dump( struct object*, int );
@@ -170,6 +172,7 @@ static int completion_signaled( struct object *obj, struct wait_queue_entry *ent
 static int completion_get_esync_fd( struct object *obj, enum esync_type *type );
 static unsigned int completion_get_fsync_idx( struct object *obj, enum fsync_type *type );
 static int completion_close_handle( struct object *obj, struct process *process, obj_handle_t handle );
+static int completion_get_inproc_sync( struct object *obj, enum inproc_sync_type *type );
 static void completion_destroy( struct object * );
 
 static const struct object_ops completion_ops =
@@ -194,7 +197,7 @@ static const struct object_ops completion_ops =
     default_unlink_name,       /* unlink_name */
     no_open_file,              /* open_file */
     no_kernel_obj_list,        /* get_kernel_obj_list */
-    no_get_inproc_sync,        /* get_inproc_sync */
+    completion_get_inproc_sync,/* get_inproc_sync */
     completion_close_handle,   /* close_handle */
     completion_destroy         /* destroy */
 };
@@ -211,6 +214,7 @@ static void completion_destroy( struct object *obj)
     {
         free( tmp );
     }
+    if (use_inproc_sync()) close( completion->inproc_sync );
 }
 
 static void completion_dump( struct object *obj, int verbose )
@@ -265,6 +269,7 @@ static int completion_close_handle( struct object *obj, struct process *process,
     }
     completion->closed = 1;
     wake_up( obj, 0 );
+    set_inproc_event( completion->inproc_sync );
     return 1;
 }
 
@@ -298,6 +303,14 @@ static struct completion_wait *create_completion_wait( struct thread *thread )
     return wait;
 }
 
+static int completion_get_inproc_sync( struct object *obj, enum inproc_sync_type *type )
+{
+    struct completion *completion = (struct completion *)obj;
+
+    *type = INPROC_SYNC_MANUAL_SERVER;
+    return completion->inproc_sync;
+}
+
 static struct completion *create_completion( struct object *root, const struct unicode_str *name,
                                              unsigned int attr, unsigned int concurrent,
                                              const struct security_descriptor *sd )
@@ -312,6 +325,7 @@ static struct completion *create_completion( struct object *root, const struct u
             list_init( &completion->wait_queue );
             completion->depth = 0;
             completion->closed = 0;
+            completion->inproc_sync = create_inproc_event( TRUE, FALSE );
         }
     }
     if (do_esync()) completion->esync_fd = esync_create_fd( 0, 0 );
@@ -346,7 +360,11 @@ void add_completion( struct completion *completion, apc_param_t ckey, apc_param_
         wake_up( &wait->obj, 1 );
         if (list_empty( &completion->queue )) return;
     }
-    if (!list_empty( &completion->queue )) wake_up( &completion->obj, 0 );
+    if (!list_empty( &completion->queue ))
+    {
+        wake_up( &completion->obj, 0 );
+        set_inproc_event( completion->inproc_sync );
+    }
 }
 
 /* create a completion */
@@ -449,6 +467,7 @@ DECL_HANDLER(remove_completion)
         reply->wait_handle = 0;
         if (list_empty( &completion->queue ))
         {
+            reset_inproc_event( completion->inproc_sync );
             if (do_esync()) esync_clear( completion->esync_fd );
             if (do_fsync()) fsync_clear( &completion->obj );
         }

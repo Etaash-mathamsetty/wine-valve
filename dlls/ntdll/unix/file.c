@@ -7417,7 +7417,7 @@ NTSTATUS WINAPI NtLockFile( HANDLE file, HANDLE event, PIO_APC_ROUTINE apc, void
         }
         if (handle)
         {
-            NtWaitForSingleObject( handle, FALSE, NULL );
+            wait_internal_server( handle, FALSE, NULL );
             NtClose( handle );
         }
         else  /* Unix lock conflict, sleep a bit and retry */
