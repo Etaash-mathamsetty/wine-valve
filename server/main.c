@@ -233,7 +233,7 @@ int main( int argc, char *argv[] )
     open_master_socket();
 
     if (use_inproc_sync())
-        fprintf( stderr, "wineserver: using ntsync synchronization.\n" );
+        fprintf( stderr, "wineserver: NTSync up and running!\n" );
 
     if (do_fsync())
         fsync_init();
