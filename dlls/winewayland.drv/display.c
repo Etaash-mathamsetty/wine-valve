@@ -190,7 +190,8 @@ static void apply_monitor_adjustment(struct wl_array *output_info_array, int *x,
         {
             struct wayland_output_mode *mode = info->output->current_mode;
             UINT64 score = (UINT64)mode->height *
-                           (UINT64)mode->width * (UINT64)mode->refresh;
+                           (UINT64)mode->width * (UINT64)mode->refresh
+                           - (info->output->logical_x / 100);
 
             if (score > max_score)
             {
