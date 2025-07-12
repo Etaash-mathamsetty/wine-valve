@@ -321,8 +321,7 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
 
     p += 18;
     p[3] = 0xfc;
-    memcpy((char *)p + 5, output_info->output->name,
-             min(strlen(output_info->output->name), 12));
+    strcpy( (char *)p + 5, "Default" );
 
     p += 18;
     p[3] = 0x10;
