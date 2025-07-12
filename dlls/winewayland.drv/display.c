@@ -163,21 +163,41 @@ static BOOL output_info_array_resolve_overlaps(struct wl_array *output_info_arra
 }
 
 /* Grab offset based on the user specified monitor name */
-static void get_user_named_offset(struct wl_array *output_info_array, int *x, int *y)
+static void apply_monitor_adjustment(struct wl_array *output_info_array, int *x, int *y)
 {
     struct output_info *info = NULL;
     char *env = getenv("WAYLANDDRV_PRIMARY_MONITOR");
     *x = *y = 0;
 
-    if (!env) return;
-
-    wl_array_for_each(info, output_info_array)
+    /* use the env if available */
+    if (env)
     {
-        if (!strcmp(info->output->name, env))
+        wl_array_for_each(info, output_info_array)
         {
-            *x = info->x;
-            *y = info->y;
-            break;
+            if (!strcmp(info->output->name, env))
+            {
+                *x = info->x;
+                *y = info->y;
+                break;
+            }
+        }
+    } else {
+
+        /* attempt to guess the best monitor based on resolution and refresh rate */
+        UINT64 max_score = 0;
+
+        wl_array_for_each(info, output_info_array)
+        {
+            struct wayland_output_mode *mode = info->output->current_mode;
+            UINT64 score = (UINT64)mode->height *
+                           (UINT64)mode->width * (UINT64)mode->refresh;
+
+            if (score > max_score)
+            {
+                *x = info->x;
+                *y = info->y;
+                max_score = score;
+            }
         }
     }
 }
@@ -202,7 +222,7 @@ static void output_info_array_arrange_physical_coords(struct wl_array *output_in
            ++steps < num_outputs)
         continue;
 
-    get_user_named_offset(output_info_array, &x_offset, &y_offset);
+    apply_monitor_adjustment(output_info_array, &x_offset, &y_offset);
 
     wl_array_for_each(info, output_info_array)
     {
