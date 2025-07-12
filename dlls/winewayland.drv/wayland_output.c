@@ -132,27 +132,6 @@ static void wayland_output_mode_free_rb(struct rb_entry *entry, void *ctx)
     free(RB_ENTRY_VALUE(entry, struct wayland_output_mode, entry));
 }
 
-/* Check environment variables to look for coordinate offset */
-static void apply_user_coord_offset(int *x, int *y)
-{
-    const char *env;
-    int offset;
-
-    env = getenv("WAYLANDDRV_XOFFSET");
-    if (env && sscanf(env, "%d", &offset) == 1)
-    {
-        *x -= offset;
-        TRACE("x offset %d\n", offset);
-    }
-
-    env = getenv("WAYLANDDRV_YOFFSET");
-    if (env && sscanf(env, "%d", &offset) == 1)
-    {
-        *y -= offset;
-        TRACE("y offset %d\n", offset);
-    }
-}
-
 static void wayland_output_done(struct wayland_output *output)
 {
     struct wayland_output_mode *mode;
@@ -191,7 +170,6 @@ static void wayland_output_done(struct wayland_output *output)
     {
         output->current.logical_x = output->pending.logical_x;
         output->current.logical_y = output->pending.logical_y;
-        apply_user_coord_offset(&output->current.logical_x, &output->current.logical_y);
     }
 
     if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_LOGICAL_WH)
