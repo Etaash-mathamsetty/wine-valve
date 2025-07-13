@@ -192,6 +192,7 @@ static void apply_monitor_adjustment(struct wl_array *output_info_array, int *x,
             UINT64 score = (UINT64)mode->height *
                            (UINT64)mode->width * (UINT64)mode->refresh
                            - (UINT64)(info->output->logical_x / 100)
+                           - (UINT64)(info->output->logical_y / 100)
                            + (UINT64)info->output->max_cll;
 
             if (score > max_score)
