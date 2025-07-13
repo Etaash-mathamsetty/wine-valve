@@ -523,6 +523,56 @@ BOOL WAYLAND_CreateWindowSurface(HWND hwnd, BOOL layered, const RECT *surface_re
     return TRUE;
 }
 
+/* FIXME: just a guess */
+static BOOL is_decoration_enabled( DWORD style, DWORD ex_style )
+{
+    if (ex_style & WS_EX_TOOLWINDOW) return FALSE;
+    if (ex_style & WS_EX_LAYERED) return FALSE;
+
+    if ((style & WS_CAPTION) == WS_CAPTION)
+        return TRUE;
+
+    return FALSE;
+}
+
+/***********************************************************************
+ *           WAYLAND_GetWindowStyleMasks
+ */
+BOOL WAYLAND_GetWindowStyleMasks(HWND hwnd, UINT style, UINT ex_style, UINT *style_mask, UINT *ex_style_mask)
+{
+    struct wayland_win_data *data;
+    struct wayland_surface *surface;
+    BOOL ret = FALSE;
+
+    if (!process_wayland.zxdg_decoration_manager_v1) return FALSE;
+
+    if ((data = wayland_win_data_get(hwnd)))
+    {
+        if ((surface = data->wayland_surface) && wayland_surface_is_toplevel(surface))
+        {
+            if (surface->configured_mode != ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE)
+                goto done;
+
+            if (EqualRect(&data->rects.window, &data->rects.visible))
+                goto done;
+
+            if (is_decoration_enabled(style, ex_style))
+            {
+                TRACE("Enabling decorations!\n");
+                *style_mask = *ex_style_mask = 0;
+                *style_mask |= WS_CAPTION | WS_DLGFRAME | WS_THICKFRAME;
+                *ex_style_mask |= WS_EX_DLGMODALFRAME;
+                ret = TRUE;
+            }
+        }
+
+        done:
+        wayland_win_data_release(data);
+    }
+
+    return ret;
+}
+
 /***********************************************************************
  *           WAYLAND_HasWindowManager
  */

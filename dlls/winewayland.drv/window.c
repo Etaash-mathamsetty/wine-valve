@@ -473,7 +473,15 @@ void WAYLAND_WindowPosChanged(HWND hwnd, HWND insert_after, HWND owner_hint, UIN
     toplevel_data = toplevel && toplevel != hwnd ? wayland_win_data_get_nolock(toplevel) : NULL;
     toplevel_surface = toplevel_data ? toplevel_data->wayland_surface : NULL;
 
+
     data->rects = *new_rects;
+
+    if (data->wayland_surface
+        && data->wayland_surface->configured_mode == ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE)
+    {
+        data->rects.window = data->rects.client;
+    }
+
     data->is_fullscreen = fullscreen;
     data->managed = managed;
 
