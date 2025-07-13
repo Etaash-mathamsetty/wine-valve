@@ -154,7 +154,7 @@ static void wayland_win_data_get_config(struct wayland_win_data *data,
     enum wayland_surface_config_state window_state = 0;
     DWORD style;
 
-    conf->rect = data->rects.window;
+    conf->rect = data->rects.visible;
     conf->client_rect = data->rects.client;
     style = NtUserGetWindowLongW(data->hwnd, GWL_STYLE);
 
@@ -532,6 +532,13 @@ void WAYLAND_WindowPosChanged(HWND hwnd, HWND insert_after, HWND owner_hint, UIN
     else if (wayland_win_data_create_wayland_surface(data, toplevel_surface))
     {
         wayland_win_data_update_wayland_state(data);
+
+        /* update client surface positioning in case it changes as a result of server decor */
+        if ((client = data->client_surface))
+        {
+            if (toplevel && NtUserIsWindowVisible(hwnd))
+                wayland_client_surface_attach(client, toplevel);
+        }
     }
 
     needs_icon = data->wayland_surface && !data->wayland_surface->big_icon_buffer &&

@@ -236,6 +236,11 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
         process_wayland.xdg_toplevel_tag_manager_v1 =
             wl_registry_bind(registry, id, &xdg_toplevel_tag_manager_v1_interface, 1);
     }
+    else if (strcmp(interface, "zxdg_decoration_manager_v1") == 0)
+    {
+        process_wayland.zxdg_decoration_manager_v1 =
+            wl_registry_bind(registry, id, &zxdg_decoration_manager_v1_interface, 1);
+    }
 }
 
 static void registry_handle_global_remove(void *data, struct wl_registry *registry,
@@ -415,6 +420,9 @@ BOOL wayland_process_init(void)
 
     if (!process_wayland.xdg_toplevel_tag_manager_v1)
         WARN("Wayland compositor doesn't support optional xdg_toplevel_tag_manager_v1!\n");
+
+    if (!process_wayland.zxdg_decoration_manager_v1)
+        ERR("Wayland compositor doesn't support zxdg_decoration_manager_v1 (server side decorations will not be supported)\n");
 
     process_wayland.initialized = TRUE;
 
