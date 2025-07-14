@@ -1677,17 +1677,18 @@ __ASM_GLOBAL_FUNC( call_user_mode_callback,
                    "movq %rax,0xa8(%rsp)\n\t"  /* frame->syscall_cfa */
                    "movw %cs,0x78(%rsp)\n\t"   /* frame->cs */
                    "movw %ss,0x90(%rsp)\n\t"   /* frame->ss */
-                   "movq 0x328(%r8),%r10\n\t"  /* amd64_thread_data()->syscall_frame */
+                   "movq 0x328(%r8),%r14\n\t"  /* amd64_thread_data()->syscall_frame */
                    "movq (%r8),%rax\n\t"       /* NtCurrentTeb()->Tib.ExceptionList */
                    "movq %rax,0x300(%rsp,%rsi)\n\t"
-                   "movl 0xb0(%r10),%r14d\n\t" /* prev_frame->syscall_flags */
-                   "movl %r14d,0xb0(%rsp)\n\t" /* frame->syscall_flags */
-                   "movq %r10,0xa0(%rsp)\n\t"  /* frame->prev_frame */
+                   "movl 0xb0(%r14),%r10d\n\t" /* prev_frame->syscall_flags */
+                   "movl %r10d,0xb0(%rsp)\n\t" /* frame->syscall_flags */
+                   "movq %r14,0xa0(%rsp)\n\t"  /* frame->prev_frame */
                    "movq %rsp,0x328(%r8)\n\t"  /* amd64_thread_data()->syscall_frame */
                    /* switch to user stack */
                    "movq %rdi,%rsp\n\t"        /* user_rsp */
+                   "movq 0x98(%r14),%rbp\n\t"  /* prev_frame->rbp */
 #ifdef __linux__
-                   "testl $12,%r14d\n\t"       /* SYSCALL_HAVE_PTHREAD_TEB | SYSCALL_HAVE_WRFSGSBASE */
+                   "testl $12,%r10d\n\t"       /* SYSCALL_HAVE_PTHREAD_TEB | SYSCALL_HAVE_WRFSGSBASE */
                    "jz 1f\n\t"
                    "movw 0x338(%r8),%fs\n"     /* amd64_thread_data()->fs */
                    "1:\n\t"
@@ -1696,8 +1697,14 @@ __ASM_GLOBAL_FUNC( call_user_mode_callback,
                    "movq (%r10),%r10\n\t"
                    "test %r10,%r10\n\t"
                    "jz 1f\n\t"
-                   "xchgq %rcx,%r10\n\t"
-                   "1\t:jmpq *%rcx" )          /* func */
+                   "xchgq %rcx,%r10\n"
+                   "1:\n\t"
+                   "xor %rbx,%rbx\n\t"
+                   "xor %r12,%r12\n\t"
+                   "xor %r13,%r13\n\t"
+                   "xor %r14,%r14\n\t"
+                   "xor %r15,%r15\n\t"
+                   "jmpq *%rcx" )          /* func */
 
 
 /***********************************************************************
