@@ -416,7 +416,7 @@ static inline unsigned int inproc_sync_handle_to_index( HANDLE handle, unsigned 
     return idx % INPROC_SYNC_CACHE_BLOCK_SIZE;
 }
 
-static struct inproc_sync_cache_entry *cache_inproc_sync_obj( HANDLE handle, obj_handle_t inproc_sync, int fd,
+static struct inproc_sync_cache_entry *cache_inproc_sync_obj( HANDLE handle, int fd,
                                                               enum inproc_sync_type type, unsigned int access )
 {
     unsigned int entry, idx = inproc_sync_handle_to_index( handle, &entry );
@@ -528,7 +528,6 @@ static NTSTATUS get_inproc_sync_obj( HANDLE handle, enum inproc_sync_type desire
                                      struct inproc_sync_cache_entry **ret_cache )
 {
     struct inproc_sync_cache_entry *cache;
-    obj_handle_t inproc_sync_handle;
     enum inproc_sync_type type;
     unsigned int access;
     sigset_t sigset;
@@ -582,7 +581,7 @@ static NTSTATUS get_inproc_sync_obj( HANDLE handle, enum inproc_sync_type desire
         return ret;
     }
 
-    cache = cache_inproc_sync_obj( handle, inproc_sync_handle, fd, type, access );
+    cache = cache_inproc_sync_obj( handle, fd, type, access );
 
     server_leave_uninterrupted_section( &fd_cache_mutex, &sigset );
 
@@ -922,7 +921,7 @@ static NTSTATUS linux_wait_objs( int device, const DWORD count, const int *objs,
     else if (timeout->QuadPart <= 0)
     {
         clock_gettime( CLOCK_MONOTONIC, &now );
-        args.timeout = (now.tv_sec * NSECPERSEC) + now.tv_nsec + (-timeout->QuadPart * 100);
+        args.timeout = ((__s64)now.tv_sec * NSECPERSEC) + now.tv_nsec + (-timeout->QuadPart * 100);
     }
     else
     {
