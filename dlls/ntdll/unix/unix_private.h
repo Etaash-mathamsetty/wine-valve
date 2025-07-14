@@ -422,7 +422,7 @@ extern void call_raise_user_exception_dispatcher(void);
 extern const char * wine_debuginfostr_pc(void *pc);
 
 #define TICKSPERSEC 10000000
-#define NSECPERSEC 1000000000
+#define NSECPERSEC (LONG64)1000000000
 #define SECS_1601_TO_1970  ((369 * 365 + 89) * (ULONGLONG)86400)
 
 static inline ULONGLONG ticks_from_time_t( time_t time )
