@@ -246,7 +246,7 @@
 @ stdcall NtGetTickCount()
 @ stdcall -syscall NtGetWriteWatch(long long ptr long ptr ptr ptr)
 @ stdcall -syscall NtImpersonateAnonymousToken(long)
-# @ stub NtImpersonateClientOfPort
+@ stdcall -syscall=0x001f NtImpersonateClientOfPort(long ptr)
 # @ stub NtImpersonateThread
 @ stdcall -syscall NtInitializeNlsFiles(ptr ptr ptr)
 # @ stub NtInitializeRegistry
@@ -352,7 +352,7 @@
 @ stdcall -syscall NtRaiseHardError(long long long ptr long ptr)
 @ stdcall -syscall=0x0006 NtReadFile(long long ptr ptr ptr ptr long ptr ptr)
 @ stdcall -syscall=0x002e NtReadFileScatter(long long ptr ptr ptr ptr long ptr ptr)
-# @ stub NtReadRequestData
+@ stdcall -syscall=0x0054 NtReadRequestData(long ptr long ptr long ptr)
 @ stdcall -syscall=0x003f NtReadVirtualMemory(long ptr ptr long ptr)
 # @ stub NtRegisterNewDevice
 @ stdcall -syscall NtRegisterThreadTerminatePort(ptr)
@@ -365,9 +365,9 @@
 @ stdcall -syscall NtRemoveProcessDebug(long long)
 @ stdcall -syscall NtRenameKey(long ptr)
 @ stdcall -syscall NtReplaceKey(ptr long ptr)
-# @ stub NtReplyPort
+@ stdcall -syscall=0x000c NtReplyPort(long ptr)
 @ stdcall -syscall=0x000b NtReplyWaitReceivePort(ptr ptr ptr ptr)
-# @ stub NtReplyWaitReceivePortEx
+@ stdcall -syscall=0x002b NtReplyWaitReceivePortEx(long ptr ptr ptr ptr)
 # @ stub NtReplyWaitReplyPort
 # @ stub NtRequestDeviceWakeup
 # @ stub NtRequestPort
@@ -464,7 +464,7 @@
 @ stdcall -syscall -arch=win32 NtWow64WriteVirtualMemory64(long int64 ptr int64 ptr)
 @ stdcall -syscall=0x0008 NtWriteFile(long long ptr ptr ptr ptr long ptr ptr)
 @ stdcall -syscall=0x001b NtWriteFileGather(long long ptr ptr ptr ptr long ptr ptr)
-# @ stub NtWriteRequestData
+@ stdcall -syscall=0x0057 NtWriteRequestData(long ptr long ptr long ptr)
 @ stdcall -syscall=0x003a NtWriteVirtualMemory(long ptr ptr long ptr)
 @ stdcall -syscall=0x0046 NtYieldExecution()
 @ stdcall NtdllDefWindowProc_A(long long long long)
@@ -1322,7 +1322,7 @@
 # @ stub ZwGetPlugPlayEvent
 @ stdcall -private ZwGetWriteWatch(long long ptr long ptr ptr ptr) NtGetWriteWatch
 @ stdcall -private ZwImpersonateAnonymousToken(long) NtImpersonateAnonymousToken
-# @ stub ZwImpersonateClientOfPort
+@ stdcall -private ZwImpersonateClientOfPort(long ptr) NtImpersonateClientOfPort
 # @ stub ZwImpersonateThread
 @ stdcall -private ZwInitializeNlsFiles(ptr ptr ptr) NtInitializeNlsFiles
 # @ stub ZwInitializeRegistry
@@ -1428,7 +1428,7 @@
 @ stdcall -private ZwRaiseHardError(long long long ptr long ptr) NtRaiseHardError
 @ stdcall -private ZwReadFile(long long ptr ptr ptr ptr long ptr ptr) NtReadFile
 @ stdcall -private ZwReadFileScatter(long long ptr ptr ptr ptr long ptr ptr) NtReadFileScatter
-# @ stub ZwReadRequestData
+@ stdcall -private ZwReadRequestData(long ptr long ptr long ptr) NtReadRequestData
 @ stdcall -private ZwReadVirtualMemory(long ptr ptr long ptr) NtReadVirtualMemory
 # @ stub ZwRegisterNewDevice
 @ stdcall -private ZwRegisterThreadTerminatePort(ptr) NtRegisterThreadTerminatePort
@@ -1441,9 +1441,9 @@
 @ stdcall -private ZwRemoveProcessDebug(long long) NtRemoveProcessDebug
 @ stdcall -private ZwRenameKey(long ptr) NtRenameKey
 @ stdcall -private ZwReplaceKey(ptr long ptr) NtReplaceKey
-# @ stub ZwReplyPort
+@ stdcall -private ZwReplyPort(long ptr) NtReplyPort
 @ stdcall -private ZwReplyWaitReceivePort(ptr ptr ptr ptr) NtReplyWaitReceivePort
-# @ stub ZwReplyWaitReceivePortEx
+@ stdcall -private ZwReplyWaitReceivePortEx(long ptr ptr ptr ptr) NtReplyWaitReceivePortEx
 # @ stub ZwReplyWaitReplyPort
 # @ stub ZwRequestDeviceWakeup
 # @ stub ZwRequestPort
@@ -1540,7 +1540,7 @@
 @ stdcall -private -arch=win32 ZwWow64WriteVirtualMemory64(long int64 ptr int64 ptr) NtWow64WriteVirtualMemory64
 @ stdcall -private ZwWriteFile(long long ptr ptr ptr ptr long ptr ptr) NtWriteFile
 @ stdcall -private ZwWriteFileGather(long long ptr ptr ptr ptr long ptr ptr) NtWriteFileGather
-# @ stub ZwWriteRequestData
+@ stdcall -private ZwWriteRequestData(long ptr long ptr long ptr) NtWriteRequestData
 @ stdcall -private ZwWriteVirtualMemory(long ptr ptr long ptr) NtWriteVirtualMemory
 @ stdcall -private ZwYieldExecution() NtYieldExecution
 @ cdecl -private -arch=i386 _CIcos()
