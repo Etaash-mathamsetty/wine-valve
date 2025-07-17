@@ -134,7 +134,7 @@
 @ stdcall -syscall=0x0000 NtAccessCheck(ptr long long ptr ptr ptr ptr ptr)
 @ stdcall -syscall=0x0029 NtAccessCheckAndAuditAlarm(ptr long ptr ptr ptr long ptr long ptr ptr ptr)
 # @ stub NtAccessCheckByType
-# @ stub NtAccessCheckByTypeAndAuditAlarm
+@ stdcall -syscall=0x0059 NtAccessCheckByTypeAndAuditAlarm(ptr long ptr ptr ptr ptr long long long ptr long ptr long ptr ptr ptr)
 # @ stub NtAccessCheckByTypeResultList
 # @ stub NtAccessCheckByTypeResultListAndAuditAlarm
 # @ stub NtAccessCheckByTypeResultListAndAuditAlarmByHandle
@@ -162,7 +162,7 @@
 @ stdcall -syscall=0x0061 NtCancelTimer(long ptr)
 @ stdcall -syscall=0x003e NtClearEvent(long)
 @ stdcall -syscall=0x000f NtClose(long)
-# @ stub NtCloseObjectAuditAlarm
+@ stdcall -syscall=0x003b NtCloseObjectAuditAlarm(ptr long long)
 @ stdcall -syscall NtCommitTransaction(long long)
 # @ stub NtCompactKeys
 @ stdcall -syscall NtCompareObjects(ptr ptr)
@@ -1212,7 +1212,7 @@
 @ stdcall -private ZwAccessCheck(ptr long long ptr ptr ptr ptr ptr) NtAccessCheck
 @ stdcall -private ZwAccessCheckAndAuditAlarm(ptr long ptr ptr ptr long ptr long ptr ptr ptr) NtAccessCheckAndAuditAlarm
 # @ stub ZwAccessCheckByType
-# @ stub ZwAccessCheckByTypeAndAuditAlarm
+@ stdcall -private ZwAccessCheckByTypeAndAuditAlarm(ptr long ptr ptr ptr ptr long long long ptr long ptr long ptr ptr ptr) NtAccessCheckByTypeAndAuditAlarm
 # @ stub ZwAccessCheckByTypeResultList
 # @ stub ZwAccessCheckByTypeResultListAndAuditAlarm
 # @ stub ZwAccessCheckByTypeResultListAndAuditAlarmByHandle
@@ -1240,7 +1240,7 @@
 @ stdcall -private ZwCancelTimer(long ptr) NtCancelTimer
 @ stdcall -private ZwClearEvent(long) NtClearEvent
 @ stdcall -private ZwClose(long) NtClose
-# @ stub ZwCloseObjectAuditAlarm
+@ stdcall -private ZwCloseObjectAuditAlarm(ptr long long) NtCloseObjectAuditAlarm
 @ stdcall -private ZwCommitTransaction(long long) NtCommitTransaction
 # @ stub ZwCompactKeys
 @ stdcall -private ZwCompareObjects(ptr ptr) NtCompareObjects
