@@ -510,10 +510,7 @@ static VkResult wine_vk_physical_device_init(struct wine_phys_dev *object, VkPhy
         ++num_properties; /* VK_KHR_win32_keyed_mutex */
 
     ++num_properties; /* VK_WINE_openxr_device_extensions */
-<<<<<<< HEAD
     ++num_properties; /* VK_WINE_openvr_device_extensions */
-=======
->>>>>>> 9d8f0cad948 (fixup! winevulkan: HACK: Advertise VK_WINE_openxr_device_extensions.)
 
     if (!(object->extensions = calloc(num_properties, sizeof(*object->extensions))))
     {
@@ -540,12 +537,9 @@ static VkResult wine_vk_physical_device_init(struct wine_phys_dev *object, VkPhy
     strcpy(object->extensions[j].extensionName, "VK_WINE_openxr_device_extensions");
     TRACE("Enabling extension '%s' for physical device %p\n", object->extensions[j].extensionName, object);
     ++j;
-<<<<<<< HEAD
     strcpy(object->extensions[j].extensionName, "VK_WINE_openvr_device_extensions");
     TRACE("Enabling extension '%s' for physical device %p\n", object->extensions[j].extensionName, object);
     ++j;
-=======
->>>>>>> 9d8f0cad948 (fixup! winevulkan: HACK: Advertise VK_WINE_openxr_device_extensions.)
 
     object->extension_count = num_properties;
     TRACE("Host supported extensions %u, Wine supported extensions %u\n", num_host_properties, num_properties);
