@@ -553,7 +553,7 @@
 @ stub KeDcacheFlushCount
 @ stdcall KeDelayExecutionThread(long long ptr)
 @ stub KeDeregisterBugCheckCallback
-@ stub KeDeregisterBugCheckReasonCallback
+@ stdcall KeDeregisterBugCheckReasonCallback(ptr)
 @ stub KeDetachProcess
 @ stub KeDisconnectInterrupt
 @ stdcall KeEnterCriticalRegion()
