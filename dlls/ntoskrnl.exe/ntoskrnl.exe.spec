@@ -627,7 +627,7 @@
 @ stub KeReadStateQueue
 @ stub KeReadStateSemaphore
 @ stub KeReadStateTimer
-@ stub KeRegisterBugCheckCallback
+@ stdcall KeRegisterBugCheckCallback(ptr ptr ptr long ptr)
 @ stub KeRegisterBugCheckReasonCallback
 @ stub KeReleaseInterruptSpinLock
 @ stub KeReleaseMutant
