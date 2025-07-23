@@ -2465,6 +2465,7 @@ NTSTATUS WINAPI FsRtlRegisterUncProvider(PHANDLE MupHandle, PUNICODE_STRING Redi
 static void *create_process_object( HANDLE handle )
 {
     ULONG len;
+    HANDLE token;
     PEPROCESS process;
     ANSI_STRING imageNameA;
     UNICODE_STRING imageNameW, fullImageName;
@@ -2497,6 +2498,10 @@ static void *create_process_object( HANDLE handle )
                                sizeof(fullImageName) + fullImageName.MaximumLength, NULL );
     process->fullImageName = fullImageName;
 
+    NtOpenProcessToken( handle, TOKEN_ALL_ACCESS, &token );
+    ObReferenceObjectByHandle( token, 0, SeTokenObjectType, KernelMode, &process->token, NULL );
+    NtClose(token);
+
     IsWow64Process( handle, &process->wow64 );
 
     return process;
@@ -2506,6 +2511,7 @@ void release_process_object(void *obj)
 {
     PEPROCESS process = obj;
     ExFreePool(process->fullImageName.Buffer);
+    ObDereferenceObject(process->token);
 
     SERVER_START_REQ( release_kernel_object )
     {
@@ -2635,6 +2641,16 @@ const char *WINAPI PsGetProcessImageFileName( PEPROCESS process )
 {
     TRACE("%p -> %s\n", process, debugstr_an(process->imageName, sizeof(process->imageName)));
     return process->imageName;
+}
+
+/*********************************************************************
+ *           PsReferencePrimaryToken    (NTOSKRNL.@)
+ */
+PACCESS_TOKEN WINAPI PsReferencePrimaryToken( PEPROCESS process )
+{
+    TRACE("%p -> %p\n", process, process->token);
+    ObReferenceObject(process->token);
+    return process->token;
 }
 
 static void *create_thread_object( HANDLE handle )
