@@ -2465,6 +2465,8 @@ NTSTATUS WINAPI FsRtlRegisterUncProvider(PHANDLE MupHandle, PUNICODE_STRING Redi
 static void *create_process_object( HANDLE handle )
 {
     PEPROCESS process;
+    UNICODE_STRING imageNameW;
+    ANSI_STRING imageNameA;
 
     if (!(process = alloc_kernel_object( PsProcessType, handle, sizeof(*process), 0 ))) return NULL;
 
@@ -2473,6 +2475,14 @@ static void *create_process_object( HANDLE handle )
     NtQueryInformationProcess( handle, ProcessBasicInformation, &process->info, sizeof(process->info), NULL );
     NtQueryInformationProcess( handle, ProcessSessionInformation, &process->session_id, sizeof(process->session_id), NULL );
     NtQueryInformationProcess( handle, ProcessTimes, &process->times, sizeof(process->times), NULL );
+
+    RtlInitUnicodeString(&imageNameW, NULL);
+    LdrGetDllFullName(handle, &imageNameW);
+    RtlUnicodeStringToAnsiString(&imageNameA, &imageNameW, TRUE);
+    memcpy(process->imageName, imageNameA.Buffer, min(sizeof(process->imageName), imageNameA.Length));
+    RtlFreeAnsiString(&imageNameA);
+    RtlFreeUnicodeString(&imageNameW);
+
     IsWow64Process( handle, &process->wow64 );
 
     return process;
@@ -2587,6 +2597,15 @@ BOOL WINAPI PsGetProcessExitProcessCalled( PEPROCESS process )
 {
     /* FIXME: not quite accurate */
     return PsGetProcessExitStatus(process) != STATUS_PENDING;
+}
+
+/*********************************************************************
+ *           PsGetProcessImageFileName    (NTOSKRNL.@)
+ */
+const char *WINAPI PsGetProcessImageFileName( PEPROCESS process )
+{
+    TRACE("%p -> %s\n", process, debugstr_an(process->imageName, sizeof(process->imageName)));
+    return process->imageName;
 }
 
 static void *create_thread_object( HANDLE handle )
