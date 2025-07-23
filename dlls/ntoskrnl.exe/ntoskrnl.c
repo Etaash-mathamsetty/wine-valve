@@ -4585,6 +4585,24 @@ static struct _OBJECT_TYPE token_type =
 
 POBJECT_TYPE SeTokenObjectType = &token_type;
 
+NTSTATUS WINAPI SeQueryInformationToken(PACCESS_TOKEN token, TOKEN_INFORMATION_CLASS class, void **info)
+{
+    HANDLE handle;
+    NTSTATUS status;
+    /* FIXME: calculate size dynamically */
+    const ULONG size = 0x1000;
+    TRACE("%p %u %p\n", token, class, info);
+
+    if ((status = ObOpenObjectByPointer( token, OBJ_KERNEL_HANDLE, NULL, TOKEN_ALL_ACCESS, SeTokenObjectType, KernelMode, &handle )))
+        return status;
+
+    *info = ExAllocatePool(PagedPool, size);
+
+    if (!*info) return STATUS_NO_MEMORY;
+
+    return NtQueryInformationToken(handle, class, *info, size, NULL);
+}
+
 /*************************************************************************
  *           ExUuidCreate            (NTOSKRNL.@)
  *
