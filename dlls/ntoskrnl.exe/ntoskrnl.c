@@ -2562,6 +2562,24 @@ LONGLONG WINAPI PsGetProcessCreateTimeQuadPart( PEPROCESS process )
     return process->times.CreateTime.QuadPart;
 }
 
+/*********************************************************************
+ *           PsGetProcessExitStatus    (NTOSKRNL.@)
+ */
+NTSTATUS WINAPI PsGetProcessExitStatus( PEPROCESS process )
+{
+    PROCESS_BASIC_INFORMATION info;
+    HANDLE handle, id = PsGetProcessId(process);
+
+    if (!(handle = OpenProcess( PROCESS_ALL_ACCESS, FALSE, HandleToUlong(id) )))
+        return STATUS_SUCCESS;
+
+    NtQueryInformationProcess(handle, ProcessBasicInformation,
+                              &info, sizeof(info), NULL);
+    NtClose(handle);
+    TRACE("%p -> %lx\n", process, info.ExitStatus);
+    return info.ExitStatus;
+}
+
 static void *create_thread_object( HANDLE handle )
 {
     THREAD_BASIC_INFORMATION info;
