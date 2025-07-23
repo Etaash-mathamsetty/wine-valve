@@ -2580,6 +2580,15 @@ NTSTATUS WINAPI PsGetProcessExitStatus( PEPROCESS process )
     return info.ExitStatus;
 }
 
+/*********************************************************************
+ *           PsGetProcessExitProcessCalled    (NTOSKRNL.@)
+ */
+BOOL WINAPI PsGetProcessExitProcessCalled( PEPROCESS process )
+{
+    /* FIXME: not quite accurate */
+    return PsGetProcessExitStatus(process) != STATUS_PENDING;
+}
+
 static void *create_thread_object( HANDLE handle )
 {
     THREAD_BASIC_INFORMATION info;
