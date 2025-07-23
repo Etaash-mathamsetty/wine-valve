@@ -36,6 +36,7 @@
 @ stdcall HalGetBusData(long long long ptr long)
 @ stdcall HalGetBusDataByOffset(long long long ptr long long)
 @ stub HalGetEnvironmentVariable
+@ stub HalGetEnvironmentVariableEx
 @ stub HalGetInterruptVector
 @ stub HalHandleNMI
 @ stub HalInitSystem
