@@ -3390,6 +3390,15 @@ DEVICE_OBJECT* WINAPI IoGetAttachedDeviceReference( DEVICE_OBJECT *device )
     return result;
 }
 
+/***********************************************************************
+ *           IoGetBaseFileSystemDeviceObject   (NTOSKRNL.EXE.@)
+ */
+DEVICE_OBJECT *WINAPI IoGetBaseFileSystemDeviceObject( FILE_OBJECT *file )
+{
+    FIXME("%p -> %p semi-stub!\n", file, file->DeviceObject);
+    return file->DeviceObject;
+}
+
 
 /***********************************************************************
  *           PsCreateSystemThread   (NTOSKRNL.EXE.@)
