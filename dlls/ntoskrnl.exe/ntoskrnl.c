@@ -2464,9 +2464,10 @@ NTSTATUS WINAPI FsRtlRegisterUncProvider(PHANDLE MupHandle, PUNICODE_STRING Redi
 
 static void *create_process_object( HANDLE handle )
 {
+    ULONG len;
     PEPROCESS process;
-    UNICODE_STRING imageNameW;
     ANSI_STRING imageNameA;
+    UNICODE_STRING imageNameW, fullImageName;
 
     if (!(process = alloc_kernel_object( PsProcessType, handle, sizeof(*process), 0 ))) return NULL;
 
@@ -2476,16 +2477,43 @@ static void *create_process_object( HANDLE handle )
     NtQueryInformationProcess( handle, ProcessSessionInformation, &process->session_id, sizeof(process->session_id), NULL );
     NtQueryInformationProcess( handle, ProcessTimes, &process->times, sizeof(process->times), NULL );
 
+    /* get short image name */
     RtlInitUnicodeString(&imageNameW, NULL);
+    LdrGetDllFullName(handle, &imageNameW);
+    imageNameW.MaximumLength = imageNameW.Length + sizeof(WCHAR);
+    imageNameW.Buffer = ExAllocatePool(PagedPool, imageNameW.MaximumLength);
     LdrGetDllFullName(handle, &imageNameW);
     RtlUnicodeStringToAnsiString(&imageNameA, &imageNameW, TRUE);
     memcpy(process->imageName, imageNameA.Buffer, min(sizeof(process->imageName), imageNameA.Length));
     RtlFreeAnsiString(&imageNameA);
-    RtlFreeUnicodeString(&imageNameW);
+    ExFreePool(imageNameW.Buffer);
+
+    /* get full image name */
+    RtlInitUnicodeString(&fullImageName, NULL);
+    NtQueryInformationProcess( handle, ProcessImageFileNameWin32, &fullImageName, sizeof(fullImageName), &len );
+    fullImageName.MaximumLength = len;
+    fullImageName.Buffer = ExAllocatePool(PagedPool, len);
+    NtQueryInformationProcess( handle, ProcessImageFileNameWin32, &fullImageName,
+                               sizeof(fullImageName) + fullImageName.MaximumLength, NULL );
+    process->fullImageName = fullImageName;
 
     IsWow64Process( handle, &process->wow64 );
 
     return process;
+}
+
+void release_process_object(void *obj)
+{
+    PEPROCESS process = obj;
+    ExFreePool(process->fullImageName.Buffer);
+
+    SERVER_START_REQ( release_kernel_object )
+    {
+        req->manager  = wine_server_obj_handle( get_device_manager() );
+        req->user_ptr = wine_server_client_ptr( obj );
+        if (wine_server_call( req )) FIXME( "failed to release %p\n", obj );
+    }
+    SERVER_END_REQ;
 }
 
 static const WCHAR process_type_name[] = {'P','r','o','c','e','s','s',0};
@@ -2493,7 +2521,8 @@ static const WCHAR process_type_name[] = {'P','r','o','c','e','s','s',0};
 static struct _OBJECT_TYPE process_type =
 {
     process_type_name,
-    create_process_object
+    create_process_object,
+    release_process_object
 };
 
 POBJECT_TYPE PsProcessType = &process_type;
@@ -4460,9 +4489,19 @@ BOOLEAN WINAPI SePrivilegeCheck(PRIVILEGE_SET *privileges, SECURITY_SUBJECT_CONT
  */
 NTSTATUS WINAPI SeLocateProcessImageName(PEPROCESS process, UNICODE_STRING **image_name)
 {
-    FIXME("stub: %p %p\n", process, image_name);
-    if (image_name) *image_name = NULL;
-    return STATUS_NOT_IMPLEMENTED;
+    TRACE("%p %p\n", process, image_name);
+
+    if (!image_name) return STATUS_INVALID_PARAMETER;
+
+    *image_name = ExAllocatePool(PagedPool, sizeof(UNICODE_STRING));
+
+    if (!*image_name) return STATUS_NO_MEMORY;
+
+    **image_name = process->fullImageName;
+
+    TRACE("ret: %s\n", debugstr_us(*image_name));
+
+    return STATUS_SUCCESS;
 }
 
 /*********************************************************************
