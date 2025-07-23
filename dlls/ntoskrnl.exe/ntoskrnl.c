@@ -2469,7 +2469,7 @@ static void *create_process_object( HANDLE handle )
     HANDLE token;
     PEPROCESS process;
     ANSI_STRING fullImageNameA;
-    UNICODE_STRING fullImageNameW;
+    UNICODE_STRING *fullImageNameW = NULL;
 
     if (!(process = alloc_kernel_object( PsProcessType, handle, sizeof(*process), 0 ))) return NULL;
 
@@ -2480,15 +2480,12 @@ static void *create_process_object( HANDLE handle )
     NtQueryInformationProcess( handle, ProcessTimes, &process->times, sizeof(process->times), NULL );
 
     /* get full image name */
-    RtlInitUnicodeString(&fullImageNameW, NULL);
-    NtQueryInformationProcess( handle, ProcessImageFileNameWin32, &fullImageNameW, sizeof(fullImageNameW), &len );
-    fullImageNameW.MaximumLength = len;
-    fullImageNameW.Buffer = ExAllocatePool(PagedPool, len);
-    if (!fullImageNameW.Buffer) return NULL;
-    NtQueryInformationProcess( handle, ProcessImageFileNameWin32, &fullImageNameW,
-                               sizeof(fullImageNameW) + fullImageNameW.MaximumLength, NULL );
-    process->fullImageName = fullImageNameW;
-    RtlUnicodeStringToAnsiString(&fullImageNameA, &fullImageNameW, TRUE);
+    NtQueryInformationProcess( handle, ProcessImageFileNameWin32, fullImageNameW, 0, &len );
+    fullImageNameW = malloc(len + sizeof(WCHAR));
+    if (!fullImageNameW) return NULL;
+    fullImageNameW->MaximumLength = len + sizeof(WCHAR);
+    NtQueryInformationProcess( handle, ProcessImageFileNameWin32, fullImageNameW, len, &len );
+    RtlUnicodeStringToAnsiString(&fullImageNameA, fullImageNameW, TRUE);
     if (!fullImageNameA.Buffer) return NULL;
     /* generate short name */
     for (p = fullImageNameA.Buffer + fullImageNameA.Length - 1; p >= fullImageNameA.Buffer; p--)
@@ -2501,6 +2498,7 @@ static void *create_process_object( HANDLE handle )
     }
     memcpy(process->imageName, p, min(fullImageNameA.Buffer + fullImageNameA.Length - p, sizeof(process->imageName)));
     RtlFreeAnsiString(&fullImageNameA);
+    free(fullImageNameW);
 
     IsWow64Process( handle, &process->wow64 );
 
@@ -2514,8 +2512,11 @@ static void *create_process_object( HANDLE handle )
 void release_process_object(void *obj)
 {
     PEPROCESS process = obj;
-    ExFreePool(process->fullImageName.Buffer);
-    ObDereferenceObject(process->token);
+
+    if (process->token)
+        ObDereferenceObject(process->token);
+
+    process->token = NULL;
 
     SERVER_START_REQ( release_kernel_object )
     {
@@ -2774,11 +2775,10 @@ HANDLE WINAPI PsGetThreadProcessId( PETHREAD thread )
  */
 NTSTATUS WINAPI PsGetContextThread(PETHREAD thread, CONTEXT *context)
 {
-    HANDLE handle;
     NTSTATUS status;
-    ULONG_PTR id = (ULONG_PTR) PsGetThreadId(thread);
+    HANDLE handle, id = PsGetThreadId(thread);
 
-    if (!(handle = OpenThread(THREAD_ALL_ACCESS, FALSE, id)))
+    if (!(handle = OpenThread(THREAD_ALL_ACCESS, FALSE, HandleToUlong(id))))
         return STATUS_NOT_FOUND;
 
     status = NtGetContextThread(handle, context);
@@ -3125,6 +3125,18 @@ PHYSICAL_ADDRESS WINAPI MmGetPhysicalAddress(void *virtual_address)
     FIXME("(%p): semi-stub\n", virtual_address);
     ret.QuadPart = (ULONG_PTR)virtual_address;
     return ret;
+}
+
+PHYSICAL_MEMORY_RANGE *WINAPI MmGetPhysicalMemoryRanges(void)
+{
+    static PHYSICAL_MEMORY_RANGE range = {
+        .BaseAddress.QuadPart = 0xdead,
+        .NumberOfBytes.QuadPart = 0x10000000
+    };
+
+    FIXME("stub!\n");
+
+    return &range;
 }
 
 /***********************************************************************
@@ -4526,17 +4538,41 @@ BOOLEAN WINAPI SePrivilegeCheck(PRIVILEGE_SET *privileges, SECURITY_SUBJECT_CONT
  */
 NTSTATUS WINAPI SeLocateProcessImageName(PEPROCESS process, UNICODE_STRING **image_name)
 {
+    ULONG len;
+    NTSTATUS status;
+    HANDLE handle, id = PsGetProcessId(process);
+
     TRACE("%p %p\n", process, image_name);
 
     if (!image_name) return STATUS_INVALID_PARAMETER;
 
-    *image_name = ExAllocatePool(PagedPool, sizeof(UNICODE_STRING));
+    if (!(handle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, HandleToUlong(id))))
+        return STATUS_NOT_FOUND;
 
-    if (!*image_name) return STATUS_NO_MEMORY;
+    NtQueryInformationProcess(handle, ProcessImageFileNameWin32, *image_name, 0, &len);
 
-    **image_name = process->fullImageName;
+    len += sizeof(WCHAR);
+
+    *image_name = ExAllocatePool(PagedPool, len);
+
+    if (!*image_name)
+    {
+        NtClose(handle);
+        return STATUS_NO_MEMORY;
+    }
+
+    (*image_name)->MaximumLength = len;
+
+    if ((status = NtQueryInformationProcess(handle, ProcessImageFileNameWin32,
+                                            *image_name, len - sizeof(WCHAR), &len)))
+    {
+        NtClose(handle);
+        return status;
+    }
 
     TRACE("ret: %s\n", debugstr_us(*image_name));
+
+    NtClose(handle);
 
     return STATUS_SUCCESS;
 }
