@@ -401,7 +401,7 @@
 @ stdcall IoFreeWorkItem(ptr)
 @ stdcall IoGetAttachedDevice(ptr)
 @ stdcall IoGetAttachedDeviceReference(ptr)
-@ stub IoGetBaseFileSystemDeviceObject
+@ stdcall IoGetBaseFileSystemDeviceObject(ptr)
 @ stub IoGetBootDiskInformation
 @ stdcall IoGetConfigurationInformation()
 @ stdcall IoGetCurrentProcess()
