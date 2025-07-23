@@ -2,6 +2,7 @@
 @ stdcall EtwUnregister(int64)
 @ stdcall -arch=!i386 ExAcquireFastMutex(ptr)
 @ stdcall -fastcall ExAcquireFastMutexUnsafe(ptr)
+@ stub ExAcquirePushLockSharedEx
 @ stub ExAcquireRundownProtection
 @ stub ExAcquireRundownProtectionEx
 @ stub ExInitializeRundownProtection
@@ -13,6 +14,7 @@
 @ stub ExReInitializeRundownProtection
 @ stdcall -arch=!i386 ExReleaseFastMutex(ptr)
 @ stdcall -fastcall ExReleaseFastMutexUnsafe(ptr)
+@ stub ExReleasePushLockSharedEx
 @ stdcall -fastcall ExReleaseResourceLite(ptr)
 @ stub ExReleaseRundownProtection
 @ stub ExReleaseRundownProtectionEx
@@ -740,6 +742,7 @@
 @ stub MmLockPagableImageSection
 @ stdcall MmLockPagableSectionByHandle(ptr)
 @ stdcall MmMapIoSpace(int64 long long)
+@ stub MmMapIoSpaceEx
 @ stub MmMapLockedPages
 @ stdcall MmMapLockedPagesSpecifyCache(ptr long long ptr long long)
 @ stub MmMapLockedPagesWithReservedMapping
@@ -1373,6 +1376,7 @@
 @ stub SeReleaseSecurityDescriptor
 @ stub SeReleaseSubjectContext
 @ stub SeSetAccessStateGenericMapping
+@ stub SeSetAuditParameter
 @ stub SeSetSecurityDescriptorInfo
 @ stub SeSetSecurityDescriptorInfoEx
 @ stdcall SeSinglePrivilegeCheck(int64 long)
