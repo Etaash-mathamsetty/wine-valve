@@ -324,7 +324,26 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
 
     p += 18;
     p[3] = 0xfc;
-    strcpy( (char *)p + 5, "Default" );
+    if (!output_info->output->name)
+        strcpy( (char *)p + 5, "Default" );
+    else
+    {
+        int i = 0;
+
+        p += 5;
+        for (; i < strlen(output_info->output->name); i++)
+        {
+            char d = output_info->output->name[i];
+            if (i >= 10) break;
+            if (d == '-') d = ' ';
+            p[i] = d;
+        }
+
+        p[i] = '\n';
+
+        TRACE("name: %s\n", p);
+        p -= 5;
+    }
 
     p += 18;
     p[3] = 0x10;
