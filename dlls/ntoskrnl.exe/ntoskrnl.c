@@ -2765,6 +2765,23 @@ HANDLE WINAPI PsGetThreadProcessId( PETHREAD thread )
     return thread->kthread.id.UniqueProcess;
 }
 
+/*********************************************************************
+ *           PsGetContextThread    (NTOSKRNL.@)
+ */
+NTSTATUS WINAPI PsGetContextThread(PETHREAD thread, CONTEXT *context)
+{
+    HANDLE handle;
+    NTSTATUS status;
+    ULONG_PTR id = (ULONG_PTR) PsGetThreadId(thread);
+
+    if (!(handle = OpenThread(THREAD_ALL_ACCESS, FALSE, id)))
+        return STATUS_NOT_FOUND;
+
+    status = NtGetContextThread(handle, context);
+    NtClose(handle);
+    return status;
+}
+
 /***********************************************************************
  *           KeInsertQueue   (NTOSKRNL.EXE.@)
  */
