@@ -2475,24 +2475,29 @@ static void *create_process_object( HANDLE handle )
 
     /* get full image name */
     NtQueryInformationProcess( handle, ProcessImageFileNameWin32, fullImageNameW, 0, &len );
-    fullImageNameW = malloc(len + sizeof(WCHAR));
-    if (!fullImageNameW) return NULL;
-    fullImageNameW->MaximumLength = len + sizeof(WCHAR);
-    NtQueryInformationProcess( handle, ProcessImageFileNameWin32, fullImageNameW, len, &len );
-    RtlUnicodeStringToAnsiString(&fullImageNameA, fullImageNameW, TRUE);
-    if (!fullImageNameA.Buffer) return NULL;
-    /* generate short name */
-    for (p = fullImageNameA.Buffer + fullImageNameA.Length - 1; p >= fullImageNameA.Buffer; p--)
+    fullImageNameW = calloc(len + 1, sizeof(WCHAR));
+    if (fullImageNameW)
     {
-        if (*p == '\\')
+        fullImageNameW->MaximumLength = len + sizeof(WCHAR);
+        NtQueryInformationProcess( handle, ProcessImageFileNameWin32, fullImageNameW, len, &len );
+        if (fullImageNameW->Buffer)
         {
-            ++p;
-            break;
+            RtlUnicodeStringToAnsiString(&fullImageNameA, fullImageNameW, TRUE);
+            if (fullImageNameA.Buffer)
+            {
+                /* generate short name */
+                for (p = fullImageNameA.Buffer + fullImageNameA.Length - 1; p > fullImageNameA.Buffer; p--)
+                {
+                    if (*(p-1) == '\\') break;
+                }
+                memcpy(process->imageName, p,
+                       min(fullImageNameA.Buffer + fullImageNameA.Length - p,
+                           sizeof(process->imageName)));
+                RtlFreeAnsiString(&fullImageNameA);
+            }
         }
+        free(fullImageNameW);
     }
-    memcpy(process->imageName, p, min(fullImageNameA.Buffer + fullImageNameA.Length - p, sizeof(process->imageName)));
-    RtlFreeAnsiString(&fullImageNameA);
-    free(fullImageNameW);
 
     IsWow64Process( handle, &process->wow64 );
 
