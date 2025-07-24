@@ -5011,7 +5011,7 @@ BOOL WINAPI VslGetSecurePciEnabled(void)
     return TRUE;
 }
 
-static NTSTATUS WINAPI pci_driver_stub( DRIVER_OBJECT *driver, UNICODE_STRING *path )
+static NTSTATUS WINAPI driver_stub( DRIVER_OBJECT *driver, UNICODE_STRING *path )
 {
     FIXME("%p %s stub!\n", driver, debugstr_us(path));
 
@@ -5026,6 +5026,7 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
     static void *handler;
     LARGE_INTEGER count;
     UNICODE_STRING str = RTL_CONSTANT_STRING( L"\\Driver\\pci" );
+    UNICODE_STRING hidusb = RTL_CONSTANT_STRING( L"\\Driver\\hidusb" );
 
     switch(reason)
     {
@@ -5039,7 +5040,8 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
         ntoskrnl_heap = HeapCreate( HEAP_CREATE_ENABLE_EXECUTE, 0, 0 );
         dpc_call_tls_index = TlsAlloc();
         LdrRegisterDllNotification( 0, ldr_notify_callback, NULL, &ldr_notify_cookie );
-        IoCreateDriver(&str, pci_driver_stub);
+        IoCreateDriver(&str, driver_stub);
+        IoCreateDriver(&hidusb, driver_stub);
         break;
     case DLL_PROCESS_DETACH:
         LdrUnregisterDllNotification( ldr_notify_cookie );
