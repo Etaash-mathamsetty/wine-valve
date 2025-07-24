@@ -2497,36 +2497,17 @@ static void *create_process_object( HANDLE handle )
     IsWow64Process( handle, &process->wow64 );
 
     NtOpenProcessToken( handle, TOKEN_ALL_ACCESS, &token );
-    ObReferenceObjectByHandle( token, 0, SeTokenObjectType, KernelMode, &process->token, NULL );
-    NtClose(token);
+    kernel_object_from_handle( token, SeTokenObjectType, &process->token );
+    NtClose( token );
 
     return process;
-}
-
-void release_process_object(void *obj)
-{
-    PEPROCESS process = obj;
-
-    if (process->token)
-        ObDereferenceObject(process->token);
-
-    process->token = NULL;
-
-    SERVER_START_REQ( release_kernel_object )
-    {
-        req->manager  = wine_server_obj_handle( get_device_manager() );
-        req->user_ptr = wine_server_client_ptr( obj );
-        if (wine_server_call( req )) FIXME( "failed to release %p\n", obj );
-    }
-    SERVER_END_REQ;
 }
 
 static struct _OBJECT_TYPE process_type =
 {
     {},
     RTL_CONSTANT_STRING( L"Process" ),
-    create_process_object,
-    release_process_object
+    create_process_object
 };
 
 POBJECT_TYPE PsProcessType = &process_type;
