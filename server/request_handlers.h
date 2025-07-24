@@ -266,6 +266,7 @@ DECL_HANDLER(set_kernel_object_ptr);
 DECL_HANDLER(grab_kernel_object);
 DECL_HANDLER(release_kernel_object);
 DECL_HANDLER(get_kernel_object_handle);
+DECL_HANDLER(get_kernel_object_name);
 DECL_HANDLER(make_process_system);
 DECL_HANDLER(grant_process_admin_token);
 DECL_HANDLER(get_token_info);
@@ -581,6 +582,7 @@ static const req_handler req_handlers[REQ_NB_REQUESTS] =
     (req_handler)req_grab_kernel_object,
     (req_handler)req_release_kernel_object,
     (req_handler)req_get_kernel_object_handle,
+    (req_handler)req_get_kernel_object_name,
     (req_handler)req_make_process_system,
     (req_handler)req_grant_process_admin_token,
     (req_handler)req_get_token_info,
@@ -2158,6 +2160,12 @@ C_ASSERT( offsetof(struct get_kernel_object_handle_request, access) == 24 );
 C_ASSERT( sizeof(struct get_kernel_object_handle_request) == 32 );
 C_ASSERT( offsetof(struct get_kernel_object_handle_reply, handle) == 8 );
 C_ASSERT( sizeof(struct get_kernel_object_handle_reply) == 16 );
+C_ASSERT( offsetof(struct get_kernel_object_name_request, rootdir) == 12 );
+C_ASSERT( offsetof(struct get_kernel_object_name_request, manager) == 16 );
+C_ASSERT( offsetof(struct get_kernel_object_name_request, attributes) == 20 );
+C_ASSERT( sizeof(struct get_kernel_object_name_request) == 24 );
+C_ASSERT( offsetof(struct get_kernel_object_name_reply, user_ptr) == 8 );
+C_ASSERT( sizeof(struct get_kernel_object_name_reply) == 16 );
 C_ASSERT( offsetof(struct make_process_system_request, handle) == 12 );
 C_ASSERT( offsetof(struct make_process_system_request, desktop_close_timeout) == 16 );
 C_ASSERT( sizeof(struct make_process_system_request) == 24 );
