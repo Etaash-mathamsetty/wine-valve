@@ -45,7 +45,8 @@ static inline LPCSTR debugstr_us( const UNICODE_STRING *us )
 
 struct _OBJECT_TYPE
 {
-    const WCHAR *name;            /* object type name used for type validation */
+    LIST_ENTRY entry;             /* dummy list entry to make it windows compliant */
+    UNICODE_STRING name;          /* object type name used for type validation */
     void *(*constructor)(HANDLE); /* used for creating an object from server handle */
     void (*release)(void*);       /* called when the last reference is released */
 };
