@@ -5403,6 +5403,22 @@ struct get_kernel_object_handle_reply
 
 
 
+struct get_kernel_object_name_request
+{
+    struct request_header __header;
+    obj_handle_t rootdir;
+    obj_handle_t manager;
+    unsigned int attributes;
+    /* VARARG(name,unicode_str); */
+};
+struct get_kernel_object_name_reply
+{
+    struct reply_header __header;
+    client_ptr_t user_ptr;
+};
+
+
+
 struct make_process_system_request
 {
     struct request_header __header;
@@ -6476,6 +6492,7 @@ enum request
     REQ_grab_kernel_object,
     REQ_release_kernel_object,
     REQ_get_kernel_object_handle,
+    REQ_get_kernel_object_name,
     REQ_make_process_system,
     REQ_grant_process_admin_token,
     REQ_get_token_info,
@@ -6794,6 +6811,7 @@ union generic_request
     struct grab_kernel_object_request grab_kernel_object_request;
     struct release_kernel_object_request release_kernel_object_request;
     struct get_kernel_object_handle_request get_kernel_object_handle_request;
+    struct get_kernel_object_name_request get_kernel_object_name_request;
     struct make_process_system_request make_process_system_request;
     struct grant_process_admin_token_request grant_process_admin_token_request;
     struct get_token_info_request get_token_info_request;
@@ -7110,6 +7128,7 @@ union generic_reply
     struct grab_kernel_object_reply grab_kernel_object_reply;
     struct release_kernel_object_reply release_kernel_object_reply;
     struct get_kernel_object_handle_reply get_kernel_object_handle_reply;
+    struct get_kernel_object_name_reply get_kernel_object_name_reply;
     struct make_process_system_reply make_process_system_reply;
     struct grant_process_admin_token_reply grant_process_admin_token_reply;
     struct get_token_info_reply get_token_info_reply;
@@ -7164,6 +7183,6 @@ union generic_reply
     struct get_inproc_alert_event_reply get_inproc_alert_event_reply;
 };
 
-#define SERVER_PROTOCOL_VERSION 861
+#define SERVER_PROTOCOL_VERSION 862
 
 #endif /* __WINE_WINE_SERVER_PROTOCOL_H */

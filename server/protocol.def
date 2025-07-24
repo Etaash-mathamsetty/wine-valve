@@ -3812,6 +3812,17 @@ struct handle_info
 @END
 
 
+/* Get kernel pointer from object name */
+@REQ(get_kernel_object_name)
+    obj_handle_t rootdir;         /* root directory */
+    obj_handle_t manager;         /* handle to the device manager */
+    unsigned int attributes;      /* object attributes */
+    VARARG(name,unicode_str);     /* object name */
+@REPLY
+    client_ptr_t user_ptr;        /* kernel object pointer */
+@END
+
+
 /* Make the current process a system process */
 @REQ(make_process_system)
     obj_handle_t handle;          /* handle to the process */

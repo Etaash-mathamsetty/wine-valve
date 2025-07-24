@@ -3250,10 +3250,11 @@ NTSTATUS WINAPI ObReferenceObjectByName( UNICODE_STRING *ObjectName,
                                          void *ParseContext,
                                          void **Object)
 {
+    NTSTATUS ret = STATUS_SUCCESS;
     struct wine_driver *driver;
     struct wine_rb_entry *entry;
 
-    TRACE("mostly-stub:%s %li %p %li %p %i %p %p\n", debugstr_us(ObjectName),
+    TRACE("%s %li %p %li %p %i %p %p\n", debugstr_us(ObjectName),
         Attributes, AccessState, DesiredAccess, ObjectType, AccessMode,
         ParseContext, Object);
 
@@ -3267,6 +3268,10 @@ NTSTATUS WINAPI ObReferenceObjectByName( UNICODE_STRING *ObjectName,
         return STATUS_NOT_IMPLEMENTED;
     }
 
+    if (!ObjectType || !Object || !ObjectName) return STATUS_INVALID_PARAMETER;
+
+    *Object = NULL;
+
     if (!RtlCompareUnicodeString(&ObjectType->name, &IoDriverObjectType->name, FALSE))
     {
         EnterCriticalSection(&drivers_cs);
@@ -3275,17 +3280,36 @@ NTSTATUS WINAPI ObReferenceObjectByName( UNICODE_STRING *ObjectName,
         if (!entry)
         {
             FIXME("Object (%s) not found, may not be tracked.\n", debugstr_us(ObjectName));
-            return STATUS_NOT_IMPLEMENTED;
+            return STATUS_NOT_FOUND;
         }
 
         driver = WINE_RB_ENTRY_VALUE(entry, struct wine_driver, entry);
         ObReferenceObject( *Object = &driver->driver_obj );
     } else {
-        FIXME("Unhandled ObjectType\n");
-        return STATUS_NOT_IMPLEMENTED;
+
+        SERVER_START_REQ(get_kernel_object_name)
+        {
+            req->manager = wine_server_obj_handle( get_device_manager() );
+            req->attributes = Attributes;
+            req->rootdir = 0;
+            wine_server_add_data(req, ObjectName->Buffer, ObjectName->Length);
+            if (!(ret = wine_server_call( req )))
+                *Object = wine_server_get_ptr( reply->user_ptr );
+        }
+        SERVER_END_REQ;
+
+        if (*Object)
+        {
+            if (ObGetObjectType( *Object ) != ObjectType)
+                ret = STATUS_OBJECT_TYPE_MISMATCH;
+            else
+                ObReferenceObject( *Object );
+        }
+
+        FIXME("ret %p %lx\n", *Object, ret);
     }
 
-    return STATUS_SUCCESS;
+    return ret;
 }
 
 
