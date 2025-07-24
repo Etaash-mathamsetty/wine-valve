@@ -3049,6 +3049,19 @@ static void dump_get_kernel_object_handle_reply( const struct get_kernel_object_
     fprintf( stderr, " handle=%04x", req->handle );
 }
 
+static void dump_get_kernel_object_name_request( const struct get_kernel_object_name_request *req )
+{
+    fprintf( stderr, " rootdir=%04x", req->rootdir );
+    fprintf( stderr, ", manager=%04x", req->manager );
+    fprintf( stderr, ", attributes=%08x", req->attributes );
+    dump_varargs_unicode_str( ", name=", cur_size );
+}
+
+static void dump_get_kernel_object_name_reply( const struct get_kernel_object_name_reply *req )
+{
+    dump_uint64( " user_ptr=", &req->user_ptr );
+}
+
 static void dump_make_process_system_request( const struct make_process_system_request *req )
 {
     fprintf( stderr, " handle=%04x", req->handle );
@@ -3806,6 +3819,7 @@ static const dump_func req_dumpers[REQ_NB_REQUESTS] =
     (dump_func)dump_grab_kernel_object_request,
     (dump_func)dump_release_kernel_object_request,
     (dump_func)dump_get_kernel_object_handle_request,
+    (dump_func)dump_get_kernel_object_name_request,
     (dump_func)dump_make_process_system_request,
     (dump_func)dump_grant_process_admin_token_request,
     (dump_func)dump_get_token_info_request,
@@ -4121,6 +4135,7 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] =
     NULL,
     NULL,
     (dump_func)dump_get_kernel_object_handle_reply,
+    (dump_func)dump_get_kernel_object_name_reply,
     (dump_func)dump_make_process_system_reply,
     NULL,
     (dump_func)dump_get_token_info_reply,
@@ -4436,6 +4451,7 @@ static const char * const req_names[REQ_NB_REQUESTS] =
     "grab_kernel_object",
     "release_kernel_object",
     "get_kernel_object_handle",
+    "get_kernel_object_name",
     "make_process_system",
     "grant_process_admin_token",
     "get_token_info",

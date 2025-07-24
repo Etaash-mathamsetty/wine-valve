@@ -232,7 +232,7 @@ static void load_function_driver( DEVICE_OBJECT *device, HDEVINFO set, SP_DEVINF
     lstrcatW( buffer, driver );
     RtlInitUnicodeString( &string, buffer );
     if (ObReferenceObjectByName( &string, OBJ_CASE_INSENSITIVE, NULL,
-                                 0, NULL, KernelMode, NULL, (void **)&driver_obj ) != STATUS_SUCCESS)
+                                 0, IoDriverObjectType, KernelMode, NULL, (void **)&driver_obj ) != STATUS_SUCCESS)
     {
         ERR("Failed to locate loaded driver %s.\n", debugstr_w(driver));
         return;
