@@ -1229,3 +1229,31 @@ DECL_HANDLER(get_kernel_object_handle)
 
     release_object( manager );
 }
+
+
+/* get kernel object from object name */
+DECL_HANDLER(get_kernel_object_name)
+{
+    struct device_manager *manager;
+    struct object *obj, *root = NULL;
+    struct unicode_str temp, name = get_req_unicode_str();
+
+    if (!(manager = (struct device_manager *)get_handle_obj( current->process, req->manager,
+        0, &device_manager_ops )))
+        return;
+
+    if (req->rootdir && !(root = get_directory_obj( current->process, req->rootdir )))
+    {
+        release_object( manager );
+        return;
+    }
+
+    if ((obj = lookup_named_object( root, &name, req->attributes, &temp )))
+    {
+        reply->user_ptr = get_kernel_object_ptr( manager, obj );
+        release_object( obj );
+    }
+    else set_error( STATUS_NOT_FOUND );
+
+    release_object( manager );
+}
