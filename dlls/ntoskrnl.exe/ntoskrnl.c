@@ -3129,12 +3129,18 @@ PHYSICAL_ADDRESS WINAPI MmGetPhysicalAddress(void *virtual_address)
 
 PHYSICAL_MEMORY_RANGE *WINAPI MmGetPhysicalMemoryRanges(void)
 {
-    static PHYSICAL_MEMORY_RANGE range = {
-        .BaseAddress.QuadPart = 0xdead,
-        .NumberOfBytes.QuadPart = 0x10000000
-    };
+    static volatile LONG once;
+    static PHYSICAL_MEMORY_RANGE range;
+    SYSTEM_BASIC_INFORMATION info;
 
-    FIXME("stub!\n");
+    TRACE("\n");
+
+    if (!InterlockedCompareExchange(&once, 1, 0))
+    {
+        NtQuerySystemInformation(SystemBasicInformation, &info, sizeof(info), NULL);
+        range.BaseAddress.QuadPart = info.MmLowestPhysicalPage;
+        range.NumberOfBytes.QuadPart = info.MmNumberOfPhysicalPages * info.PageSize;
+    }
 
     return &range;
 }
