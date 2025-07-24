@@ -258,11 +258,10 @@ POBJECT_TYPE WINAPI ObGetObjectType( void *object )
     return header->type;
 }
 
-static const WCHAR section_type_name[] = {'S','e','c','t','i','o','n',0};
-
 static struct _OBJECT_TYPE section_type =
 {
-    section_type_name
+    {},
+    RTL_CONSTANT_STRING( L"Section" )
 };
 
 static POBJECT_TYPE p_section_type = &section_type;
@@ -321,8 +320,7 @@ NTSTATUS kernel_object_from_handle( HANDLE handle, POBJECT_TYPE type, void **ret
             for (i = 0; i < ARRAY_SIZE(known_types); i++)
             {
                 type = *known_types[i];
-                if (!RtlCompareUnicodeStrings( type->name, lstrlenW(type->name), type_info->TypeName.Buffer,
-                                               type_info->TypeName.Length / sizeof(WCHAR), FALSE ))
+                if (!RtlCompareUnicodeString( &type->name, &type_info->TypeName, FALSE ))
                     break;
             }
             if (i == ARRAY_SIZE(known_types))
@@ -332,8 +330,7 @@ NTSTATUS kernel_object_from_handle( HANDLE handle, POBJECT_TYPE type, void **ret
                 return STATUS_INVALID_HANDLE;
             }
         }
-        else if (RtlCompareUnicodeStrings( type->name, lstrlenW(type->name), type_info->TypeName.Buffer,
-                                           type_info->TypeName.Length / sizeof(WCHAR), FALSE) )
+        else if (RtlCompareUnicodeString( &type->name, &type_info->TypeName, FALSE) )
         {
             LeaveCriticalSection( &handle_map_cs );
             return STATUS_OBJECT_TYPE_MISMATCH;
@@ -343,7 +340,7 @@ NTSTATUS kernel_object_from_handle( HANDLE handle, POBJECT_TYPE type, void **ret
             obj = type->constructor( handle );
         else
         {
-            FIXME( "No constructor for type %s\n", debugstr_w(type->name) );
+            FIXME( "No constructor for type %s\n", debugstr_us(&type->name) );
             obj = alloc_kernel_object( type, handle, 0, 0 );
         }
         if (!obj) status = STATUS_NO_MEMORY;
@@ -415,10 +412,9 @@ NTSTATUS WINAPI ObOpenObjectByPointer( void *obj, ULONG attr, ACCESS_STATE *acce
 
 static void *create_file_object( HANDLE handle );
 
-static const WCHAR file_type_name[] = {'F','i','l','e',0};
-
 static struct _OBJECT_TYPE file_type = {
-    file_type_name,
+    {},
+    RTL_CONSTANT_STRING( L"File" ),
     create_file_object
 };
 
@@ -1530,11 +1526,10 @@ static void free_driver_object( void *obj )
     free_kernel_object( driver );
 }
 
-static const WCHAR driver_type_name[] = {'D','r','i','v','e','r',0};
-
 static struct _OBJECT_TYPE driver_type =
 {
-    driver_type_name,
+    {},
+    RTL_CONSTANT_STRING( L"Driver" ),
     NULL,
     free_driver_object
 };
@@ -1608,11 +1603,10 @@ void WINAPI IoDeleteDriver( DRIVER_OBJECT *driver_object )
 }
 
 
-static const WCHAR device_type_name[] = {'D','e','v','i','c','e',0};
-
 static struct _OBJECT_TYPE device_type =
 {
-    device_type_name,
+    {},
+    RTL_CONSTANT_STRING( L"Device" )
 };
 
 POBJECT_TYPE IoDeviceObjectType = &device_type;
@@ -2527,11 +2521,10 @@ void release_process_object(void *obj)
     SERVER_END_REQ;
 }
 
-static const WCHAR process_type_name[] = {'P','r','o','c','e','s','s',0};
-
 static struct _OBJECT_TYPE process_type =
 {
-    process_type_name,
+    {},
+    RTL_CONSTANT_STRING( L"Process" ),
     create_process_object,
     release_process_object
 };
@@ -2684,11 +2677,10 @@ static void *create_thread_object( HANDLE handle )
     return thread;
 }
 
-static const WCHAR thread_type_name[] = {'T','h','r','e','a','d',0};
-
 static struct _OBJECT_TYPE thread_type =
 {
-    thread_type_name,
+    {},
+    RTL_CONSTANT_STRING( L"Thread" ),
     create_thread_object
 };
 
@@ -3268,7 +3260,6 @@ NTSTATUS WINAPI ObReferenceObjectByName( UNICODE_STRING *ObjectName,
     if (AccessState) FIXME("Unhandled AccessState\n");
     if (DesiredAccess) FIXME("Unhandled DesiredAccess\n");
     if (ParseContext) FIXME("Unhandled ParseContext\n");
-    if (ObjectType) FIXME("Unhandled ObjectType\n");
 
     if (AccessMode != KernelMode)
     {
@@ -3276,17 +3267,24 @@ NTSTATUS WINAPI ObReferenceObjectByName( UNICODE_STRING *ObjectName,
         return STATUS_NOT_IMPLEMENTED;
     }
 
-    EnterCriticalSection(&drivers_cs);
-    entry = wine_rb_get(&wine_drivers, ObjectName);
-    LeaveCriticalSection(&drivers_cs);
-    if (!entry)
+    if (!RtlCompareUnicodeString(&ObjectType->name, &IoDriverObjectType->name, FALSE))
     {
-        FIXME("Object (%s) not found, may not be tracked.\n", debugstr_us(ObjectName));
+        EnterCriticalSection(&drivers_cs);
+        entry = wine_rb_get(&wine_drivers, ObjectName);
+        LeaveCriticalSection(&drivers_cs);
+        if (!entry)
+        {
+            FIXME("Object (%s) not found, may not be tracked.\n", debugstr_us(ObjectName));
+            return STATUS_NOT_IMPLEMENTED;
+        }
+
+        driver = WINE_RB_ENTRY_VALUE(entry, struct wine_driver, entry);
+        ObReferenceObject( *Object = &driver->driver_obj );
+    } else {
+        FIXME("Unhandled ObjectType\n");
         return STATUS_NOT_IMPLEMENTED;
     }
 
-    driver = WINE_RB_ENTRY_VALUE(entry, struct wine_driver, entry);
-    ObReferenceObject( *Object = &driver->driver_obj );
     return STATUS_SUCCESS;
 }
 
@@ -4648,11 +4646,10 @@ void WINAPI KeLeaveGuardedRegion(void)
     FIXME("\n");
 }
 
-static const WCHAR token_type_name[] = {'T','o','k','e','n',0};
-
 static struct _OBJECT_TYPE token_type =
 {
-    token_type_name
+    {},
+    RTL_CONSTANT_STRING( L"Token" )
 };
 
 POBJECT_TYPE SeTokenObjectType = &token_type;

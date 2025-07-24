@@ -196,10 +196,9 @@ static void *create_event_object( HANDLE handle )
     return event;
 }
 
-static const WCHAR event_type_name[] = {'E','v','e','n','t',0};
-
 static struct _OBJECT_TYPE event_type = {
-    event_type_name,
+    {},
+    RTL_CONSTANT_STRING( L"Event" ),
     create_event_object
 };
 
@@ -384,11 +383,10 @@ LONG WINAPI KeReleaseSemaphore( PRKSEMAPHORE semaphore, KPRIORITY increment,
     return ret;
 }
 
-static const WCHAR semaphore_type_name[] = {'S','e','m','a','p','h','o','r','e',0};
-
 static struct _OBJECT_TYPE semaphore_type =
 {
-    semaphore_type_name
+    {},
+    RTL_CONSTANT_STRING( L"Semaphore" )
 };
 
 POBJECT_TYPE ExSemaphoreObjectType = &semaphore_type;
