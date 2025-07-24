@@ -5048,6 +5048,7 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
     LARGE_INTEGER count;
     UNICODE_STRING str = RTL_CONSTANT_STRING( L"\\Driver\\pci" );
     UNICODE_STRING hidusb = RTL_CONSTANT_STRING( L"\\Driver\\hidusb" );
+    UNICODE_STRING disk = RTL_CONSTANT_STRING( L"\\Driver\\Disk" );
 
     switch(reason)
     {
@@ -5063,6 +5064,7 @@ BOOL WINAPI DllMain( HINSTANCE inst, DWORD reason, LPVOID reserved )
         LdrRegisterDllNotification( 0, ldr_notify_callback, NULL, &ldr_notify_cookie );
         IoCreateDriver(&str, driver_stub);
         IoCreateDriver(&hidusb, driver_stub);
+        IoCreateDriver(&disk, driver_stub);
         break;
     case DLL_PROCESS_DETACH:
         LdrUnregisterDllNotification( ldr_notify_cookie );
