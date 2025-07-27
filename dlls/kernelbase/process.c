@@ -628,7 +628,8 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
         {L"launcher_epic.exe", L" --in-process-gpu"}, /* ZZZ EGS */
         {L"Battle.net.exe", L" --in-process-gpu"},
         {L"RSI Launcher.exe", L" --in-process-gpu"},
-        {L"EADesktop.exe", L" --in-process-gpu"}
+        {L"EADesktop.exe", L" --in-process-gpu"},
+        {L"Launcher.exe", L" --in-process-gpu", "230410"} /* Warframe steam */
     };
 
     unsigned int i;
