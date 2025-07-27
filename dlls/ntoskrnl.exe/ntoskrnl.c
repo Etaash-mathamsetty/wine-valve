@@ -3105,6 +3105,9 @@ PHYSICAL_ADDRESS WINAPI MmGetPhysicalAddress(void *virtual_address)
     return ret;
 }
 
+/***********************************************************************
+ *           MmGetPhysicalMemoryRanges   (NTOSKRNL.EXE.@)
+ */
 PHYSICAL_MEMORY_RANGE *WINAPI MmGetPhysicalMemoryRanges(void)
 {
     static volatile LONG once;
@@ -3117,7 +3120,7 @@ PHYSICAL_MEMORY_RANGE *WINAPI MmGetPhysicalMemoryRanges(void)
     {
         NtQuerySystemInformation(SystemBasicInformation, &info, sizeof(info), NULL);
         range.BaseAddress.QuadPart = info.MmLowestPhysicalPage;
-        range.NumberOfBytes.QuadPart = info.MmNumberOfPhysicalPages * info.PageSize;
+        range.NumberOfBytes.QuadPart = (ULONG64)info.MmNumberOfPhysicalPages * (ULONG64)info.PageSize;
     }
 
     return &range;
@@ -3234,7 +3237,7 @@ NTSTATUS WINAPI ObReferenceObjectByName( UNICODE_STRING *ObjectName,
                                          POBJECT_TYPE ObjectType,
                                          KPROCESSOR_MODE AccessMode,
                                          void *ParseContext,
-                                         void **Object)
+                                         void **Object )
 {
     NTSTATUS ret = STATUS_SUCCESS;
     struct wine_driver *driver;
