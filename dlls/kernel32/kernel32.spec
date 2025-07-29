@@ -1613,6 +1613,7 @@
 @ stdcall -import VirtualLock(ptr long)
 @ stdcall -import VirtualProtect(ptr long long ptr)
 @ stdcall -import VirtualProtectEx(long ptr long long ptr)
+@ stdcall -import VirtualProtectFromApp(ptr long long ptr)
 @ stdcall -import VirtualQuery(ptr ptr long)
 @ stdcall -import VirtualQueryEx(long ptr ptr long)
 @ stdcall -import VirtualUnlock(ptr long)
