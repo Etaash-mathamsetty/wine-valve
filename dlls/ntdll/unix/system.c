@@ -3502,6 +3502,8 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
         ULONG i;
         RTL_PROCESS_MODULES *smi = info;
 
+        FIXME("semi-stub!\n");
+
         len = offsetof( RTL_PROCESS_MODULES, Modules[ARRAY_SIZE(fake_modules)] );
         if (len <= size)
         {
@@ -3836,6 +3838,8 @@ NTSTATUS WINAPI NtQuerySystemInformation( SYSTEM_INFORMATION_CLASS class,
 
         ULONG i;
         RTL_PROCESS_MODULE_INFORMATION_EX *module_info = info;
+
+        FIXME("semi-stub!\n");
 
         len = sizeof(*module_info) * ARRAY_SIZE(fake_modules) + sizeof(module_info->NextOffset);
         if (len <= size)
