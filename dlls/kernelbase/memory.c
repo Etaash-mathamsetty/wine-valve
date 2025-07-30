@@ -807,6 +807,8 @@ BOOL WINAPI HeapSummary( HANDLE heap, DWORD flags, LPHEAP_SUMMARY heap_summary )
     SIZE_T uncommitted = 0;
     PROCESS_HEAP_ENTRY entry;
 
+    TRACE("%p %lu %p\n", heap, flags, heap_summary);
+
     if (heap_summary->cb != sizeof(*heap_summary))
     {
         /* needs to be set to the exact size by the caller */
