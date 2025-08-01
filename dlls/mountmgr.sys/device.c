@@ -1621,7 +1621,34 @@ static NTSTATUS query_property( struct disk_device *device, IRP *irp )
         }
         break;
     }
+    case StorageDeviceTrimProperty:
+    {
+        DEVICE_TRIM_DESCRIPTOR *d = irp->AssociatedIrp.SystemBuffer;
 
+        if (irpsp->Parameters.DeviceIoControl.OutputBufferLength < sizeof(STORAGE_DESCRIPTOR_HEADER))
+        {
+            status = STATUS_INVALID_PARAMETER;
+        }
+        else
+        {
+            if (irpsp->Parameters.DeviceIoControl.OutputBufferLength < sizeof(*d))
+            {
+                d->Version = d->Size = sizeof(*d);
+                irp->IoStatus.Information = sizeof(DEVICE_TRIM_DESCRIPTOR);
+            }
+            else
+            {
+                FIXME( "Faking StorageDeviceTrimProperty data.\n" );
+
+                memset( d, 0, sizeof(*d) );
+                d->TrimEnabled = TRUE;
+                d->Version = d->Size = sizeof(*d);
+                irp->IoStatus.Information = sizeof(*d);
+            }
+            status = STATUS_SUCCESS;
+        }
+        break;
+    }
     default:
         FIXME( "Unsupported property %#x\n", query->PropertyId );
         status = STATUS_NOT_SUPPORTED;
