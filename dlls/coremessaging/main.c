@@ -17,7 +17,10 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
 
+#include "activation.h"
 #include "dispatcherqueue.h"
+#include "winstring.h"
+
 #include "wine/debug.h"
 
 WINE_DEFAULT_DEBUG_CHANNEL(messaging);
@@ -27,4 +30,11 @@ HRESULT WINAPI CreateDispatcherQueueController( DispatcherQueueOptions options, 
     FIXME( "options.dwSize = %lu, options.threadType = %d, options.apartmentType = %d, queue_controller %p stub!\n",
             options.dwSize, options.threadType, options.apartmentType, queue_controller );
     return E_NOTIMPL;
+}
+
+HRESULT WINAPI DllGetActivationFactory( HSTRING classid, IActivationFactory **factory )
+{
+    FIXME("classid %s factory %p stub!\n", debugstr_hstring(classid), factory);
+
+    return CLASS_E_CLASSNOTAVAILABLE;
 }
