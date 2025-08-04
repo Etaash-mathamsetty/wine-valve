@@ -450,7 +450,7 @@ struct wl_output *wayland_get_best_output_for_rect(const RECT *window_rect)
 {
     struct wayland_output *output;
     struct wl_output *best = NULL;
-    RECT output_rect, temp, intersect = {0};
+    RECT output_rect, temp = {0}, intersect = {0};
     struct wl_array output_info_array;
     struct output_info *output_info;
 
