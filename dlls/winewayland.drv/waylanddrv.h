@@ -317,7 +317,7 @@ struct wayland_surface
     HWND hwnd;
 
     struct wl_surface *wl_surface;
-    struct wl_output *wl_output;
+    struct wl_output *requested_output;
     struct wp_viewport *wp_viewport;
     struct wp_fractional_scale_v1 *wp_fractional_scale_v1;
     /* FIXME: should this be moved? */
