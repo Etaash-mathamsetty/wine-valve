@@ -168,56 +168,12 @@ static const struct wp_fractional_scale_v1_listener wp_fractional_scale_listener
 
 static void wl_surface_handle_enter(void *user_data, struct wl_surface *wl_surface, struct wl_output *wl_output)
 {
-    struct wayland_win_data *data;
-    struct wayland_output *output;
-    HWND hwnd = user_data;
-
-    if ((data = wayland_win_data_get(hwnd)))
-    {
-        if (data->wayland_surface)
-        {
-            pthread_mutex_lock(&process_wayland.output_mutex);
-            wl_list_for_each(output, &process_wayland.output_list, link)
-            {
-                if (output->wl_output == wl_output)
-                {
-                    TRACE("Setting output %p for surface %p\n", wl_output, data->wayland_surface);
-                    data->wayland_surface->wl_output = wl_output;
-                    break;
-                }
-            }
-            pthread_mutex_unlock(&process_wayland.output_mutex);
-        }
-
-        wayland_win_data_release(data);
-    }
+    TRACE("surface %p output %p\n", wl_surface, wl_output);
 }
 
-static void wl_surface_handle_leave(void *user_data, struct wl_surface *surface, struct wl_output *wl_output)
+static void wl_surface_handle_leave(void *user_data, struct wl_surface *wl_surface, struct wl_output *wl_output)
 {
-    struct wayland_win_data *data;
-    struct wayland_output *output;
-    HWND hwnd = user_data;
-
-    if ((data = wayland_win_data_get(hwnd)))
-    {
-        if (data->wayland_surface)
-        {
-            pthread_mutex_lock(&process_wayland.output_mutex);
-            wl_list_for_each(output, &process_wayland.output_list, link)
-            {
-                if (output->wl_output == wl_output)
-                {
-                    TRACE("Clearing output %p for surface %p\n", wl_output, data->wayland_surface);
-                    data->wayland_surface->wl_output = NULL;
-                    break;
-                }
-            }
-            pthread_mutex_unlock(&process_wayland.output_mutex);
-        }
-
-        wayland_win_data_release(data);
-    }
+    TRACE("surface %p output %p\n", wl_surface, wl_output);
 }
 
 static const struct wl_surface_listener wl_surface_listener =
@@ -710,10 +666,10 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
                 struct wl_output *output;
                 pthread_mutex_lock(&process_wayland.output_mutex);
                 output = wayland_get_best_output_for_rect(&surface->window.rect);
-                if (output != surface->wl_output)
+                if (output != surface->requested_output)
                 {
-                    TRACE("Resetting fullscreen state: output %p surface output %p\n",
-                        output, surface->wl_output);
+                    TRACE("Resetting fullscreen state: output %p, old output %p\n",
+                        output, surface->requested_output);
                     xdg_toplevel_unset_fullscreen(surface->xdg_toplevel);
                     wl_display_flush(process_wayland.wl_display);
                     xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
@@ -721,7 +677,7 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
                     /* In case we don't get enter event from compositor
                     happens on sway for instance
                     */
-                    surface->wl_output = output;
+                    surface->requested_output = output;
                 }
                 pthread_mutex_unlock(&process_wayland.output_mutex);
             }
