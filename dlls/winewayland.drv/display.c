@@ -276,6 +276,7 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     unsigned char c;
     struct wayland_output_mode *mode = output_info->output->current_mode;
     const struct wayland_primaries *primaries = &output_info->output->primaries;
+    const char *model = output_info->output->model;
 
     mwidth = output_info->output->width_mm;
     mheight = output_info->output->height_mm;
@@ -294,6 +295,13 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     if (!data) return 0;
 
     *(uint64_t*)data = 0x00ffffffffffff00;
+    if (model && strlen(model) >= 2)
+    {
+        data[10] = model[0];
+        data[11] = model[1];
+    }
+    data[16] = 0xFF;
+    data[17] = 31; /* 2021 */
     data[18] = 1;
     data[19] = 4;
     data[20] = 0xa0; /* FIXME */
@@ -330,24 +338,23 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
 
     p += 18;
     p[3] = 0xfc;
-    if (!output_info->output->name)
+    if (!model)
         strcpy( (char *)p + 5, "Default" );
     else
     {
         int i = 0;
 
         p += 5;
-        for (; i < strlen(output_info->output->name); i++)
+        for (; i < strlen(model); i++)
         {
-            char d = output_info->output->name[i];
-            if (i >= 10) break;
-            if (d == '-') d = ' ';
+            char d = model[i];
+            if (i >= 11) break;
             p[i] = d;
         }
 
         p[i] = '\n';
 
-        TRACE("name: %s\n", p);
+        TRACE("model: %s\n", p);
         p -= 5;
     }
 
