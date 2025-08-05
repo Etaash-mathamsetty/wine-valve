@@ -252,6 +252,7 @@ struct wayland_output_state
     int logical_x, logical_y;
     int logical_w, logical_h;
     int transform;
+    int width_mm, height_mm;
 };
 
 struct wayland_output
