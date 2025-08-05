@@ -34,7 +34,7 @@
 #include "waylanddrv.h"
 #include "wine/debug.h"
 
-WINE_DEFAULT_DEBUG_CHANNEL(waylanddrv);
+WINE_DEFAULT_DEBUG_CHANNEL(cursor);
 
 struct system_cursors
 {
