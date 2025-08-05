@@ -39,7 +39,7 @@ static uint32_t next_output_id = 0;
 #define WAYLAND_OUTPUT_CHANGED_NAME       0x02
 #define WAYLAND_OUTPUT_CHANGED_LOGICAL_XY 0x04
 #define WAYLAND_OUTPUT_CHANGED_LOGICAL_WH 0x08
-#define WAYLAND_OUTPUT_CHANGED_TRANSFORM  0x10
+#define WAYLAND_OUTPUT_CHANGED_GEOMETRY  0x10
 #define WAYLAND_OUTPUT_CHANGED_PRIMARIES  0x20
 #define WAYLAND_OUTPUT_CHANGED_FALL       0x40
 #define WAYLAND_OUTPUT_CHANGED_CLL        0x80
@@ -178,9 +178,11 @@ static void wayland_output_done(struct wayland_output *output)
         output->current.logical_h = output->pending.logical_h;
     }
 
-    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_TRANSFORM)
+    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_GEOMETRY)
     {
         output->current.transform = output->pending.transform;
+        output->current.width_mm = output->pending.width_mm;
+        output->current.height_mm = output->pending.height_mm;
     }
 
 
@@ -236,8 +238,10 @@ static void output_handle_geometry(void *data, struct wl_output *wl_output,
     struct wayland_output *output = data;
 
     output->pending.transform = output_transform;
+    output->pending.width_mm = physical_width;
+    output->pending.height_mm = physical_height;
 
-    output->pending_flags |= WAYLAND_OUTPUT_CHANGED_TRANSFORM;
+    output->pending_flags |= WAYLAND_OUTPUT_CHANGED_GEOMETRY;
 }
 
 static void output_handle_mode(void *data, struct wl_output *wl_output,

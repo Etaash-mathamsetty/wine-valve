@@ -277,9 +277,15 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     struct wayland_output_mode *mode = output_info->output->current_mode;
     const struct wayland_primaries *primaries = &output_info->output->primaries;
 
-    /* assume ~150 dpi */
-    mwidth = mode->width / 60;
-    mheight = mode->height / 60;
+    mwidth = output_info->output->width_mm;
+    mheight = output_info->output->height_mm;
+
+    if (mwidth == 0 || mheight == 0)
+    {
+        /* assume ~150 dpi */
+        mwidth = mode->width / 60;
+        mheight = mode->height / 60;
+    }
 
     /* another 128 bytes needed for CTA-861 extension */
     *data_out = calloc( 1, edid_size );
@@ -291,8 +297,8 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     data[18] = 1;
     data[19] = 4;
     data[20] = 0xa0; /* FIXME */
-    data[21] = mwidth;
-    data[22] = mheight;
+    data[21] = round(mwidth / 10.0); /* cm */
+    data[22] = round(mheight / 10.0); /* cm */
     data[24] = 0x6;
     data[25] = ((primaries->r_x & 0x3) << 6) | ((primaries->r_y & 0x3) << 4) |
                ((primaries->g_x & 0x3) << 2) | (primaries->g_y & 0x3);
