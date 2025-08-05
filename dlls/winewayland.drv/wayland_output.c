@@ -180,9 +180,11 @@ static void wayland_output_done(struct wayland_output *output)
 
     if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_GEOMETRY)
     {
+        free(output->current.model);
         output->current.transform = output->pending.transform;
         output->current.width_mm = output->pending.width_mm;
         output->current.height_mm = output->pending.height_mm;
+        output->current.model = output->pending.model;
     }
 
 
@@ -240,6 +242,7 @@ static void output_handle_geometry(void *data, struct wl_output *wl_output,
     output->pending.transform = output_transform;
     output->pending.width_mm = physical_width;
     output->pending.height_mm = physical_height;
+    output->pending.model = strdup(model);
 
     output->pending_flags |= WAYLAND_OUTPUT_CHANGED_GEOMETRY;
 }
@@ -591,6 +594,12 @@ BOOL wayland_output_create(uint32_t id, uint32_t version)
     else
     {
         ERR("Couldn't allocate space for output name\n");
+        goto err;
+    }
+
+    if (!(output->current.model = strdup("Monitor")))
+    {
+        ERR("Couldn't allocate space for output model\n");
         goto err;
     }
 
