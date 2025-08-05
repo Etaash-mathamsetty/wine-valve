@@ -1005,6 +1005,7 @@
 @ stdcall -import IsDBCSLeadByte(long)
 @ stdcall -import IsDBCSLeadByteEx(long long)
 @ stdcall -import IsDebuggerPresent()
+@ stdcall IsEnclaveTypeSupported(long)
 @ stub -i386 IsLSCallback
 @ stdcall -import IsNLSDefinedString(long long ptr wstr long)
 @ stdcall -import IsNormalizedString(long wstr long)
@@ -1014,6 +1015,7 @@
 @ stdcall IsSystemResumeAutomatic()
 @ stdcall -import IsThreadAFiber()
 @ stdcall IsThreadpoolTimerSet(ptr) NTDLL.TpIsTimerSet
+@ stdcall IsUserCetAvailableInEnvironment(long)
 # @ stub IsTimeZoneRedirectionEnabled
 # @ stub IsValidCalDateTime
 @ stdcall -import IsValidCodePage(long)
