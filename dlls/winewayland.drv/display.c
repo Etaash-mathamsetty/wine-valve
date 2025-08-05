@@ -277,6 +277,7 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     struct wayland_output_mode *mode = output_info->output->current_mode;
     const struct wayland_primaries *primaries = &output_info->output->primaries;
     const char *model = output_info->output->model;
+    const char *make = output_info->output->make;
 
     mwidth = output_info->output->width_mm;
     mheight = output_info->output->height_mm;
@@ -295,6 +296,17 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     if (!data) return 0;
 
     *(uint64_t*)data = 0x00ffffffffffff00;
+    if (make && strlen(make) >= 3)
+    {
+        unsigned char l[3];
+        for (int i = 0; i < 3; i++)
+        {
+            l[i] = tolower(make[i]) - 'a' + 1;
+            if (l[i] > 26) l[i] = 26;
+        }
+        data[8] = ((l[0] & 0x1f) << 2) | ((l[1] & 0x18) >> 3);
+        data[9] = ((l[1] & 0x7) << 5) | (l[2] & 0x1f);
+    }
     if (model && strlen(model) >= 2)
     {
         data[10] = model[0];
