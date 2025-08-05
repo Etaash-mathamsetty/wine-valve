@@ -249,6 +249,7 @@ struct wayland_output_state
     uint32_t max_fall;
     uint32_t max_cll;
     char *name;
+    char *make;
     char *model;
     int logical_x, logical_y;
     int logical_w, logical_h;
