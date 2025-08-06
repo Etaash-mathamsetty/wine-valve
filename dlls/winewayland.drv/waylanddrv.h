@@ -78,7 +78,8 @@ enum wayland_surface_config_state
     WAYLAND_SURFACE_CONFIG_STATE_MAXIMIZED = (1 << 0),
     WAYLAND_SURFACE_CONFIG_STATE_RESIZING = (1 << 1),
     WAYLAND_SURFACE_CONFIG_STATE_TILED = (1 << 2),
-    WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN = (1 << 3)
+    WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN = (1 << 3),
+    WAYLAND_SURFACE_CONFIG_STATE_MINIMIZED = (1 << 4)
 };
 
 enum wayland_surface_role
@@ -323,8 +324,6 @@ struct wayland_surface
     struct wl_output *requested_output;
     struct wp_viewport *wp_viewport;
     struct wp_fractional_scale_v1 *wp_fractional_scale_v1;
-    /* FIXME: should this be moved? */
-    struct xdg_activation_token_v1 *xdg_activation_token_v1;
 
     enum wayland_surface_role role;
     union
@@ -433,6 +432,7 @@ struct wayland_win_data
     /* window rects, relative to parent client area */
     struct window_rects rects;
     BOOL is_fullscreen;
+    BOOL force_below_hack;
     BOOL managed;
 };
 
