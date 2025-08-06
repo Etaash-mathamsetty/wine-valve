@@ -160,8 +160,12 @@ static void wayland_win_data_get_config(struct wayland_win_data *data,
 
     TRACE("window=%s style=%#lx\n", wine_dbgstr_rect(&conf->rect), (long)style);
 
+    if (data->force_below_hack)
+    {
+        window_state |= WAYLAND_SURFACE_CONFIG_STATE_MINIMIZED;
+    }
     /* The fullscreen state is implied by the window position and style. */
-    if (data->is_fullscreen)
+    else if (data->is_fullscreen)
     {
         if ((style & WS_MAXIMIZE) && (style & WS_CAPTION) == WS_CAPTION)
             window_state |= WAYLAND_SURFACE_CONFIG_STATE_MAXIMIZED;
@@ -280,6 +284,12 @@ static void wayland_surface_update_state_toplevel(struct wayland_surface *surfac
             xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
             surface->requested_output = output;
             pthread_mutex_unlock(&process_wayland.output_mutex);
+        }
+        if ((surface->window.state & WAYLAND_SURFACE_CONFIG_STATE_MINIMIZED) &&
+            !(surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_MINIMIZED))
+        {
+            xdg_toplevel_set_minimized(surface->xdg_toplevel);
+            surface->requested_output = NULL;
         }
     }
     else
@@ -450,6 +460,22 @@ static HICON get_window_icon(HWND hwnd, UINT type, HICON icon, ICONINFO *ret)
     return icon;
 }
 
+static int use_force_below_hack(void)
+{
+    static int cached = -1;
+
+    if (cached == -1)
+    {
+        char const *sgi = getenv( "SteamGameId" );
+
+        cached = sgi && (
+            !strcmp(sgi, "1293830")
+            || !strcmp(sgi, "1551360")
+        );
+    }
+    return cached;
+}
+
 /***********************************************************************
  *           WAYLAND_WindowPosChanged
  */
@@ -476,6 +502,16 @@ void WAYLAND_WindowPosChanged(HWND hwnd, HWND insert_after, HWND owner_hint, UIN
     data->rects = *new_rects;
     data->is_fullscreen = fullscreen;
     data->managed = managed;
+
+    if (use_force_below_hack())
+    {
+        if (insert_after != HWND_BOTTOM && insert_after != HWND_NOTOPMOST
+            && insert_after != HWND_TOP && insert_after != HWND_TOPMOST)
+        {
+            WARN( "hwnd %p setting force_below_hack.\n", hwnd );
+            data->force_below_hack = TRUE;
+        }
+    }
 
     if (!surface)
     {
