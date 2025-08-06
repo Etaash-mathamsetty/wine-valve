@@ -271,12 +271,6 @@ void wayland_surface_destroy(struct wayland_surface *surface)
 
     wayland_surface_clear_role(surface);
 
-    if (surface->xdg_activation_token_v1)
-    {
-        xdg_activation_token_v1_destroy(surface->xdg_activation_token_v1);
-        surface->xdg_activation_token_v1 = NULL;
-    }
-
     if (surface->wp_fractional_scale_v1)
     {
         wp_fractional_scale_v1_destroy(surface->wp_fractional_scale_v1);
@@ -1386,19 +1380,17 @@ static void xdg_activation_token_handle_done(void *user_data,
 {
     HWND hwnd = user_data;
     struct wayland_win_data *data;
-    struct wayland_surface *surface;
 
 
     if ((data = wayland_win_data_get(hwnd)))
     {
-        if ((surface = data->wayland_surface))
-        {
-            xdg_activation_v1_activate(process_wayland.xdg_activation_v1, token, surface->wl_surface);
-            xdg_activation_token_v1_destroy(surface->xdg_activation_token_v1);
-            surface->xdg_activation_token_v1 = NULL;
-        }
+        if (data->wayland_surface)
+            xdg_activation_v1_activate(process_wayland.xdg_activation_v1,
+                                       token, data->wayland_surface->wl_surface);
         wayland_win_data_release(data);
     }
+
+    xdg_activation_token_v1_destroy(xdg_activation_token_v1);
 }
 
 const static struct xdg_activation_token_v1_listener xdg_activation_listener = {
@@ -1407,29 +1399,23 @@ const static struct xdg_activation_token_v1_listener xdg_activation_listener = {
 
 void wayland_surface_set_activation(struct wayland_surface *surface, BOOL activate)
 {
+    struct xdg_activation_token_v1 *xdg_activation_token_v1;
     assert(surface);
 
-    if (!activate && surface->xdg_activation_token_v1)
+    if (activate && process_wayland.xdg_activation_v1)
     {
-        xdg_activation_token_v1_destroy(surface->xdg_activation_token_v1);
-        surface->xdg_activation_token_v1 = NULL;
-        return;
-    }
-
-    if (activate && !surface->xdg_activation_token_v1 && process_wayland.xdg_activation_v1)
-    {
-        surface->xdg_activation_token_v1 =
+        xdg_activation_token_v1 =
             xdg_activation_v1_get_activation_token(process_wayland.xdg_activation_v1);
 
-        if (!surface->xdg_activation_token_v1)
+        if (!xdg_activation_token_v1)
         {
             ERR("Failed to create activation token!\n");
             return;
         }
 
-        xdg_activation_token_v1_add_listener(surface->xdg_activation_token_v1,
+        xdg_activation_token_v1_add_listener(xdg_activation_token_v1,
                                              &xdg_activation_listener, surface->hwnd);
-        xdg_activation_token_v1_set_surface(surface->xdg_activation_token_v1, surface->wl_surface);
-        xdg_activation_token_v1_commit(surface->xdg_activation_token_v1);
+        xdg_activation_token_v1_set_surface(xdg_activation_token_v1, surface->wl_surface);
+        xdg_activation_token_v1_commit(xdg_activation_token_v1);
     }
 }
