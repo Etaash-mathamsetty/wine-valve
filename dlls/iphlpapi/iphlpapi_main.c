@@ -4540,6 +4540,15 @@ DWORD WINAPI GetIpInterfaceTable(ADDRESS_FAMILY family, PMIB_IPINTERFACE_TABLE *
 }
 
 /******************************************************************
+ *    GetIpInterfaceEntry (IPHLPAPI.@)
+ */
+DWORD WINAPI GetIpInterfaceEntry(MIB_IPINTERFACE_ROW *row)
+{
+    FIXME("(%p): stub\n", row);
+    return ERROR_NOT_SUPPORTED;
+}
+
+/******************************************************************
  *    GetBestRoute2 (IPHLPAPI.@)
  */
 DWORD WINAPI GetBestRoute2(NET_LUID *luid, NET_IFINDEX index,
@@ -4846,6 +4855,16 @@ DWORD WINAPI Icmp6SendEcho2( HANDLE handle, HANDLE event, PIO_APC_ROUTINE apc_ro
 {
     FIXME( "(%p, %p, %p, %p, %p, %p, %p, %d, %p, %p, %ld, %ld): stub\n", handle, event,
            apc_routine, apc_ctxt, src, dst, request, request_size, opts, reply, reply_size, timeout );
+    SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
+    return 0;
+}
+
+/***********************************************************************
+ *    Icmp6ParseReplies (IPHLPAPI.@)
+ */
+DWORD WINAPI Icmp6ParseReplies(void *reply, DWORD length)
+{
+    FIXME("%p %lx\n", reply, length);
     SetLastError( ERROR_CALL_NOT_IMPLEMENTED );
     return 0;
 }

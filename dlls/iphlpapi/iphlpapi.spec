@@ -106,7 +106,7 @@
 @ stdcall GetIpForwardTable( ptr ptr long )
 @ stdcall GetIpForwardTable2( long ptr )
 @ stub GetIpForwardTableFromStack
-#@ stub GetIpInterfaceEntry
+@ stdcall GetIpInterfaceEntry(ptr)
 @ stdcall GetIpInterfaceTable( long ptr )
 #@ stub GetIpNetEntry2
 @ stdcall GetIpNetTable( ptr ptr long )
@@ -153,7 +153,7 @@
 @ stdcall GetUnicastIpAddressTable(long ptr)
 @ stdcall GetUniDirectionalAdapterInfo( ptr ptr )
 @ stdcall Icmp6CreateFile()
-#@ stub Icmp6ParseReplies
+@ stdcall Icmp6ParseReplies(ptr long)
 @ stdcall Icmp6SendEcho2(ptr ptr ptr ptr ptr ptr ptr long ptr ptr long long)
 @ stdcall IcmpCloseHandle(ptr)
 @ stdcall IcmpCreateFile()
