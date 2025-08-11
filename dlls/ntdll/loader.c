@@ -34,7 +34,6 @@
 #include "wine/exception.h"
 #include "wine/debug.h"
 #include "wine/list.h"
-#include "wine/rbtree.h"
 #include "ntdll_misc.h"
 #include "ddk/ntddk.h"
 #include "ddk/wdm.h"
@@ -190,13 +189,6 @@ static WINE_MODREF *cached_modref;
 static WINE_MODREF *last_failed_modref;
 
 static LDR_DDAG_NODE *node_ntdll, *node_kernel32;
-
-struct known_dll
-{
-    struct rb_entry entry;
-    WCHAR name[1];
-};
-static struct rb_tree known_dlls;
 
 static NTSTATUS load_dll( const WCHAR *load_path, const WCHAR *libname, DWORD flags, WINE_MODREF** pwm, BOOL system );
 static NTSTATUS process_attach( LDR_DDAG_NODE *node, LPVOID lpReserved );
@@ -3418,7 +3410,6 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname, UNI
                                WINE_MODREF **pwm, HANDLE *mapping, SECTION_IMAGE_INFORMATION *image_info,
                                struct file_id *id, BOOL find_loaded )
 {
-    const WCHAR *known_dll_name = NULL;
     WCHAR *fullname = NULL;
     NTSTATUS status;
     ULONG wow64_old_value = 0;
@@ -3449,12 +3440,6 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname, UNI
             }
             if (!open_known_dll( libname, nt_name, pwm, mapping, image_info, id )) return STATUS_SUCCESS;
         }
-        if (!fullname && rb_get( &known_dlls, libname ))
-        {
-            prepend_system_dir( libname, wcslen(libname), &fullname );
-            known_dll_name = libname;
-            libname = fullname;
-        }
     }
 
     /* Win 7/2008R2 and up seem to re-enable WoW64 FS redirection when loading libraries */
@@ -3467,11 +3452,7 @@ static NTSTATUS find_dll_file( const WCHAR *load_path, const WCHAR *libname, UNI
             status = find_builtin_without_file( libname, nt_name, pwm, mapping, image_info, id );
     }
     else if (!(status = RtlDosPathNameToNtPathName_U_WithStatus( libname, nt_name, NULL, NULL )))
-    {
         status = open_dll_file( nt_name, pwm, mapping, image_info, id );
-        if (status == STATUS_DLL_NOT_FOUND && known_dll_name)
-            status = find_builtin_without_file( known_dll_name, nt_name, pwm, mapping, image_info, id );
-    }
 
     if (status == STATUS_NOT_SUPPORTED) status = STATUS_INVALID_IMAGE_FORMAT;
 
@@ -4377,31 +4358,16 @@ PIMAGE_NT_HEADERS WINAPI RtlImageNtHeader(HMODULE hModule)
     return ret;
 }
 
-/*************************************************************************
- *           compare_known_dlls
- */
-static int compare_known_dlls( const void *name, const struct wine_rb_entry *entry )
-{
-    struct known_dll *known_dll = WINE_RB_ENTRY_VALUE( entry, struct known_dll, entry );
-
-    return wcsicmp( name, known_dll->name );
-}
-
 /***********************************************************************
  *           load_global_options
  */
 static void load_global_options(void)
 {
-    char buffer[256];
-    KEY_VALUE_PARTIAL_INFORMATION *info = (KEY_VALUE_PARTIAL_INFORMATION *)buffer;
     OBJECT_ATTRIBUTES attr;
     UNICODE_STRING bootstrap_mode_str = RTL_CONSTANT_STRING( L"WINEBOOTSTRAPMODE" );
     UNICODE_STRING session_manager_str =
         RTL_CONSTANT_STRING( L"\\Registry\\Machine\\System\\CurrentControlSet\\Control\\Session Manager" );
-    UNICODE_STRING val_str, name_str;
-    struct known_dll *known_dll;
-    ULONG idx = 0, size;
-    NTSTATUS status;
+    UNICODE_STRING val_str;
     HANDLE hkey;
 
     val_str.MaximumLength = 0;
@@ -4421,25 +4387,6 @@ static void load_global_options(void)
         query_dword_option( hkey, L"SafeDllSearchMode", &dll_safe_mode );
         NtClose( hkey );
     }
-
-    rb_init( &known_dlls, compare_known_dlls );
-
-    RtlInitUnicodeString( &name_str,
-                          L"\\Registry\\Machine\\System\\CurrentControlSet\\Control\\Session Manager\\KnownDLLs" );
-    if (NtOpenKey( &hkey, KEY_QUERY_VALUE, &attr )) return;
-    while (1)
-    {
-        status = NtEnumerateValueKey( hkey, idx++, KeyValuePartialInformation, buffer, sizeof(buffer), &size );
-        if (status == STATUS_BUFFER_OVERFLOW) continue;
-        if (status) break;
-        if (info->Type != REG_SZ) continue;
-
-        known_dll = RtlAllocateHeap( GetProcessHeap(), 0, offsetof(struct known_dll, name[0]) + info->DataLength );
-        if (!known_dll) break;
-        memcpy( known_dll->name, info->Data, info->DataLength );
-        rb_put( &known_dlls, known_dll->name, &known_dll->entry );
-    }
-    NtClose( hkey );
 }
 
 static BOOL needs_elevation(void)
