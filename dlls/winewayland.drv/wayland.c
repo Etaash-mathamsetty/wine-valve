@@ -220,6 +220,11 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
         process_wayland.xdg_activation_v1 =
             wl_registry_bind(registry, id, &xdg_activation_v1_interface, 1);
     }
+    else if (strcmp(interface, "wp_content_type_manager_v1") == 0)
+    {
+        process_wayland.wp_content_type_manager_v1 =
+            wl_registry_bind(registry, id, &wp_content_type_manager_v1_interface, 1);
+    }
 }
 
 static void registry_handle_global_remove(void *data, struct wl_registry *registry,
@@ -351,19 +356,22 @@ BOOL wayland_process_init(void)
     }
 
     if (!process_wayland.xdg_toplevel_icon_manager_v1)
-        ERR("Wayland compositor doesn't support xdg_toplevel_icon_manager_v1 (window icons will not be supported)\n");
+        ERR("Wayland compositor doesn't support optional xdg_toplevel_icon_manager_v1 (window icons will not be supported)\n");
 
     if (!process_wayland.wp_fractional_scale_manager_v1)
-        ERR("Wayland compositor doesn't support wp_fractional_scale_manager_v1 (fractional scaling will be broken)\n");
+        ERR("Wayland compositor doesn't support optional wp_fractional_scale_manager_v1 (fractional scaling will be broken)\n");
 
     if (!process_wayland.wp_color_manager_v1)
-        ERR("Wayland compositor doesn't support wp_color_manager_v1 (HDR will not be supported)\n");
+        ERR("Wayland compositor doesn't support optional wp_color_manager_v1 (HDR metadata will not be supported)\n");
 
     if (!process_wayland.xdg_system_bell_v1)
-        ERR("Wayland compositor doesn't xdg_system_bell_v1! (Beep will not be supported)\n");
+        ERR("Wayland compositor doesn't optional xdg_system_bell_v1! (Beep will not be supported)\n");
 
     if (!process_wayland.xdg_activation_v1)
-        ERR("Wayland compositor doesn't support xdg_activation_v1! (Flash Window will not be supported)\n");
+        ERR("Wayland compositor doesn't support optional xdg_activation_v1! (Flash Window will not be supported)\n");
+
+    if (!process_wayland.wp_content_type_manager_v1)
+        WARN("Wayland compositor doesn't support optional wp_content_type_manager_v1!\n");
 
     process_wayland.initialized = TRUE;
 

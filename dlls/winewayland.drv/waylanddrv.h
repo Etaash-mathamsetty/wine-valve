@@ -43,6 +43,7 @@
 #include "color-management-v1-client-protocol.h"
 #include "xdg-system-bell-v1-client-protocol.h"
 #include "xdg-activation-v1-client-protocol.h"
+#include "content-type-v1-client-protocol.h"
 
 #include "windef.h"
 #include "winbase.h"
@@ -209,6 +210,7 @@ struct wayland
     struct wl_data_device_manager *wl_data_device_manager;
     struct xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager_v1;
     struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1;
+    struct wp_content_type_manager_v1 *wp_content_type_manager_v1;
     struct wp_color_manager_v1 *wp_color_manager_v1;
     struct xdg_system_bell_v1 *xdg_system_bell_v1;
     struct xdg_activation_v1 *xdg_activation_v1;
@@ -326,6 +328,7 @@ struct wayland_surface
     struct wl_output *requested_output;
     struct wp_viewport *wp_viewport;
     struct wp_fractional_scale_v1 *wp_fractional_scale_v1;
+    struct wp_content_type_v1 *wp_content_type_v1;
 
     enum wayland_surface_role role;
     union
