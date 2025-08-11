@@ -651,6 +651,8 @@ NTSTATUS exec_wineloader( char **argv, int socketfd, const struct pe_image_info 
         strcpy( env, "LD_PRELOAD=" );
         strcat( env, ld_preload );
 
+        TRACE("HACK: Unsetting LD_PRELOAD for explorer.exe\n");
+
         tmp = env + 11;
         do
         {
