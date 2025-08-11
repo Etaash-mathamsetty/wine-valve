@@ -229,10 +229,22 @@ struct wayland_surface *wayland_surface_create(HWND hwnd)
             wp_fractional_scale_manager_v1_get_fractional_scale(
                 process_wayland.wp_fractional_scale_manager_v1,
                 surface->wl_surface);
+        if (!surface->wp_fractional_scale_v1) goto err;
         wp_fractional_scale_v1_add_listener(
             surface->wp_fractional_scale_v1,
             &wp_fractional_scale_listener,
             hwnd);
+    }
+
+    if (process_wayland.wp_content_type_manager_v1)
+    {
+        TRACE("using game content type!\n");
+        surface->wp_content_type_v1 =
+        wp_content_type_manager_v1_get_surface_content_type(
+            process_wayland.wp_content_type_manager_v1, surface->wl_surface);
+        if (!surface->wp_content_type_v1) goto err;
+        wp_content_type_v1_set_content_type(
+            surface->wp_content_type_v1, WP_CONTENT_TYPE_V1_TYPE_GAME);
     }
 
     return surface;
@@ -275,6 +287,12 @@ void wayland_surface_destroy(struct wayland_surface *surface)
     {
         wp_fractional_scale_v1_destroy(surface->wp_fractional_scale_v1);
         surface->wp_fractional_scale_v1 = NULL;
+    }
+
+    if (surface->wp_content_type_v1)
+    {
+        wp_content_type_v1_destroy(surface->wp_content_type_v1);
+        surface->wp_content_type_v1 = NULL;
     }
 
     if (surface->wp_viewport)
