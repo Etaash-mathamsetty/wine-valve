@@ -900,7 +900,7 @@
 @ stdcall IsDebuggerPresent()
 # @ stub IsDeveloperModeEnabled
 # @ stub IsDeveloperModePolicyApplied
-# @ stub IsEnclaveTypeSupported
+@ stdcall IsEnclaveTypeSupported(long)
 # @ stub IsGlobalizationUserSettingsKeyRedirected
 @ stdcall IsInternetESCEnabled()
 @ stdcall IsNLSDefinedString(long long ptr wstr long)

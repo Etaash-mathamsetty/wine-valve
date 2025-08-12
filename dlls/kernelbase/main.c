@@ -521,6 +521,16 @@ static HRESULT lcid_to_rfc1766(LCID lcid, WCHAR *rfc1766, INT len)
     return E_FAIL;
 }
 
+/******************************************************************************
+ *           IsEnclaveTypeSupported       (KERNEL32.@)
+ */
+BOOL WINAPI IsEnclaveTypeSupported(DWORD enclave)
+{
+    FIXME("%lx stub!\n", enclave);
+    SetLastError(ERROR_NOT_SUPPORTED);
+    return FALSE;
+}
+
 HRESULT WINAPI GetAcceptLanguagesW(WCHAR *langbuf, DWORD *buflen)
 {
     DWORD mystrlen, mytype;
