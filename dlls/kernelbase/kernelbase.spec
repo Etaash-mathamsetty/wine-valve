@@ -387,6 +387,7 @@
 @ stdcall FlsAlloc(ptr)
 @ stdcall FlsFree(long)
 @ stdcall FlsGetValue(long)
+@ stdcall FlsGetValue2(long) FlsGetValue
 @ stdcall FlsSetValue(long ptr)
 @ stdcall FlushConsoleInputBuffer(long)
 @ stdcall FlushFileBuffers(long)
