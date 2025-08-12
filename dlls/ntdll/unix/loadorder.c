@@ -426,6 +426,7 @@ enum loadorder get_load_order( const UNICODE_STRING *nt_name )
         UNICODE_STRING eac_unix_name;
         OBJECT_ATTRIBUTES attr;
         char *unix_path = NULL;
+        ULONG unix_len = 0;
         NTSTATUS status;
 
         if (eac_launcher_process)
@@ -444,9 +445,12 @@ enum loadorder get_load_order( const UNICODE_STRING *nt_name )
             wcscpy(basename, easyanticheat_x64W);
         wcscpy(&basename[18], soW);
         eac_unix_name.Length = eac_unix_name.MaximumLength = wcslen(eac_unix_name.Buffer) * sizeof(WCHAR);
+        /* FIXME: this is an extra big buffer */
+        unix_len = eac_unix_name.Length * 2;
+        unix_path = malloc(unix_len);
         InitializeObjectAttributes(&attr, &eac_unix_name, 0, NULL, NULL);
 
-        if (!(status = nt_to_unix_file_name(&attr, &unix_path, FILE_OPEN)))
+        if (!(status = wine_nt_to_unix_file_name(&attr, unix_path, &unix_len, FILE_OPEN)))
         {
             free(unix_path);
             free(eac_unix_name.Buffer);
@@ -459,6 +463,7 @@ enum loadorder get_load_order( const UNICODE_STRING *nt_name )
             ret = LO_NATIVE;
             TRACE( "got hardcoded %s for %s, as the eac unix library (%s) is not present. status %x\n", debugstr_loadorder(ret), debugstr_w(path), debugstr_w(eac_unix_name.Buffer), (int)status );
             free(eac_unix_name.Buffer);
+            free(unix_path);
             return ret;
         }
     }

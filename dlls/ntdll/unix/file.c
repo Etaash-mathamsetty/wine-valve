@@ -3275,7 +3275,6 @@ static void get_redirect( OBJECT_ATTRIBUTES *attr, UNICODE_STRING *redir )
 
     if (replace_path( attr, redir, prefix_len, system32W, syswow64W )) return;
     if (replace_path( attr, redir, prefix_len, regeditW, syswow64_regeditW )) return;
-    return FALSE;
 }
 
 #else  /* _WIN64 */
