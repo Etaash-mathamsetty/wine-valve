@@ -2465,6 +2465,8 @@ static void *create_process_object( HANDLE handle )
     ANSI_STRING fullImageNameA;
     UNICODE_STRING *fullImageNameW = NULL;
 
+    TRACE("handle %p\n", handle);
+
     if (!(process = alloc_kernel_object( PsProcessType, handle, sizeof(*process), 0 ))) return NULL;
 
     process->header.Type = 3;
