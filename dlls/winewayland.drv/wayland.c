@@ -225,6 +225,12 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
         process_wayland.wp_content_type_manager_v1 =
             wl_registry_bind(registry, id, &wp_content_type_manager_v1_interface, 1);
     }
+    else if (strcmp(interface, "zwp_linux_dmabuf_v1") == 0)
+    {
+        if (version >= 4)
+            process_wayland.zwp_linux_dmabuf_v1 =
+                wl_registry_bind(registry, id, &zwp_linux_dmabuf_v1_interface, version);
+    }
 }
 
 static void registry_handle_global_remove(void *data, struct wl_registry *registry,
@@ -372,6 +378,9 @@ BOOL wayland_process_init(void)
 
     if (!process_wayland.wp_content_type_manager_v1)
         WARN("Wayland compositor doesn't support optional wp_content_type_manager_v1!\n");
+
+    if (!process_wayland.zwp_linux_dmabuf_v1)
+        ERR("Wayland compositor doesn't support zwp_linux_dmabuf_v1 version 4 (Cross process rendering will not be supported)!");
 
     process_wayland.initialized = TRUE;
 
