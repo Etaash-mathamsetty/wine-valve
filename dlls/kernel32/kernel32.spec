@@ -1009,7 +1009,7 @@
 @ stdcall -import IsDBCSLeadByte(long)
 @ stdcall -import IsDBCSLeadByteEx(long long)
 @ stdcall -import IsDebuggerPresent()
-@ stdcall IsEnclaveTypeSupported(long)
+@ stdcall -import IsEnclaveTypeSupported(long)
 @ stub -i386 IsLSCallback
 @ stdcall -import IsNLSDefinedString(long long ptr wstr long)
 @ stdcall -import IsNormalizedString(long wstr long)
