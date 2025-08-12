@@ -11,6 +11,7 @@ SOURCES = \
 	display.c \
 	dllmain.c \
 	fractional-scale-v1.xml \
+	linux-dmabuf-v1.xml \
 	opengl.c \
 	pointer-constraints-unstable-v1.xml \
 	relative-pointer-unstable-v1.xml \
