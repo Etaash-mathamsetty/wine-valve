@@ -216,16 +216,6 @@ BOOL WINAPI GetSystemRegistryQuota(PDWORD pdwQuotaAllowed, PDWORD pdwQuotaUsed)
 }
 
 /******************************************************************************
- *           IsEnclaveTypeSupported       (KERNEL32.@)
- */
-BOOL WINAPI IsEnclaveTypeSupported(DWORD enclave)
-{
-    FIXME("%lx stub!\n", enclave);
-    SetLastError(ERROR_NOT_SUPPORTED);
-    return FALSE;
-}
-
-/******************************************************************************
  *           IsUserCetAvailableInEnvironment       (KERNEL32.@)
  */
 BOOL WINAPI IsUserCetAvailableInEnvironment(DWORD cet)
