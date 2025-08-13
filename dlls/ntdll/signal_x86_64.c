@@ -94,22 +94,14 @@ __ASM_GLOBAL_FUNC( "EXP+#KiUserExceptionDispatcher",
 WINE_DEFAULT_DEBUG_CHANNEL(seh);
 WINE_DECLARE_DEBUG_CHANNEL(relay);
 
+
 /***********************************************************************
  *           virtual_unwind
  */
-static NTSTATUS virtual_unwind( ULONG type, DISPATCHER_CONTEXT *dispatch, CONTEXT *context, BOOL dump_backtrace )
+static NTSTATUS virtual_unwind( ULONG type, DISPATCHER_CONTEXT *dispatch, CONTEXT *context )
 {
-    LDR_DATA_TABLE_ENTRY *module = NULL;
+    LDR_DATA_TABLE_ENTRY *module;
     NTSTATUS status;
-
-    if (dump_backtrace)
-    {
-        if (!LdrFindEntryForAddress( (void *)context->Rip, &module ))
-            WINE_BACKTRACE_LOG( "%p: %s + %p.\n", (void *)context->Rip, debugstr_w(module->BaseDllName.Buffer),
-                                (void *)((char *)context->Rip - (char *)module->DllBase) );
-        else
-            WINE_BACKTRACE_LOG( "%p: unknown module.\n", (void *)context->Rip );
-    }
 
     dispatch->ImageBase = 0;
     dispatch->ScopeIndex = 0;
@@ -118,8 +110,8 @@ static NTSTATUS virtual_unwind( ULONG type, DISPATCHER_CONTEXT *dispatch, CONTEX
                                                       dispatch->HistoryTable );
 
     /* look for host system exception information */
-    if (!dispatch->FunctionEntry && ((!module && LdrFindEntryForAddress( (void *)context->Rip, &module ))
-        || module->Flags & LDR_WINE_INTERNAL))
+    if (!dispatch->FunctionEntry &&
+        (LdrFindEntryForAddress( (void *)context->Rip, &module ) || (module->Flags & LDR_WINE_INTERNAL)))
     {
         struct unwind_builtin_dll_params params = { type, dispatch, context };
 
@@ -231,7 +223,7 @@ NTSTATUS call_seh_handlers( EXCEPTION_RECORD *rec, CONTEXT *orig_context )
     dispatch.HistoryTable  = &table;
     for (;;)
     {
-        status = virtual_unwind( UNW_FLAG_EHANDLER, &dispatch, &context, need_backtrace( rec->ExceptionCode ) );
+        status = virtual_unwind( UNW_FLAG_EHANDLER, &dispatch, &context );
         if (status != STATUS_SUCCESS) return status;
 
     unwind_done:
@@ -714,7 +706,7 @@ void WINAPI RtlUnwindEx( PVOID end_frame, PVOID target_ip, EXCEPTION_RECORD *rec
 
     for (;;)
     {
-        status = virtual_unwind( UNW_FLAG_UHANDLER, &dispatch, &new_context, FALSE );
+        status = virtual_unwind( UNW_FLAG_UHANDLER, &dispatch, &new_context );
         if (status != STATUS_SUCCESS) raise_status( status, rec );
 
     unwind_done:
