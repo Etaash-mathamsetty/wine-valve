@@ -599,6 +599,25 @@ static inline void remove_epoll_user( struct fd *fd, int user )
     }
 }
 
+/* HACK: Add syscall for epoll_pwait2 */
+#ifndef HAVE_EPOLL_PWAIT2
+#ifdef HAVE_SYS_SYSCALL_H
+#define HAVE_EPOLL_PWAIT2
+
+#ifndef __NR_epoll_pwait2
+#define __NR_epoll_pwait2 441
+#endif
+
+int epoll_pwait2(int epfd, struct epoll_event *events,
+                      int maxevents, const struct timespec *timeout,
+                      const sigset_t *sigmask)
+{
+    return syscall(__NR_epoll_pwait2, epfd, events, maxevents, timeout, sigmask);
+}
+
+#endif
+#endif
+
 static inline void main_loop_epoll(void)
 {
     int i, ret, timeout;
