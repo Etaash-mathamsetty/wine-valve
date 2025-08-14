@@ -305,6 +305,7 @@ struct wayland_client_surface
     struct wl_surface *wl_surface;
     struct wl_subsurface *wl_subsurface;
     struct wp_viewport *wp_viewport;
+    struct wp_content_type_v1 *wp_content_type_v1;
 };
 
 struct wayland_shm_buffer
