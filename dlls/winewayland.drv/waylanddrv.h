@@ -44,6 +44,7 @@
 #include "xdg-activation-v1-client-protocol.h"
 #include "content-type-v1-client-protocol.h"
 #include "linux-dmabuf-v1-client-protocol.h"
+#include "xdg-toplevel-tag-v1-client-protocol.h"
 
 #include "windef.h"
 #include "winbase.h"
@@ -214,6 +215,7 @@ struct wayland
     struct xdg_activation_v1 *xdg_activation_v1;
     struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1;
     struct zwp_linux_dmabuf_v1 *zwp_linux_dmabuf_v1;
+    struct xdg_toplevel_tag_manager_v1 *xdg_toplevel_tag_manager_v1;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;

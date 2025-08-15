@@ -341,6 +341,18 @@ void wayland_surface_make_toplevel(struct wayland_surface *surface)
     if (process_name)
         xdg_toplevel_set_app_id(surface->xdg_toplevel, process_name);
 
+    if (process_wayland.xdg_toplevel_tag_manager_v1)
+    {
+        xdg_toplevel_tag_manager_v1_set_toplevel_tag(
+            process_wayland.xdg_toplevel_tag_manager_v1, surface->xdg_toplevel,
+            "proton-game"
+        );
+        xdg_toplevel_tag_manager_v1_set_toplevel_description(
+            process_wayland.xdg_toplevel_tag_manager_v1, surface->xdg_toplevel,
+            "This is a game running through proton"
+        );
+    }
+
     wl_surface_commit(surface->wl_surface);
     wl_display_flush(process_wayland.wl_display);
 
