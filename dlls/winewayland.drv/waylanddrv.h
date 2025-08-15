@@ -225,6 +225,8 @@ struct wayland
     /* Protects the output_list and the wayland_output.current states. */
     pthread_mutex_t output_mutex;
     LONG input_serial;
+    /* Steam overlay active event */
+    HANDLE overlay_event;
 };
 
 struct wayland_output_mode
@@ -363,6 +365,7 @@ struct wayland_surface
  */
 
 BOOL wayland_process_init(void);
+BOOL wayland_is_overlay_active(void);
 
 /**********************************************************************
  *          Wayland output
@@ -512,6 +515,18 @@ static inline LONG area_rect(const RECT *rect)
 static inline LRESULT send_message(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     return NtUserMessageCall(hwnd, msg, wparam, lparam, NULL, NtUserSendMessage, FALSE);
+}
+
+static inline void ascii_to_unicode(WCHAR *dst, const char *src, size_t len)
+{
+    while (len--) *dst++ = (unsigned char)*src++;
+}
+
+static inline UINT asciiz_to_unicode(WCHAR *dst, const char *src)
+{
+    WCHAR *p = dst;
+    while ((*p++ = *src++));
+    return (p - dst) * sizeof(WCHAR);
 }
 
 RGNDATA *get_region_data(HRGN region);
