@@ -63,18 +63,6 @@ static const struct user_driver_funcs waylanddrv_funcs =
     .pwine_get_wgl_driver = WAYLAND_wine_get_wgl_driver,
 };
 
-static inline void ascii_to_unicode(WCHAR *dst, const char *src, size_t len)
-{
-    while (len--) *dst++ = (unsigned char)*src++;
-}
-
-static inline UINT asciiz_to_unicode(WCHAR *dst, const char *src)
-{
-    WCHAR *p = dst;
-    while ((*p++ = *src++));
-    return (p - dst) * sizeof(WCHAR);
-}
-
 static HKEY reg_open_key(HKEY root, const WCHAR *name, ULONG name_len)
 {
     UNICODE_STRING nameW = {name_len, name_len, (WCHAR *)name};
