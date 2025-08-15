@@ -275,6 +275,30 @@ static const struct wl_registry_listener registry_listener = {
     registry_handle_global_remove
 };
 
+static void init_overlay_event(void)
+{
+    OBJECT_ATTRIBUTES attr;
+    WCHAR buffer[MAX_PATH];
+    char path[MAX_PATH];
+    UNICODE_STRING str;
+
+    RtlInitUnicodeString( &str, buffer );
+    str.MaximumLength = sizeof(buffer);
+    InitializeObjectAttributes( &attr, &str, OBJ_CASE_INSENSITIVE | OBJ_OPENIF, 0, NULL );
+
+    str.Length = sprintf( path, "\\Sessions\\%u\\BaseNamedObjects\\__wine_steamclient_GameOverlayActivated",
+                          (int)NtCurrentTeb()->Peb->SessionId );
+    ascii_to_unicode( buffer, path, str.Length + 1 );
+    str.Length *= sizeof(WCHAR);
+    NtCreateEvent( &process_wayland.overlay_event, EVENT_ALL_ACCESS, &attr, NotificationEvent, FALSE );
+}
+
+BOOL wayland_is_overlay_active(void)
+{
+    LARGE_INTEGER timeout = {0};
+    return NtWaitForSingleObject(process_wayland.overlay_event, FALSE, &timeout) == WAIT_OBJECT_0;
+}
+
 /**********************************************************************
  *          wayland_process_init
  *
@@ -320,6 +344,8 @@ BOOL wayland_process_init(void)
      * initial events produced from registering the globals. */
     wl_display_roundtrip_queue(process_wayland.wl_display, process_wayland.wl_event_queue);
     wl_display_roundtrip_queue(process_wayland.wl_display, process_wayland.wl_event_queue);
+
+    init_overlay_event();
 
     /* Check for required protocol globals. */
     if (!process_wayland.wl_compositor)
