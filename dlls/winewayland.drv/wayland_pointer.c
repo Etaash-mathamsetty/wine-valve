@@ -518,23 +518,23 @@ static void wayland_motion_delta_to_window(struct wayland_surface *surface,
     *window_y = surface_y * surface->window.scale;
 }
 
-/* Some compositors seem to have broken rawinput so allow users to disable */
-static BOOL is_rawinput_disabled(void)
+/* Some compositors seem to have broken rawinput so allow users to disable/adjust sensitivity */
+static double get_rawinput_sens(void)
 {
-    static int cached;
+    static double cached = -1.0;
     const char *env;
 
-    if (cached) return cached - 1;
+    if (cached != -1.0) return cached;
 
-    env = getenv("WAYLANDDRV_RAWINPUT");
-    cached = 1;
-
-    if (env && !strcmp(env, "0"))
+    if ((env = getenv("WAYLANDDRV_RAWINPUT")))
     {
-        cached = 2;
+        /* an invalid value would return 0, disabling rawinput */
+        cached = strtod(env, NULL);
+        if (cached < 0) cached = 0;
     }
+    else cached = 1.0;
 
-    return cached - 1;
+    return cached;
 }
 
 static void relative_pointer_v1_relative_motion(void *private,
@@ -545,11 +545,13 @@ static void relative_pointer_v1_relative_motion(void *private,
 {
     HWND hwnd;
     struct wayland_win_data *data;
-    double f_dx = 0.0, f_dy = 0.0, f_dxu = 0.0, f_dyu = 0.0;
+    double f_dx = 0.0, f_dy = 0.0, f_dxu = 0.0, f_dyu = 0.0, sensitivity;
     struct wayland_pointer *pointer = &process_wayland.pointer;
 
     if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
     if (!(data = wayland_win_data_get(hwnd))) return;
+
+    sensitivity = get_rawinput_sens();
 
     f_dxu = wl_fixed_to_double(dx_unaccel);
     f_dyu = wl_fixed_to_double(dy_unaccel);
@@ -563,13 +565,13 @@ static void relative_pointer_v1_relative_motion(void *private,
     pthread_mutex_lock(&pointer->mutex);
 
 
-    if (is_rawinput_disabled())
+    if (sensitivity == 0.0)
     {
         pointer->pointer_frame.dx += f_dx;
         pointer->pointer_frame.dy += f_dy;
     } else {
-        pointer->pointer_frame.dx += f_dxu;
-        pointer->pointer_frame.dy += f_dyu;
+        pointer->pointer_frame.dx += f_dxu * sensitivity;
+        pointer->pointer_frame.dy += f_dyu * sensitivity;
     }
 
     pointer->pointer_frame.flags |= WAYLAND_POINTER_FRAME_REL;
