@@ -155,8 +155,6 @@ static void pointer_handle_motion_internal(wl_fixed_t sx, wl_fixed_t sy, BOOL se
 
     wayland_win_data_release(data);
 
-    if (wayland_is_overlay_active()) return;
-
     if (!send_input)
     {
         pthread_mutex_lock(&pointer->mutex);
@@ -169,6 +167,8 @@ static void pointer_handle_motion_internal(wl_fixed_t sx, wl_fixed_t sy, BOOL se
         pthread_mutex_unlock(&pointer->mutex);
     } else {
         INPUT input = {0};
+
+        if (wayland_is_overlay_active()) return;
 
         input.type = INPUT_MOUSE;
         input.mi.dx = screen.x;
@@ -318,7 +318,6 @@ static void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer,
 
     if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
     if (InterlockedCompareExchange(&pointer->pointer_frame.discrete_event_handled, FALSE, TRUE)) return;
-    if (wayland_is_overlay_active()) return;
 
     pthread_mutex_lock(&pointer->mutex);
 
@@ -368,6 +367,8 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
 
     pthread_mutex_lock(&pointer->mutex);
 
+    if (wayland_is_overlay_active()) goto skip;
+
     input.type = INPUT_MOUSE;
 
     if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_ABS)
@@ -414,6 +415,7 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
             NtUserSendHardwareInput(hwnd, 0, &input, 0);
     }
 
+skip:
     /* reset accumulators when scroll event ends */
     if (pointer->pointer_frame.axis_stop & WAYLAND_POINTER_AXIS_STOP_VERTICAL)
         pointer->pointer_frame.wheel = 0;
@@ -460,7 +462,6 @@ static void pointer_handle_axis_discrete(void *data, struct wl_pointer *wl_point
     struct wayland_pointer *pointer = &process_wayland.pointer;
 
     if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
-    if (wayland_is_overlay_active()) return;
 
     InterlockedExchange(&pointer->pointer_frame.discrete_event_handled, TRUE);
 
@@ -542,7 +543,6 @@ static void relative_pointer_v1_relative_motion(void *private,
 
     if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
     if (!(data = wayland_win_data_get(hwnd))) return;
-    if (wayland_is_overlay_active()) return;
 
     f_dxu = wl_fixed_to_double(dx_unaccel);
     f_dyu = wl_fixed_to_double(dy_unaccel);
