@@ -346,7 +346,6 @@ static void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer,
     TRACE("hwnd=%p axis=%u value=%.2f\n", hwnd, axis, scroll_value);
 }
 
-/* FIXME: do we want to handle buttons here? */
 static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
 {
     HWND hwnd;
@@ -388,7 +387,12 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
         pointer->pointer_frame.dy -= input.mi.dy;
         input.mi.dwFlags = MOUSEEVENTF_MOVE;
         if (input.mi.dx != 0 || input.mi.dy != 0)
-            NtUserSendHardwareInput(hwnd, pointer->relative_only ? 0 : SEND_HWMSG_NO_MSG, &input, 0);
+        {
+            if (pointer->relative_only)
+                NtUserSendHardwareInput(hwnd, SEND_HWMSG_NO_RAW, &input, 0);
+
+            NtUserSendHardwareInput(0, SEND_HWMSG_NO_MSG, &input, 0);
+        }
     }
 
     /* zero these values just in case */
@@ -415,9 +419,13 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
 
     if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_BUTTON)
     {
+        /* raw button input */
         input.mi.mouseData = pointer->pointer_frame.button_data;
         input.mi.dwFlags = pointer->pointer_frame.button_flags;
-        NtUserSendHardwareInput(hwnd, 0, &input, 0);
+        NtUserSendHardwareInput(0, SEND_HWMSG_NO_MSG, &input, 0);
+
+        /* normal button input */
+        NtUserSendHardwareInput(hwnd, SEND_HWMSG_NO_RAW, &input, 0);
     }
 
 skip:
