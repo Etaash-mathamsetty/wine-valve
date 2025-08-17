@@ -21,7 +21,9 @@ SOURCES = \
 	viewporter.xml \
 	vulkan.c \
 	wayland.c \
+	wayland_cross.c \
 	wayland_data_device.c \
+	wayland_dc.c \
 	wayland_keyboard.c \
 	wayland_output.c \
 	wayland_pointer.c \

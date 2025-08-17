@@ -695,6 +695,32 @@ LRESULT WAYLAND_WindowMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     case WM_WAYLAND_SET_FOREGROUND:
         NtUserSetForegroundWindow(hwnd);
         return 0;
+    case WM_WAYLAND_REMOTE:
+    {
+        void *mapping = (void *)lp;
+
+        TRACE("wp %x mapping %p\n", (UINT)wp, mapping);
+
+        switch (wp)
+        {
+            case WAYLAND_REMOTE_MESSAGE_COMMIT:
+            {
+                if (!mapping) break;
+                FIXME("remote commit is unimplemented!\n");
+                break;
+            }
+            default:
+            {
+                FIXME("wp %x not implemented\n", (UINT)wp);
+                break;
+            }
+        }
+
+        if (mapping)
+            NtUnmapViewOfSection(GetCurrentProcess(), mapping);
+
+        return 0;
+    }
     default:
         FIXME("got window msg %x hwnd %p wp %lx lp %lx\n", msg, hwnd, (long)wp, lp);
         return 0;
