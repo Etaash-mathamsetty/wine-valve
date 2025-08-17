@@ -144,7 +144,6 @@ static void wp_fractional_scale_handle_scale(void *user_data,
     struct wayland_win_data *data;
     struct wayland_surface *surface;
     HWND hwnd = user_data;
-    assert(hwnd);
 
     if ((data = wayland_win_data_get(hwnd)))
     {
@@ -153,6 +152,9 @@ static void wp_fractional_scale_handle_scale(void *user_data,
             surface->window.fractional_scale = scale / 120.0;
             surface->window.scale =
                 surface->window.fractional_scale * NtUserGetSystemDpiForProcess(0) / 96.0;
+
+            wayland_surface_reconfigure(surface);
+            wayland_surface_ensure_contents(surface);
 
             TRACE("Got scale %lf\n", surface->window.fractional_scale);
         }
