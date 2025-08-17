@@ -76,6 +76,7 @@ enum wayland_window_message
     WM_WAYLAND_INIT_DISPLAY_DEVICES = WM_WINE_FIRST_DRIVER_MSG,
     WM_WAYLAND_CONFIGURE,
     WM_WAYLAND_SET_FOREGROUND,
+    WM_WAYLAND_REMOTE
 };
 
 enum wayland_surface_config_state
@@ -107,6 +108,11 @@ enum wayland_pointer_axis_stop_flags
 {
     WAYLAND_POINTER_AXIS_STOP_VERTICAL = (1 << 0),
     WAYLAND_POINTER_AXIS_STOP_HORIZONTAL = (1 << 1)
+};
+
+enum wayland_remote_message_type
+{
+    WAYLAND_REMOTE_MESSAGE_COMMIT
 };
 
 struct wayland_keyboard
@@ -365,6 +371,10 @@ struct wayland_surface
     HCURSOR hcursor;
 };
 
+typedef struct {
+    struct gdi_physdev dev;
+} WAYLAND_PDEVICE;
+
 /**********************************************************************
  *          Wayland initialization
  */
@@ -428,6 +438,11 @@ struct wayland_shm_buffer *wayland_shm_buffer_from_color_bitmaps(HDC hdc, HBITMA
                                                                  HBITMAP mask);
 void wayland_shm_buffer_ref(struct wayland_shm_buffer *shm_buffer);
 void wayland_shm_buffer_unref(struct wayland_shm_buffer *shm_buffer);
+
+/**********************************************************************
+ *          Wayland Cross Process helpers
+ */
+int wayland_remote_call(HWND target, DWORD type, void *data, SIZE_T size);
 
 /**********************************************************************
  *          Wayland Window
@@ -560,5 +575,14 @@ BOOL WAYLAND_CreateWindowSurface(HWND hwnd, BOOL layered, const RECT *surface_re
 BOOL WAYLAND_HasWindowManager(const char *name);
 UINT WAYLAND_VulkanInit(UINT version, void *vulkan_handle, const struct vulkan_driver_funcs **driver_funcs);
 struct opengl_funcs *WAYLAND_wine_get_wgl_driver(UINT version);
+
+/* dc funcs */
+BOOL WAYLAND_CreateDC(PHYSDEV *pdev, LPCWSTR device,
+                            LPCWSTR output, const DEVMODEW* initData);
+BOOL WAYLAND_CreateCompatibleDC(PHYSDEV orig, PHYSDEV *pdev);
+BOOL WAYLAND_DeleteDC(PHYSDEV dev);
+DWORD WAYLAND_PutImage(PHYSDEV dev, HRGN clip, BITMAPINFO *info,
+                             const struct gdi_image_bits *bits, struct bitblt_coords *src,
+                             struct bitblt_coords *dst, DWORD rop);
 
 #endif /* __WINE_WAYLANDDRV_H */

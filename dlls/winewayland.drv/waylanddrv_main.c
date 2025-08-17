@@ -39,6 +39,12 @@ BOOL option_use_system_cursors = TRUE;
 
 static const struct user_driver_funcs waylanddrv_funcs =
 {
+    .dc_funcs.pCreateDC = WAYLAND_CreateDC,
+    .dc_funcs.pCreateCompatibleDC = WAYLAND_CreateCompatibleDC,
+    .dc_funcs.pDeleteDC = WAYLAND_DeleteDC,
+    .dc_funcs.pPutImage = WAYLAND_PutImage,
+    .dc_funcs.priority = GDI_PRIORITY_GRAPHICS_DRV,
+
     .pBeep = WAYLAND_Beep,
     .pClipboardWindowProc = WAYLAND_ClipboardWindowProc,
     .pClipCursor = WAYLAND_ClipCursor,
@@ -62,6 +68,60 @@ static const struct user_driver_funcs waylanddrv_funcs =
     .pVulkanInit = WAYLAND_VulkanInit,
     .pwine_get_wgl_driver = WAYLAND_wine_get_wgl_driver,
 };
+
+static inline WAYLAND_PDEVICE *get_wayland_dev(PHYSDEV dev)
+{
+    return (WAYLAND_PDEVICE *)dev;
+}
+
+static WAYLAND_PDEVICE *create_wayland_physdev(void)
+{
+    WAYLAND_PDEVICE *phys;
+
+    phys = calloc(1, sizeof(*phys));
+
+    return phys;
+}
+
+/**********************************************************************
+ *           WAYLAND_CreateDC
+ */
+BOOL WAYLAND_CreateDC(PHYSDEV *pdev, LPCWSTR device,
+                            LPCWSTR output, const DEVMODEW* initData)
+{
+    WAYLAND_PDEVICE *physDev = create_wayland_physdev();
+
+    if (!physDev) return FALSE;
+
+    push_dc_driver(pdev, &physDev->dev, &waylanddrv_funcs.dc_funcs);
+
+    return TRUE;
+}
+
+/**********************************************************************
+ *           WAYLAND_CreateCompatibleDC
+ */
+BOOL WAYLAND_CreateCompatibleDC(PHYSDEV orig, PHYSDEV *pdev)
+{
+    WAYLAND_PDEVICE *physDev = create_wayland_physdev();
+
+    if (!physDev) return FALSE;
+
+    push_dc_driver(pdev, &physDev->dev, &waylanddrv_funcs.dc_funcs);
+
+    return TRUE;
+}
+
+/**********************************************************************
+ *           WAYLAND_DeleteDC
+ */
+BOOL WAYLAND_DeleteDC(PHYSDEV dev)
+{
+    WAYLAND_PDEVICE *physDev = get_wayland_dev(dev);
+
+    free(physDev);
+    return TRUE;
+}
 
 static HKEY reg_open_key(HKEY root, const WCHAR *name, ULONG name_len)
 {
