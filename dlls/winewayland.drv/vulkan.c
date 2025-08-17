@@ -85,6 +85,7 @@ static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_ins
     if (tid && pid != GetCurrentProcessId())
     {
         ERR("Cross process rendering is not supported!\n");
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
 
     create_info_host.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
