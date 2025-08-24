@@ -97,8 +97,7 @@ enum wayland_pointer_frame_flags
     WAYLAND_POINTER_FRAME_ABS = (1 << 0),
     WAYLAND_POINTER_FRAME_REL = (1 << 1),
     WAYLAND_POINTER_FRAME_WHEEL = (1 << 2),
-    WAYLAND_POINTER_FRAME_WHEELH = (1 << 3),
-    WAYLAND_POINTER_FRAME_BUTTON = (1 << 4)
+    WAYLAND_POINTER_FRAME_WHEELH = (1 << 3)
 };
 
 enum wayland_pointer_axis_stop_flags
@@ -147,8 +146,6 @@ struct wayland_pointer
         double wheel, wheelH;
         unsigned int flags;
         unsigned int axis_stop;
-        unsigned int button_flags;
-        unsigned int button_data;
     } pointer_frame;
     pthread_mutex_t mutex;
 };
