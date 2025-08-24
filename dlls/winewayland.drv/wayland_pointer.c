@@ -249,47 +249,49 @@ static void pointer_handle_leave(void *data, struct wl_pointer *wl_pointer,
     pthread_mutex_unlock(&pointer->mutex);
 }
 
-static void pointer_handle_button(void *private, struct wl_pointer *wl_pointer,
+static void pointer_handle_button(void *data, struct wl_pointer *wl_pointer,
                                   uint32_t serial, uint32_t time, uint32_t button,
                                   uint32_t state)
 {
     struct wayland_pointer *pointer = &process_wayland.pointer;
-    DWORD flags = 0, data = 0;
+    INPUT input = {0};
     HWND hwnd;
 
     InterlockedExchange(&process_wayland.input_serial, serial);
 
     if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
+    if (wayland_is_overlay_active()) return;
+
+    input.type = INPUT_MOUSE;
 
     switch (button)
     {
-    case BTN_LEFT: flags = MOUSEEVENTF_LEFTDOWN; break;
-    case BTN_RIGHT: flags = MOUSEEVENTF_RIGHTDOWN; break;
-    case BTN_MIDDLE: flags = MOUSEEVENTF_MIDDLEDOWN; break;
+    case BTN_LEFT: input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN; break;
+    case BTN_RIGHT: input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN; break;
+    case BTN_MIDDLE: input.mi.dwFlags = MOUSEEVENTF_MIDDLEDOWN; break;
     case BTN_SIDE:
     case BTN_BACK:
-        flags = MOUSEEVENTF_XDOWN;
-        data = XBUTTON1;
+        input.mi.dwFlags = MOUSEEVENTF_XDOWN;
+        input.mi.mouseData = XBUTTON1;
         break;
     case BTN_EXTRA:
     case BTN_FORWARD:
-        flags = MOUSEEVENTF_XDOWN;
-        data = XBUTTON2;
+        input.mi.dwFlags = MOUSEEVENTF_XDOWN;
+        input.mi.mouseData = XBUTTON2;
         break;
     default: break;
     }
 
-    if (state == WL_POINTER_BUTTON_STATE_RELEASED) flags <<= 1;
+    if (state == WL_POINTER_BUTTON_STATE_RELEASED) input.mi.dwFlags <<= 1;
 
     pthread_mutex_lock(&pointer->mutex);
     pointer->button_serial = state == WL_POINTER_BUTTON_STATE_PRESSED ?
                              serial : 0;
-    pointer->pointer_frame.button_data |= data;
-    pointer->pointer_frame.button_flags |= flags;
-    pointer->pointer_frame.flags |= WAYLAND_POINTER_FRAME_BUTTON;
     pthread_mutex_unlock(&pointer->mutex);
 
     TRACE("hwnd=%p button=%#x state=%u\n", hwnd, button, state);
+
+    NtUserSendHardwareInput(hwnd, 0, &input, 0);
 }
 
 static void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer,
@@ -417,17 +419,6 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
             NtUserSendHardwareInput(hwnd, 0, &input, 0);
     }
 
-    if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_BUTTON)
-    {
-        /* raw button input */
-        input.mi.mouseData = pointer->pointer_frame.button_data;
-        input.mi.dwFlags = pointer->pointer_frame.button_flags;
-        NtUserSendHardwareInput(0, SEND_HWMSG_NO_MSG, &input, 0);
-
-        /* normal button input */
-        NtUserSendHardwareInput(hwnd, SEND_HWMSG_NO_RAW, &input, 0);
-    }
-
 skip:
     /* reset accumulators when scroll event ends */
     if (pointer->pointer_frame.axis_stop & WAYLAND_POINTER_AXIS_STOP_VERTICAL)
@@ -437,8 +428,6 @@ skip:
 
     /* reset flags */
     pointer->pointer_frame.flags = 0;
-    pointer->pointer_frame.button_flags = 0;
-    pointer->pointer_frame.button_data = 0;
     pointer->pointer_frame.axis_stop = 0;
     InterlockedExchange(&pointer->pointer_frame.discrete_event_handled, FALSE);
 
