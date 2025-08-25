@@ -390,10 +390,8 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
         input.mi.dwFlags = MOUSEEVENTF_MOVE;
         if (input.mi.dx != 0 || input.mi.dy != 0)
         {
-            if (pointer->relative_only)
-                NtUserSendHardwareInput(hwnd, SEND_HWMSG_NO_RAW, &input, 0);
-
-            NtUserSendHardwareInput(0, SEND_HWMSG_NO_MSG, &input, 0);
+            NtUserSendHardwareInput(hwnd, pointer->relative_only ? 0 : SEND_HWMSG_NO_MSG,
+                                    &input, 0);
         }
     }
 
