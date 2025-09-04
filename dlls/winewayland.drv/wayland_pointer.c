@@ -921,7 +921,12 @@ static BOOL wayland_pointer_set_cursor_shape(HCURSOR hcursor)
         process_wayland.wp_cursor_shape_manager_v1);
     /* HACK: KDE doesn't support v2 shapes despite advertising v2 */
     if (WAYLAND_HasWindowManager("KDE")) proto_version = 1;
-    if (!(shape = cursor_shape_from_info(&info, proto_version))) return FALSE;
+    shape = cursor_shape_from_info(&info, proto_version);
+
+    if (info.hbmColor) NtGdiDeleteObjectApp(info.hbmColor);
+    if (info.hbmMask) NtGdiDeleteObjectApp(info.hbmMask);
+
+    if (!shape) return FALSE;
 
     if (!pointer->wp_cursor_shape_device_v1)
     {
