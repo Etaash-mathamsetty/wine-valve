@@ -86,6 +86,23 @@ static const struct wl_seat_listener seat_listener =
     wl_seat_handle_name
 };
 
+static BOOL check_ime_disabled(void)
+{
+    static int cached = -1;
+
+    if (cached == -1)
+    {
+        const char *env = getenv("WAYLANDDRV_NO_IME");
+
+        if (env && !strcmp(env, "1"))
+            cached = 1;
+        else
+            cached = 0;
+    }
+
+    return cached;
+}
+
 /**********************************************************************
  *          Registry handling
  */
@@ -175,6 +192,7 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
     }
     else if (strcmp(interface, "zwp_text_input_manager_v3") == 0)
     {
+        if (check_ime_disabled()) return;
         process_wayland.zwp_text_input_manager_v3 =
             wl_registry_bind(registry, id, &zwp_text_input_manager_v3_interface, 1);
         if (process_wayland.seat.wl_seat) wayland_text_input_init();
