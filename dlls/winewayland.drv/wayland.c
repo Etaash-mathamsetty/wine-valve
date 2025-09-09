@@ -88,7 +88,7 @@ static const struct wl_seat_listener seat_listener =
 
 static BOOL check_ime_disabled(void)
 {
-    static int cached = -1;
+    static volatile int cached = -1;
 
     if (cached == -1)
     {
