@@ -144,7 +144,7 @@ static void wp_fractional_scale_handle_scale(void *user_data,
     struct wayland_win_data *data;
     struct wayland_surface *surface;
     HWND hwnd = user_data;
-    assert(hwnd);
+    BOOL set_scale = FALSE;
 
     if ((data = wayland_win_data_get(hwnd)))
     {
@@ -153,11 +153,27 @@ static void wp_fractional_scale_handle_scale(void *user_data,
             surface->window.fractional_scale = scale / 120.0;
             surface->window.scale =
                 surface->window.fractional_scale * NtUserGetSystemDpiForProcess(0) / 96.0;
+            set_scale = TRUE;
 
             TRACE("Got scale %lf\n", surface->window.fractional_scale);
         }
 
         wayland_win_data_release(data);
+    }
+
+    /* redraw contents if possible
+     * TODO: work around potential race conditions
+     */
+    if (set_scale)
+    {
+        HRGN region;
+        struct wayland_shm_buffer *buffer;
+        buffer = get_window_surface_contents(hwnd);
+        if (buffer && (region = NtGdiCreateRectRgn(0, 0, INT32_MAX, INT32_MAX)))
+        {
+            set_window_surface_contents(hwnd, buffer, region);
+            NtGdiDeleteObjectApp(region);
+        }
     }
 }
 
