@@ -317,7 +317,6 @@ static void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer,
     struct wayland_pointer *pointer = &process_wayland.pointer;
 
     if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
-    if (InterlockedCompareExchange(&pointer->pointer_frame.discrete_event_handled, FALSE, TRUE)) return;
 
     pthread_mutex_lock(&pointer->mutex);
 
@@ -333,11 +332,15 @@ static void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer,
     switch (axis)
     {
         case WL_POINTER_AXIS_VERTICAL_SCROLL:
+            if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEELD)
+                break;
             pointer->pointer_frame.wheel -= scroll_value;
             pointer->pointer_frame.flags |= WAYLAND_POINTER_FRAME_WHEEL;
             break;
         case WL_POINTER_AXIS_HORIZONTAL_SCROLL:
-            pointer->pointer_frame.wheel += scroll_value;
+            if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEELDH)
+                break;
+            pointer->pointer_frame.wheelH += scroll_value;
             pointer->pointer_frame.flags |= WAYLAND_POINTER_FRAME_WHEELH;
             break;
         default: break;
@@ -381,6 +384,8 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
     /*
      * Always send raw input
      * FIXME: is this correct behavior?
+     * A: The value is probably correct but the way
+     * the input is sent is not quite right
     */
     if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_REL) {
         input.mi.dx = round(pointer->pointer_frame.dx);
@@ -399,7 +404,14 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
     input.mi.dx = 0;
     input.mi.dy = 0;
 
-    if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEEL)
+    /* handle discrete events seperately */
+    if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEELD)
+    {
+        input.mi.mouseData = pointer->pointer_frame.wheelD;
+        input.mi.dwFlags = MOUSEEVENTF_WHEEL;
+        if (input.mi.mouseData)
+            NtUserSendHardwareInput(hwnd, 0, &input, 0);
+    } else if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEEL)
     {
         input.mi.mouseData = trunc(pointer->pointer_frame.wheel / WHEEL_DELTA) * WHEEL_DELTA;
         pointer->pointer_frame.wheel -= (int)input.mi.mouseData;
@@ -408,7 +420,13 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
             NtUserSendHardwareInput(hwnd, 0, &input, 0);
     }
 
-    if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEELH)
+    if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEELDH)
+    {
+        input.mi.mouseData = pointer->pointer_frame.wheelDH;
+        input.mi.dwFlags = MOUSEEVENTF_HWHEEL;
+        if (input.mi.mouseData)
+            NtUserSendHardwareInput(hwnd, 0, &input, 0);
+    } else if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEELH)
     {
         input.mi.mouseData = trunc(pointer->pointer_frame.wheelH / WHEEL_DELTA) * WHEEL_DELTA;
         pointer->pointer_frame.wheelH -= (int)input.mi.mouseData;
@@ -427,7 +445,6 @@ skip:
     /* reset flags */
     pointer->pointer_frame.flags = 0;
     pointer->pointer_frame.axis_stop = 0;
-    InterlockedExchange(&pointer->pointer_frame.discrete_event_handled, FALSE);
 
     pthread_mutex_unlock(&pointer->mutex);
 }
@@ -465,19 +482,17 @@ static void pointer_handle_axis_discrete(void *data, struct wl_pointer *wl_point
 
     if (!(hwnd = wayland_pointer_get_focused_hwnd())) return;
 
-    InterlockedExchange(&pointer->pointer_frame.discrete_event_handled, TRUE);
-
     pthread_mutex_lock(&pointer->mutex);
 
     switch (axis)
     {
         case WL_POINTER_AXIS_VERTICAL_SCROLL:
-            pointer->pointer_frame.wheel = -WHEEL_DELTA * discrete;
-            pointer->pointer_frame.flags |= WAYLAND_POINTER_FRAME_WHEEL;
+            pointer->pointer_frame.wheelD = -WHEEL_DELTA * discrete;
+            pointer->pointer_frame.flags |= WAYLAND_POINTER_FRAME_WHEELD;
             break;
         case WL_POINTER_AXIS_HORIZONTAL_SCROLL:
-            pointer->pointer_frame.wheelH = WHEEL_DELTA * discrete;
-            pointer->pointer_frame.flags |= WAYLAND_POINTER_FRAME_WHEELH;
+            pointer->pointer_frame.wheelDH = WHEEL_DELTA * discrete;
+            pointer->pointer_frame.flags |= WAYLAND_POINTER_FRAME_WHEELDH;
             break;
         default: break;
     }
