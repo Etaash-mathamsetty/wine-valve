@@ -146,7 +146,7 @@ struct wayland_pointer
         int x, y;
         double dx, dy;
         double wheel, wheelH;
-        double wheelD, wheelDH;
+        int wheelD, wheelDH;
         unsigned int flags;
         unsigned int axis_stop;
     } pointer_frame;
