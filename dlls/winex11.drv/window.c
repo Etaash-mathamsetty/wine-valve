@@ -1846,9 +1846,10 @@ static UINT window_update_client_state( struct x11drv_win_data *data )
     if (data->current_state.net_wm_state & (1 << NET_WM_STATE_MAXIMIZED)) new_style |= WS_MAXIMIZE;
 
     /* KWin sometimes combines NET_WM_STATE_FULLSCREEN with NET_WM_STATE_MAXIMIZED, but sometimes doesn't.
-     * Don't feed back the maximized state to the Win32 side as it confuses many applications.
+     * Don't feeding back the maximized state to the Win32 side when windows are fullscreen.
      */
-    if (X11DRV_HasWindowManager( "KWin" )) new_style = (new_style & ~WS_MAXIMIZE) | (old_style & WS_MAXIMIZE);
+    if (X11DRV_HasWindowManager( "KWin" ) && data->current_state.net_wm_state & (1 << NET_WM_STATE_FULLSCREEN))
+        new_style = (new_style & ~WS_MAXIMIZE) | (old_style & WS_MAXIMIZE);
 
     if ((old_style & WS_MINIMIZE) && !(new_style & WS_MINIMIZE))
     {
@@ -1913,9 +1914,10 @@ static UINT window_update_client_config( struct x11drv_win_data *data )
     if (data->current_state.net_wm_state & (1 << NET_WM_STATE_MAXIMIZED)) new_style |= WS_MAXIMIZE;
 
     /* KWin sometimes combines NET_WM_STATE_FULLSCREEN with NET_WM_STATE_MAXIMIZED, but sometimes doesn't.
-     * Don't feed back the maximized state to the Win32 side as it confuses many applications.
+     * Don't feeding back the maximized state to the Win32 side when windows are fullscreen.
      */
-    if (X11DRV_HasWindowManager( "KWin" )) new_style = (new_style & ~WS_MAXIMIZE) | (old_style & WS_MAXIMIZE);
+    if (X11DRV_HasWindowManager( "KWin" ) && data->current_state.net_wm_state & (1 << NET_WM_STATE_FULLSCREEN))
+        new_style = (new_style & ~WS_MAXIMIZE) | (old_style & WS_MAXIMIZE);
 
     if ((old_style & WS_CAPTION) == WS_CAPTION || !data->is_fullscreen)
     {
