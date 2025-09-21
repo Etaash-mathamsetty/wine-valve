@@ -138,42 +138,66 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener =
     xdg_toplevel_handle_close
 };
 
+/*
+   needed to avoid race conditions with fractional scale redraw
+   TODO: move this
+*/
+static BOOL wayland_surface_refresh_contents(struct wayland_surface *wayland_surface)
+{
+    struct wayland_shm_buffer *shm_buffer;
+    struct wayland_win_data *data;
+    int width, height;
+    RECT *rect;
+    HRGN damage_region;
+    BOOL committed = FALSE;
+
+    if (!wayland_surface) goto done;
+    if (!(data = wayland_win_data_get_nolock(wayland_surface->hwnd))) goto done;
+    if (!(shm_buffer = data->window_contents)) goto done;
+
+    rect = &data->rects.window;
+    width = rect->right - rect->left;
+    height = rect->top - rect->bottom;
+
+    damage_region = NtGdiCreateRectRgn(0, 0, width, height);
+
+    if (wayland_surface_reconfigure(wayland_surface))
+    {
+        wayland_surface_attach_shm(wayland_surface, shm_buffer, damage_region);
+        wl_surface_commit(wayland_surface->wl_surface);
+        committed = TRUE;
+    }
+    else
+    {
+        TRACE("Wayland surface not configured yet, not flushing\n");
+    }
+
+    NtGdiDeleteObjectApp(damage_region);
+
+done:
+    return committed;
+}
+
 static void wp_fractional_scale_handle_scale(void *user_data,
         struct wp_fractional_scale_v1 *fractional_scale_v1, uint32_t scale)
 {
     struct wayland_win_data *data;
     struct wayland_surface *surface;
     HWND hwnd = user_data;
-    BOOL set_scale = FALSE;
 
     if ((data = wayland_win_data_get(hwnd)))
     {
-        if((surface = data->wayland_surface))
+        if ((surface = data->wayland_surface))
         {
             surface->window.fractional_scale = scale / 120.0;
             surface->window.scale =
                 surface->window.fractional_scale * NtUserGetSystemDpiForProcess(0) / 96.0;
-            set_scale = TRUE;
+            wayland_surface_refresh_contents(surface);
 
             TRACE("Got scale %lf\n", surface->window.fractional_scale);
         }
 
         wayland_win_data_release(data);
-    }
-
-    /* redraw contents if possible
-     * TODO: work around potential race conditions
-     */
-    if (set_scale)
-    {
-        HRGN region;
-        struct wayland_shm_buffer *buffer;
-        buffer = get_window_surface_contents(hwnd);
-        if (buffer && (region = NtGdiCreateRectRgn(0, 0, INT32_MAX, INT32_MAX)))
-        {
-            set_window_surface_contents(hwnd, buffer, region);
-            NtGdiDeleteObjectApp(region);
-        }
     }
 }
 
