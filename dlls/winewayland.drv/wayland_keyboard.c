@@ -860,7 +860,7 @@ static void keyboard_handle_modifiers(void *data, struct wl_keyboard *wl_keyboar
 
     if (!wayland_keyboard_get_focused_hwnd()) return;
 
-    TRACE("serial=%u mods_depressed=%#x mods_latched=%#x mods_locked=%#x xkb_group=%d stub!\n",
+    TRACE("serial=%u mods_depressed=%#x mods_latched=%#x mods_locked=%#x xkb_group=%d\n",
           serial, mods_depressed, mods_latched, mods_locked, xkb_group);
 
     pthread_mutex_lock(&keyboard->mutex);
