@@ -387,7 +387,8 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
      * A: The value is probably correct but the way
      * the input is sent is not quite right
     */
-    if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_REL) {
+    if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_REL)
+    {
         input.mi.dx = round(pointer->pointer_frame.dx);
         input.mi.dy = round(pointer->pointer_frame.dy);
         pointer->pointer_frame.dx -= input.mi.dx;
@@ -411,8 +412,7 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
         input.mi.dwFlags = MOUSEEVENTF_WHEEL;
         if (input.mi.mouseData)
             NtUserSendHardwareInput(hwnd, 0, &input, 0);
-    } else if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEEL)
-    {
+    } else if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEEL) {
         input.mi.mouseData = trunc(pointer->pointer_frame.wheel / WHEEL_DELTA) * WHEEL_DELTA;
         pointer->pointer_frame.wheel -= (int)input.mi.mouseData;
         input.mi.dwFlags = MOUSEEVENTF_WHEEL;
@@ -426,8 +426,7 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
         input.mi.dwFlags = MOUSEEVENTF_HWHEEL;
         if (input.mi.mouseData)
             NtUserSendHardwareInput(hwnd, 0, &input, 0);
-    } else if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEELH)
-    {
+    } else if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_WHEELH) {
         input.mi.mouseData = trunc(pointer->pointer_frame.wheelH / WHEEL_DELTA) * WHEEL_DELTA;
         pointer->pointer_frame.wheelH -= (int)input.mi.mouseData;
         input.mi.dwFlags = MOUSEEVENTF_HWHEEL;
