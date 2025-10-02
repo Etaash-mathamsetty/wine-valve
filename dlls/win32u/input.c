@@ -1344,13 +1344,14 @@ INT WINAPI NtUserToUnicodeEx( UINT virt, UINT scan, const BYTE *state,
     else
     {
         str[0] = kbd_tables_vkey_to_wchar( kbd_tables, virt, state, &is_dead );
-        thread->kbd_deadkey = is_dead ? str[0] : 0;
+        if (str[0] != WCH_NONE) thread->kbd_deadkey = is_dead ? str[0] : 0;
     }
     if (size > 1) str[1] = 0;
 
     if (str[0] != WCH_NONE) len = 1;
     else str[0] = len = 0;
 
+    /* TODO: Implement deadkey pressed twice */
     if (deadkey && !is_dead && len && str[0])
     {
         DEADKEY *key = kbd_tables->pDeadKey;
