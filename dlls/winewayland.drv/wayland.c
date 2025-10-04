@@ -296,7 +296,7 @@ static const struct wl_registry_listener registry_listener = {
 static void init_overlay_event(void)
 {
     OBJECT_ATTRIBUTES attr;
-    WCHAR buffer[MAX_PATH];
+    WCHAR buffer[MAX_PATH] = {0};
     char path[MAX_PATH];
     UNICODE_STRING str;
 
