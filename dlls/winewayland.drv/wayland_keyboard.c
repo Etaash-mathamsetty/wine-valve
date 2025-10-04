@@ -632,7 +632,7 @@ static void add_xkb_layout(const char *xkb_layout, struct xkb_keymap *xkb_keymap
             if (vkey2wch.wch[mod] != WCH_NONE) found = TRUE;
 
             keysym = xkb_state_key_get_one_sym(xkb_state, keyc);
-            if (keysym >= XKB_KEY_dead_grave && keysym <= XKB_KEY_dead_currency)
+            if (xkb_compose && keysym >= XKB_KEY_dead_grave && keysym <= XKB_KEY_dead_currency)
             {
                 vkey2wch.wch[mod] = WCH_DEAD;
                 dead_vkey2wch.wch[mod] = get_xkb_dead_key_char(keysym);
@@ -649,7 +649,7 @@ static void add_xkb_layout(const char *xkb_layout, struct xkb_keymap *xkb_keymap
             if (caps_vkey2wch.wch[mod] != WCH_NONE) caps_found = TRUE;
 
             keysym = xkb_state_key_get_one_sym(xkb_state, keyc);
-            if (keysym >= XKB_KEY_dead_grave && keysym <= XKB_KEY_dead_currency)
+            if (xkb_compose && keysym >= XKB_KEY_dead_grave && keysym <= XKB_KEY_dead_currency)
             {
                 caps_vkey2wch.wch[mod] = WCH_DEAD;
                 dead_caps_vkey2wch.wch[mod] = get_xkb_dead_key_char(keysym);
