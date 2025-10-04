@@ -637,15 +637,6 @@ static void wayland_surface_get_rect_in_monitor(struct wayland_surface *surface,
     OffsetRect(rect, -surface->window.rect.left, -surface->window.rect.top);
 }
 
-static BOOL is_window_resizable(struct wayland_surface *surface)
-{
-    DWORD style = NtUserGetWindowLongW(surface->hwnd, GWL_STYLE);
-
-    if (style & WS_THICKFRAME) return TRUE;
-
-    return surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN;
-}
-
 /**********************************************************************
  *          wayland_surface_reconfigure_geometry
  *
@@ -699,31 +690,6 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
                                         rect.bottom - rect.top);
         if (wayland_surface_is_toplevel(surface))
         {
-            /* HACK: update min/max size depending on if the window is resizable */
-            if (!is_window_resizable(surface))
-            {
-                xdg_toplevel_set_min_size(
-                    surface->xdg_toplevel,
-                    rect.right - rect.left,
-                    rect.bottom - rect.top);
-                xdg_toplevel_set_max_size(
-                    surface->xdg_toplevel,
-                    rect.right - rect.left,
-                    rect.bottom - rect.top
-                );
-            }
-            else
-            {
-                xdg_toplevel_set_min_size(
-                    surface->xdg_toplevel,
-                    0, 0
-                );
-                xdg_toplevel_set_max_size(
-                    surface->xdg_toplevel,
-                    0, 0
-                );
-            }
-
             /* HACK: reset fullscreen state to ensure surface is on correct output */
             if (surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN)
             {
