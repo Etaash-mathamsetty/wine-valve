@@ -447,7 +447,7 @@ static void add_xkb_layout(const char *xkb_layout, struct xkb_keymap *xkb_keymap
 
     /* both tables are zero-terminated */
     deadkeys_len = sizeof(DEADKEY);
-    deadkey_names_len = 2 * sizeof(WCHAR);
+    deadkey_names_len = 2 * sizeof(WCHAR*);
 
 #ifdef HAVE_XKBCOMMON_XKBCOMMON_COMPOSE_H
     if (xkb_compose)
