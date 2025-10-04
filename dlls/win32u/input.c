@@ -538,7 +538,7 @@ static WCHAR kbd_tables_vkey_to_wchar( const KBDTABLES *tables, UINT vkey, const
              */
             if (!caps) while (entry->Attributes & SGCAPS) entry = NEXT_ENTRY(table, entry);
             if ((entry->Attributes & CAPLOK) && table->nModifications > caps_mod) mod = caps_mod;
-            if ((*is_dead = entry->wch[mod] == WCH_DEAD)) entry = NEXT_ENTRY(table, entry);
+            if ((*is_dead = (entry->wch[mod] == WCH_DEAD))) entry = NEXT_ENTRY(table, entry);
             return entry->wch[mod];
         }
     }

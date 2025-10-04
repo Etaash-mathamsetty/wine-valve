@@ -421,15 +421,12 @@ static void add_xkb_layout(const char *xkb_layout, struct xkb_keymap *xkb_keymap
     unsigned int mod, keyc, len, names_len, min_keycode, max_keycode, deadkeys_len, deadkey_names_len;
     struct xkb_state *xkb_state = xkb_state_new(xkb_keymap);
     xkb_mod_mask_t shift_mask, control_mask, altgr_mask, capslock_mask, numlock_mask;
-    struct xkb_compose_table_iterator *compose_iter;
-    struct xkb_compose_table_entry *compose_entry;
     VSC_LPWSTR *names_entry, *names_ext_entry;
     VSC_VK *vsc2vk_e0_entry, *vsc2vk_e1_entry;
-    WCHAR *names_str, **deadkey_name;
+    WCHAR *names_str;
     VK_TO_WCHARS8 *vk2wchars_entry;
     struct layout *layout;
     const USHORT *scan2vk;
-    DEADKEY *deadkey;
     WORD index = 0;
     char *ptr;
 
@@ -455,7 +452,8 @@ static void add_xkb_layout(const char *xkb_layout, struct xkb_keymap *xkb_keymap
 #ifdef HAVE_XKBCOMMON_XKBCOMMON_COMPOSE_H
     if (xkb_compose)
     {
-        compose_iter = xkb_compose_table_iterator_new(xkb_compose);
+        struct xkb_compose_table_iterator *compose_iter = xkb_compose_table_iterator_new(xkb_compose);
+        struct xkb_compose_table_entry *compose_entry;
         while ((compose_entry = xkb_compose_table_iterator_next(compose_iter)))
         {
             size_t sequence_len;
@@ -466,14 +464,11 @@ static void add_xkb_layout(const char *xkb_layout, struct xkb_keymap *xkb_keymap
             names_len += strlen(xkb_compose_table_entry_utf8(compose_entry)) + 1;
             names_len += xkb_keysym_get_name(xkb_compose_table_entry_keysym(compose_entry), NULL, 0) + 1;
 
-            deadkey_names_len += 2 * sizeof(WCHAR);
+            deadkey_names_len += 2 * sizeof(WCHAR*);
             deadkeys_len += sizeof(DEADKEY);
         }
         xkb_compose_table_iterator_free(compose_iter);
     }
-#else
-    (void)compose_iter;
-    (void)compose_entry;
 #endif /* HAVE_XKBCOMMON_XKBCOMMON_COMPOSE_H */
 
     names_len *= sizeof(WCHAR);
@@ -697,9 +692,10 @@ static void add_xkb_layout(const char *xkb_layout, struct xkb_keymap *xkb_keymap
 #ifdef HAVE_XKBCOMMON_XKBCOMMON_COMPOSE_H
     if (xkb_compose)
     {
-        deadkey = layout->deadkeys;
-        deadkey_name = layout->deadkey_names;
-        compose_iter = xkb_compose_table_iterator_new(xkb_compose);
+        DEADKEY *deadkey = layout->deadkeys;
+        WCHAR **deadkey_name = layout->deadkey_names;
+        struct xkb_compose_table_iterator *compose_iter = xkb_compose_table_iterator_new(xkb_compose);
+        struct xkb_compose_table_entry *compose_entry;
         while ((compose_entry = xkb_compose_table_iterator_next(compose_iter)))
         {
             const xkb_keysym_t *sequence;
@@ -729,9 +725,6 @@ static void add_xkb_layout(const char *xkb_layout, struct xkb_keymap *xkb_keymap
         }
         xkb_compose_table_iterator_free(compose_iter);
     }
-#else
-    (void)deadkey_name;
-    (void)deadkey;
 #endif /* HAVE_XKBCOMMON_XKBCOMMON_COMPOSE_H */
 
     xkb_state_unref(xkb_state);
