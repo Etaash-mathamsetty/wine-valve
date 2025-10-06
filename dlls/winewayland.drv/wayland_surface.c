@@ -190,8 +190,7 @@ static void wp_fractional_scale_handle_scale(void *user_data,
         if ((surface = data->wayland_surface))
         {
             surface->window.fractional_scale = scale / 120.0;
-            surface->window.scale =
-                surface->window.fractional_scale * NtUserGetSystemDpiForProcess(0) / 96.0;
+            surface->window.scale = surface->window.fractional_scale;
             wayland_surface_refresh_contents(surface);
 
             TRACE("Got scale %lf\n", surface->window.fractional_scale);
