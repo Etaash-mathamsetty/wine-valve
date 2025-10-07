@@ -958,6 +958,12 @@ static NTSTATUS linux_wait_objs( int device, const DWORD count, const int *objs,
             return ret;
         }
 
+        /*
+         * HACK: simulate sched quantum
+         * Ubisoft Connect updater doesn't work without this
+         */
+        if (fsync_simulate_sched_quantum) usleep(0);
+
         return wait_any ? args.index : 0;
     }
     else if (errno == EOWNERDEAD)
