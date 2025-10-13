@@ -50,6 +50,7 @@ struct xkb_compose_table;
 #include "content-type-v1-client-protocol.h"
 #include "linux-dmabuf-v1-client-protocol.h"
 #include "xdg-toplevel-tag-v1-client-protocol.h"
+#include "pointer-warp-v1-client-protocol.h"
 
 #include "windef.h"
 #include "winbase.h"
@@ -141,7 +142,6 @@ struct wayland_pointer
     HWND focused_hwnd;
     HWND constraint_hwnd;
     BOOL pending_warp;
-    BOOL confinement_updated;
     BOOL relative_only;
     uint32_t enter_serial;
     uint32_t button_serial;
@@ -225,6 +225,7 @@ struct wayland
     struct wp_cursor_shape_manager_v1 *wp_cursor_shape_manager_v1;
     struct zwp_linux_dmabuf_v1 *zwp_linux_dmabuf_v1;
     struct xdg_toplevel_tag_manager_v1 *xdg_toplevel_tag_manager_v1;
+    struct wp_pointer_warp_v1 *wp_pointer_warp_v1;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;
