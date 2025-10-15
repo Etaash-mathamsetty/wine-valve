@@ -66,6 +66,22 @@ static void wine_vk_surface_destroy(struct wayland_client_surface *client)
     if (data) wayland_win_data_release(data);
 }
 
+static BOOL vulkan_opwr_disabled(void)
+{
+    static int disabled = -1;
+
+    if (disabled == -1)
+    {
+        const char *env = getenv("WINE_DISABLE_VULKAN_OPWR");
+        if (env && !strcmp(env, "1"))
+            disabled = 1;
+        else
+            disabled = 0;
+    }
+
+    return disabled;
+}
+
 static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_instance *instance, VkSurfaceKHR *surface, void **private)
 {
     VkResult res;
@@ -84,6 +100,8 @@ static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_ins
     tid = NtUserGetWindowThread(hwnd, &pid);
     if (tid && pid != GetCurrentProcessId())
     {
+        if (vulkan_opwr_disabled()) return VK_ERROR_OUT_OF_HOST_MEMORY;
+
         ERR("Cross process rendering is not supported!\n");
         return VK_ERROR_OUT_OF_HOST_MEMORY;
     }
