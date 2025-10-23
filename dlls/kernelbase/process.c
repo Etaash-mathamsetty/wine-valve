@@ -629,7 +629,8 @@ static const WCHAR *hack_append_command_line( const WCHAR *cmd )
         {L"RSI Launcher.exe", L" --in-process-gpu"},
         {L"EADesktop.exe", L" --in-process-gpu"},
         {L"Launcher.exe", L" --in-process-gpu", "230410"}, /* Warframe steam */
-        {L"idTechLauncher.exe", L" --in-process-gpu"}
+        {L"idTechLauncher.exe", L" --in-process-gpu"},
+        {L"Paradox Launcher.exe",  L" --use-angle=gl --in-process-gpu"}
     };
 
     unsigned int i;
