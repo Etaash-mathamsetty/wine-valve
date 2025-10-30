@@ -442,7 +442,7 @@ DWORD WINAPI DECLSPEC_HOTPATCH WaitForMultipleObjectsEx( DWORD count, const HAND
 
     status = NtWaitForMultipleObjects( count, hloc, !wait_all, alertable,
                                        get_nt_timeout( &time, timeout ) );
-    if (HIWORD(status))  /* is it an error code? */
+    if (NT_ERROR(status))
     {
         SetLastError( RtlNtStatusToDosError(status) );
         status = WAIT_FAILED;
