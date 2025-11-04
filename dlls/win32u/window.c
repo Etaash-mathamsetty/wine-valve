@@ -1492,7 +1492,10 @@ BOOL win32u_set_window_pixel_format( HWND hwnd, int format, BOOL internal )
     if (internal)
         win->internal_pixel_format = format;
     else
+    {
+        win->internal_pixel_format = 0;
         win->pixel_format = format;
+    }
     release_win_ptr( win );
 
     update_window_state( hwnd );
