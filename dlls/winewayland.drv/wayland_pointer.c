@@ -927,8 +927,6 @@ static BOOL wayland_pointer_set_cursor_shape(HCURSOR hcursor)
     if (!get_icon_info(hcursor, &info)) return FALSE;
     proto_version = wp_cursor_shape_manager_v1_get_version(
         process_wayland.wp_cursor_shape_manager_v1);
-    /* HACK: KDE doesn't support v2 shapes despite advertising v2 */
-    if (WAYLAND_HasWindowManager("KDE")) proto_version = 1;
     shape = cursor_shape_from_info(&info, proto_version);
 
     if (info.hbmColor) NtGdiDeleteObjectApp(info.hbmColor);
