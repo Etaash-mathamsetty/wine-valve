@@ -592,7 +592,7 @@ static void add_xkb_layout(const char *xkb_layout, struct xkb_keymap *xkb_keymap
 
     for (keyc = min_keycode; keyc <= max_keycode; keyc++)
     {
-        WORD scan = key2scan(keyc - 8), vkey = scan2vk[scan];
+        WORD scan = key2scan(keyc - 8), vkey = scan2vk_qwerty[scan];
         VK_TO_WCHARS8 vkey2wch = {.VirtualKey = vkey}, caps_vkey2wch = vkey2wch;
         VK_TO_WCHARS8 dead_vkey2wch = vkey2wch, dead_caps_vkey2wch = vkey2wch;
         BOOL found = FALSE, caps_found = FALSE, dead_found = FALSE, dead_caps_found = FALSE;
