@@ -27,7 +27,6 @@
 #include "winbase.h"
 #include "winternl.h"
 #include "wine/debug.h"
-#include "wine/heap.h"
 #include "wine/vulkan.h"
 
 #define COBJMACROS
