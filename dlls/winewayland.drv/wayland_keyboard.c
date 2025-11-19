@@ -144,13 +144,13 @@ static const USHORT scan2vk_qwertz_swiss[0x280] =
     EXTRA_SCAN2VK
 };
 
-/* TODO: Fix using https://kbdlayout.info/kbdgr/virtualkeys+scancodes?arrangement=ISO105 */
+/* https://kbdlayout.info/kbdgr/virtualkeys+scancodes?arrangement=ISO105 */
 static const USHORT scan2vk_qwertz[0x280] =
 {
     T00, T01, T02, T03, T04, T05, T06, T07, T08, T09, T0A, T0B, VK_OEM_4, VK_OEM_6, T0E,
-    T0F, T10, T11, T12, T13, T14, 'Z', T16, T17, T18, T19, VK_OEM_1, VK_OEM_3, T1C,
-    T1D, T1E, T1F, T20, T21, T22, T23, T24, T25, T26, VK_OEM_7, VK_OEM_5, VK_OEM_2,
-    T2A, VK_OEM_8, 'Y', T2D, T2E, T2F, T30, T31, T32, T33, T34, VK_OEM_MINUS,
+    T0F, T10, T11, T12, T13, T14, 'Z', T16, T17, T18, T19, VK_OEM_1, VK_OEM_PLUS, T1C,
+    T1D, T1E, T1F, T20, T21, T22, T23, T24, T25, T26, VK_OEM_3, VK_OEM_7, VK_OEM_5,
+    T2A, VK_OEM_2, 'Y', T2D, T2E, T2F, T30, T31, T32, T33, T34, VK_OEM_MINUS,
     EXTRA_SCAN2VK
 };
 
