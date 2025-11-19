@@ -1030,7 +1030,7 @@ static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     input.ki.wScan = (scan & 0x300) ? scan + 0xdf00 : scan;
 
     pthread_mutex_lock(&keyboard->mutex);
-    input.ki.wVk = NtUserMapVirtualKeyEx(scan, MAPVK_VSC_TO_VK, keyboard_hkl) & 0xff;
+    input.ki.wVk = NtUserMapVirtualKeyEx(scan & 0xff, MAPVK_VSC_TO_VK, keyboard_hkl);
     pthread_mutex_unlock(&keyboard->mutex);
 
     if (scan & ~0xff) input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
