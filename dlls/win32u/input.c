@@ -447,7 +447,14 @@ static void kbd_tables_init_vk2char( const KBDTABLES *tables, BYTE vk2char[0x100
         for (entry = table->pVkToWchars; entry->VirtualKey; entry = NEXT_ENTRY(table, entry))
         {
             if (entry->VirtualKey & ~0xff) continue;
-            vk2char[entry->VirtualKey] = entry->wch[0];
+            if (entry->Attributes & SGCAPS) continue;
+            /*
+             * FIXME: implement dead keys
+             * MSDN says the top bit is set 1 in the return value of MAPVK_VK_TO_CHAR
+             */
+            /* don't overwrite an already set value */
+            if (entry->wch[0] & 0xff && entry->wch[0] != WCH_DEAD)
+                vk2char[entry->VirtualKey] = entry->wch[0];
         }
     }
 }
