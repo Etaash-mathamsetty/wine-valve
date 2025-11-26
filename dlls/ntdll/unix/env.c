@@ -344,7 +344,12 @@ static BOOL is_special_env_var( const char *var )
             STARTS_WITH( var, "TMP=" ) ||
             STARTS_WITH( var, "QT_" ) ||
             STARTS_WITH( var, "SDL_AUDIODRIVER=" ) ||
-            STARTS_WITH( var, "SDL_VIDEODRIVER=" ) || /* the only allowed video driver on windows is windows */
+            STARTS_WITH( var, "SDL_AUDIO_DRIVER=" ) ||
+            STARTS_WITH( var, "SDL_VIDEO_DRIVER=" ) ||
+            STARTS_WITH( var, "SDL_VIDEODRIVER=" ) ||
+            STARTS_WITH( var, "DOTNET_ROOT=" ) ||
+            STARTS_WITH( var, "DOTNET_BUNDLE_EXTRACT_BASE_DIR=" ) ||
+            STARTS_WITH( var, "NIXPKGS=" ) ||
             STARTS_WITH( var, "VK_" ) ||
             STARTS_WITH( var, "XR_" ) ||
             STARTS_WITH( var, "XDG_SESSION_TYPE=" ));
