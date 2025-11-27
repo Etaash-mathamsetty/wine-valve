@@ -2163,6 +2163,22 @@ static void dump_get_thread_desktop_reply( const struct get_thread_desktop_reply
     fprintf( stderr, ", handle=%04x", req->handle );
 }
 
+static void dump_get_thread_layout_request( const struct get_thread_layout_request *req )
+{
+    fprintf( stderr, " tid=%04x", req->tid );
+}
+
+static void dump_get_thread_layout_reply( const struct get_thread_layout_reply *req )
+{
+    dump_uint64( " layout=", &req->layout );
+}
+
+static void dump_set_thread_layout_request( const struct set_thread_layout_request *req )
+{
+    fprintf( stderr, " tid=%04x", req->tid );
+    dump_uint64( ", layout=", &req->layout );
+}
+
 static void dump_set_thread_desktop_request( const struct set_thread_desktop_request *req )
 {
     fprintf( stderr, " handle=%04x", req->handle );
@@ -3762,6 +3778,8 @@ static const dump_func req_dumpers[REQ_NB_REQUESTS] =
     (dump_func)dump_set_input_desktop_request,
     (dump_func)dump_close_desktop_request,
     (dump_func)dump_get_thread_desktop_request,
+    (dump_func)dump_get_thread_layout_request,
+    (dump_func)dump_set_thread_layout_request,
     (dump_func)dump_set_thread_desktop_request,
     (dump_func)dump_set_user_object_info_request,
     (dump_func)dump_register_hotkey_request,
@@ -4079,6 +4097,8 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] =
     NULL,
     NULL,
     (dump_func)dump_get_thread_desktop_reply,
+    (dump_func)dump_get_thread_layout_reply,
+    NULL,
     (dump_func)dump_set_thread_desktop_reply,
     (dump_func)dump_set_user_object_info_reply,
     (dump_func)dump_register_hotkey_reply,
@@ -4396,6 +4416,8 @@ static const char * const req_names[REQ_NB_REQUESTS] =
     "set_input_desktop",
     "close_desktop",
     "get_thread_desktop",
+    "get_thread_layout",
+    "set_thread_layout",
     "set_thread_desktop",
     "set_user_object_info",
     "register_hotkey",
