@@ -1031,7 +1031,6 @@ static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
 {
     UINT scan = key2scan(key);
     INPUT input = {0};
-    const KBDTABLES *tables;
     HWND hwnd;
 
     InterlockedExchange(&process_wayland.input_serial, serial);
@@ -1057,29 +1056,7 @@ static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     input.ki.wScan = (scan & 0x300) ? scan + 0xdf00 : scan;
     if (scan & ~0xff) input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
 
-    if ((tables = WAYLAND_KbdLayerDescriptor(keyboard_hkl)))
-    {
-        if (scan < 0x100)
-            input.ki.wVk = tables->pusVSCtoVK[scan];
-        else
-        {
-            const VSC_VK *entry;
-
-            for (entry = tables->pVSCtoVK_E0; entry && entry->Vsc && !input.ki.wVk; entry++)
-            {
-                if (entry->Vsc + 0x100 == scan)
-                    input.ki.wVk = entry->Vk;
-            }
-            for (entry = tables->pVSCtoVK_E1; entry && entry->Vsc && !input.ki.wVk; entry++)
-            {
-                if (entry->Vsc + 0x200 == scan)
-                    input.ki.wVk = entry->Vk;
-            }
-        }
-
-        WAYLAND_ReleaseKbdTables(tables);
-    } else input.ki.dwFlags |= KEYEVENTF_SCANCODE;
-
+    input.ki.dwFlags |= KEYEVENTF_SCANCODE;
     if (state == WL_KEYBOARD_KEY_STATE_RELEASED) input.ki.dwFlags |= KEYEVENTF_KEYUP;
 
     NtUserSendHardwareInput(hwnd, 0, &input, 0);
