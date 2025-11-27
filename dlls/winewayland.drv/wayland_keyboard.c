@@ -1003,6 +1003,28 @@ static void send_right_control(HWND hwnd, uint32_t state)
     NtUserSendHardwareInput(hwnd, 0, &input, 0);
 }
 
+static void sync_mod_state(HWND hwnd)
+{
+    struct wayland_keyboard *keyboard = &process_wayland.keyboard;
+    INPUT input = {0};
+    BYTE state[256];
+
+    input.type = INPUT_KEYBOARD;
+    input.ki.dwFlags = KEYEVENTF_SCANCODE;
+    if (!NtUserGetAsyncKeyboardState(state)) return;
+
+    pthread_mutex_lock(&keyboard->mutex);
+    if (!!(state[VK_NUMLOCK] & 0x80) != keyboard->numlock_active)
+    {
+        input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+        input.ki.wScan = key2scan(KEY_NUMLOCK);
+        if (!keyboard->numlock_active) input.ki.dwFlags |= KEYEVENTF_KEYUP;
+
+        NtUserSendHardwareInput(hwnd, 0, &input, 0);
+    }
+    pthread_mutex_unlock(&keyboard->mutex);
+}
+
 static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
                                 uint32_t serial, uint32_t time, uint32_t key,
                                 uint32_t state)
@@ -1022,6 +1044,11 @@ static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     }
 
     TRACE_(key)("serial=%u hwnd=%p key=%d scan=%#x state=%#x\n", serial, hwnd, key, scan, state);
+
+    sync_mod_state(hwnd);
+
+    /* don't send modifier keys twice */
+    if (key == KEY_NUMLOCK) return;
 
     /* NOTE: Windows normally sends VK_CONTROL + VK_MENU only if the layout has KLLF_ALTGR */
     if (key == KEY_RIGHTALT) send_right_control(hwnd, state);
@@ -1075,6 +1102,9 @@ static void keyboard_handle_modifiers(void *data, struct wl_keyboard *wl_keyboar
     pthread_mutex_lock(&keyboard->mutex);
     xkb_state_update_mask(keyboard->xkb_state, mods_depressed, mods_latched,
                           mods_locked, 0, 0, xkb_group);
+    keyboard->numlock_active = xkb_state_mod_name_is_active(keyboard->xkb_state,
+                                                            XKB_MOD_NAME_NUM,
+                                                            XKB_STATE_MODS_LOCKED) > 0;
     pthread_mutex_unlock(&keyboard->mutex);
 
     set_current_xkb_group(xkb_group);
