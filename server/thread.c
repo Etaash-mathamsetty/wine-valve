@@ -316,6 +316,7 @@ static inline void init_thread_structure( struct thread *thread )
     thread->desc_len        = 0;
     thread->inproc_sync     = create_inproc_event( TRUE, FALSE );
     thread->inproc_alert_event = NULL;
+    thread->layout = 0;
 
     thread->creation_time = current_time;
     thread->exit_time     = 0;
