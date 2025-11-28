@@ -992,6 +992,12 @@ static void keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
      * and for any key repetition to stop. */
     release_all_keys(hwnd);
 
+    if (hwnd == NtUserGetForegroundWindow())
+    {
+        if (!(NtUserGetWindowLongW(hwnd, GWL_STYLE) & WS_MINIMIZE))
+            send_message(hwnd, WM_CANCELMODE, 0, 0);
+    }
+
     /* FIXME: update foreground window as well */
 }
 
