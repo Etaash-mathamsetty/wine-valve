@@ -806,6 +806,8 @@ static void release_all_keys(HWND hwnd)
         if (vkey < 7 && vkey != VK_CANCEL) continue;
         /* Skip left/right-agnostic modifier vkeys. */
         if (vkey == VK_SHIFT || vkey == VK_CONTROL || vkey == VK_MENU) continue;
+        /* skip modifier keys we handle */
+        if (vkey == VK_NUMLOCK) continue;
 
         if (state[vkey] & 0x80)
         {
@@ -1008,13 +1010,17 @@ static void sync_mod_state(HWND hwnd)
     struct wayland_keyboard *keyboard = &process_wayland.keyboard;
     INPUT input = {0};
     BYTE state[256];
+    BOOL numlock_changed;
 
     input.type = INPUT_KEYBOARD;
     input.ki.dwFlags = KEYEVENTF_SCANCODE;
     if (!NtUserGetAsyncKeyboardState(state)) return;
 
     pthread_mutex_lock(&keyboard->mutex);
-    if (!!(state[VK_NUMLOCK] & 0x80) != keyboard->numlock_active)
+    numlock_changed = (!!(state[VK_NUMLOCK] & 0x80) != keyboard->numlock_active);
+    pthread_mutex_unlock(&keyboard->mutex);
+
+    if (numlock_changed)
     {
         input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
         input.ki.wScan = key2scan(KEY_NUMLOCK);
@@ -1022,7 +1028,6 @@ static void sync_mod_state(HWND hwnd)
 
         NtUserSendHardwareInput(hwnd, 0, &input, 0);
     }
-    pthread_mutex_unlock(&keyboard->mutex);
 }
 
 static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
