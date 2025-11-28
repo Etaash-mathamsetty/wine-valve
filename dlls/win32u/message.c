@@ -3800,7 +3800,7 @@ NTSTATUS send_hardware_message( HWND hwnd, UINT flags, const INPUT *input, LPARA
             if (input->ki.dwFlags & KEYEVENTF_SCANCODE)
             {
                 UINT scan = input->ki.wScan;
-                HKL layout = NtUserGetKeyboardLayout(NtUserGetWindowThread( hwnd, NULL ));
+                HKL layout = NtUserGetKeyboardLayout(get_window_thread( hwnd, NULL ));
                 if (flags & SEND_HWMSG_INJECTED)
                 {
                     scan = scan & 0xff;
