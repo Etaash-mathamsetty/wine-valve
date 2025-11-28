@@ -798,7 +798,7 @@ static void release_all_keys(HWND hwnd)
     int vkey;
     INPUT input = {.type = INPUT_KEYBOARD};
 
-    NtUserGetAsyncKeyboardState(state);
+    if (!NtUserGetAsyncKeyboardState(state)) return;
 
     for (vkey = 1; vkey < 256; vkey++)
     {
