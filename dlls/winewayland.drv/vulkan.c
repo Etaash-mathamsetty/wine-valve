@@ -100,7 +100,8 @@ static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_ins
     tid = NtUserGetWindowThread(hwnd, &pid);
     if (tid && pid != GetCurrentProcessId())
     {
-        if (vulkan_opwr_disabled()) return VK_ERROR_OUT_OF_HOST_MEMORY;
+        if (vulkan_opwr_disabled() && hwnd != NtUserGetDesktopWindow())
+            return VK_ERROR_OUT_OF_HOST_MEMORY;
 
         ERR("Cross process rendering is not supported!\n");
         return VK_ERROR_OUT_OF_HOST_MEMORY;
