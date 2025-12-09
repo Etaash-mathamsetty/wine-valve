@@ -367,6 +367,17 @@ static void pointer_handle_frame(void *data, struct wl_pointer *wl_pointer)
 
     input.type = INPUT_MOUSE;
 
+    /*
+     * if there is a pending set cursor position triggered by another thread,
+     * then we cannot send any motion events
+     */
+    if (pointer->pending_warp)
+    {
+        pointer->pointer_frame.flags &= ~(WAYLAND_POINTER_FRAME_ABS
+                                        | WAYLAND_POINTER_FRAME_REL);
+        TRACE("Pointer warp is pending, ignoring motion!\n");
+    }
+
     if (pointer->pointer_frame.flags & WAYLAND_POINTER_FRAME_ABS)
     {
         input.mi.dx = pointer->pointer_frame.x;
@@ -1296,7 +1307,8 @@ BOOL WAYLAND_ClipCursor(const RECT *clip, BOOL reset)
                                         wl_fixed_from_int(warp_x),
                                         wl_fixed_from_int(warp_y),
                                         pointer->enter_serial);
-        TRACE("Warping hwnd=%p warp_xy=%d,%d\n", hwnd, warp_x, warp_y);
+        TRACE("Warping hwnd=%p warp_xy=%d,%d screen_xy=%d,%d\n",
+              hwnd, warp_x, warp_y, (int)cursor_pos.x, (int)cursor_pos.y);
         pointer->pending_warp = FALSE;
     }
     else if (wl_surface && pointer->pending_warp)
