@@ -100,7 +100,7 @@ HRESULT WINAPI AmdD3D11CreateDeviceExt(IDXGIAdapter *adapter, D3D_DRIVER_TYPE dr
 
     0x0 = AddRef
     0x8 = Release
-    0x10 = ??
+    0x10 = virtual destructor
     0x18 = BeginUAVOverlap
     0x20 = EndUAVOverlap
     0x28 = GetVersion (called on init, prob some kind of version getter)
@@ -110,7 +110,7 @@ HRESULT WINAPI AmdD3D11CreateDeviceExt(IDXGIAdapter *adapter, D3D_DRIVER_TYPE dr
 /* field_0x168 (0xb)
     0x0 = AddRef
     0x8 = Release
-    0x10 = ??
+    0x10 = virtual destructor
     0x18 = SetDepthBounds
     0x20 = GetVersion
 */
@@ -118,7 +118,7 @@ HRESULT WINAPI AmdD3D11CreateDeviceExt(IDXGIAdapter *adapter, D3D_DRIVER_TYPE dr
 /* field_0x170 (0x11)
     0x0 = AddRef
     0x8 = Release
-    0x10 = ??
+    0x10 = virtual destructor
     0x18 = GetVersion
     0x20 = MultiDrawIndirect
     0x28 = MultiDrawIndexedIndirect
@@ -195,6 +195,12 @@ unsigned int __thiscall AmdDxExt_Release(IAmdDxExt *iface)
     return ref;
 }
 
+DEFINE_THISCALL_WRAPPER(AmdDxExt_Release, 4)
+void __thiscall AmdDxExt_Destroy(IAmdDxExt *iface)
+{
+    FIXME("%p stub!\n", iface);
+}
+
 DEFINE_THISCALL_WRAPPER(AmdDxExt_GetVersion, 8)
 HRESULT __thiscall AmdDxExt_GetVersion(IAmdDxExt *ext, AmdDxExtVersion *version)
 {
@@ -204,20 +210,6 @@ HRESULT __thiscall AmdDxExt_GetVersion(IAmdDxExt *ext, AmdDxExtVersion *version)
     version->minorVersion = 0;
 
     return S_OK;
-}
-
-DEFINE_THISCALL_WRAPPER(AmdDxExtUAVOverlap_AddRef, 4)
-unsigned int __thiscall AmdDxExtUAVOverlap_AddRef(IAmdDxExtUAVOverlap *iface)
-{
-    AmdDxExt *This = impl_from_IAmdDxExtUAVOverlap(iface);
-    return AmdDxExt_AddRef(&This->IAmdDxExt_iface);
-}
-
-DEFINE_THISCALL_WRAPPER(AmdDxExtUAVOverlap_Release, 4)
-unsigned int __thiscall AmdDxExtUAVOverlap_Release(IAmdDxExtUAVOverlap *iface)
-{
-    AmdDxExt *This = impl_from_IAmdDxExtUAVOverlap(iface);
-    return AmdDxExt_Release(&This->IAmdDxExt_iface);
 }
 
 DEFINE_THISCALL_WRAPPER(AmdDxExt_GetExtInterface, 8)
@@ -248,10 +240,7 @@ IAmdDxExtInterface* __thiscall AmdDxExt_GetExtInterface(IAmdDxExt *ext, unsigned
         }
     }
 
-    if (ret)
-    {
-        AmdDxExt_AddRef(ext);
-    }
+    if (ret) AmdDxExt_AddRef(ext);
 
     return ret;
 }
@@ -318,10 +307,25 @@ HRESULT __thiscall AmdDxExt_IaGetPrimitiveTopologyCtx(IAmdDxExt *iface, AmdDxExt
     return E_NOTIMPL;
 }
 
-DEFINE_THISCALL_WRAPPER(AmdDxExtUAVOverlap_Unk1, 4)
-void __thiscall AmdDxExtUAVOverlap_Unk1(IAmdDxExtUAVOverlap *iface)
+/* our release method handles destruction */
+DEFINE_THISCALL_WRAPPER(AmdDxExtUAVOverlap_Destroy, 4)
+void __thiscall AmdDxExtUAVOverlap_Destroy(IAmdDxExtUAVOverlap *iface)
 {
-    FIXME("%p stub\n", iface);
+    FIXME("%p stub!\n", iface);
+}
+
+DEFINE_THISCALL_WRAPPER(AmdDxExtUAVOverlap_AddRef, 4)
+unsigned int __thiscall AmdDxExtUAVOverlap_AddRef(IAmdDxExtUAVOverlap *iface)
+{
+    AmdDxExt *This = impl_from_IAmdDxExtUAVOverlap(iface);
+    return AmdDxExt_AddRef(&This->IAmdDxExt_iface);
+}
+
+DEFINE_THISCALL_WRAPPER(AmdDxExtUAVOverlap_Release, 4)
+unsigned int __thiscall AmdDxExtUAVOverlap_Release(IAmdDxExtUAVOverlap *iface)
+{
+    AmdDxExt *This = impl_from_IAmdDxExtUAVOverlap(iface);
+    return AmdDxExt_Release(&This->IAmdDxExt_iface);
 }
 
 DEFINE_THISCALL_WRAPPER(AmdDxExtUAVOverlap_BeginUAVOverlap, 4)
@@ -374,6 +378,12 @@ unsigned int __thiscall AmdDxExtQuadBufferStereo_Release(IAmdDxExtQuadBufferSter
 {
     AmdDxExt *This = impl_from_IAmdDxExtQuadBufferStereo(iface);
     return AmdDxExt_Release(&This->IAmdDxExt_iface);
+}
+
+DEFINE_THISCALL_WRAPPER(AmdDxExtQuadBufferStereo_Destroy, 4)
+void __thiscall AmdDxExtQuadBufferStereo_Destroy(IAmdDxExtQuadBufferStereo *iface)
+{
+    FIXME("%p stub!\n", iface);
 }
 
 DEFINE_THISCALL_WRAPPER(AmdDxExtQuadBufferStereo_EnableQuadBufferStereo, 8)
@@ -442,8 +452,8 @@ HRESULT __thiscall AmdDxExtDepthBounds_SetDepthBounds(IAmdDxExtDepthBounds *ifac
     return S_OK;
 }
 
-DEFINE_THISCALL_WRAPPER(AmdDxExtDepthBounds_Unk1, 4)
-void __thiscall AmdDxExtDepthBounds_Unk1(IAmdDxExtDepthBounds *iface)
+DEFINE_THISCALL_WRAPPER(AmdDxExtDepthBounds_Destroy, 4)
+void __thiscall AmdDxExtDepthBounds_Destroy(IAmdDxExtDepthBounds *iface)
 {
     FIXME("%p stub\n", iface);
 }
@@ -462,8 +472,8 @@ unsigned int __thiscall AmdDxExtMultidrawIndirect_Release(IAmdDxExtMultidrawIndi
     return AmdDxExt_Release(&This->IAmdDxExt_iface);
 }
 
-DEFINE_THISCALL_WRAPPER(AmdDxExtMultidrawIndirect_Unk1, 4)
-void __thiscall AmdDxExtMultidrawIndirect_Unk1(IAmdDxExtMultidrawIndirect *iface)
+DEFINE_THISCALL_WRAPPER(AmdDxExtMultidrawIndirect_Destroy, 4)
+void __thiscall AmdDxExtMultidrawIndirect_Destroy(IAmdDxExtMultidrawIndirect *iface)
 {
     FIXME("%p stub\n", iface);
 }
@@ -571,7 +581,7 @@ static const IAmdDxExtUAVOverlapVtbl amddxext_uav_vtable =
 {
     THISCALL(AmdDxExtUAVOverlap_AddRef),
     THISCALL(AmdDxExtUAVOverlap_Release),
-    THISCALL(AmdDxExtUAVOverlap_Unk1),
+    THISCALL(AmdDxExtUAVOverlap_Destroy),
     THISCALL(AmdDxExtUAVOverlap_BeginUAVOverlap),
     THISCALL(AmdDxExtUAVOverlap_EndUAVOverlap),
     THISCALL(AmdDxExtUAVOverlap_GetVersion)
@@ -581,21 +591,23 @@ static const IAmdDxExtVtbl AmdDxExt_vtable =
 {
     THISCALL(AmdDxExt_AddRef), //0
     THISCALL(AmdDxExt_Release), //0x8
-    THISCALL(AmdDxExt_IaGetPrimitiveTopology), // 0x10 ??
+    THISCALL(AmdDxExt_Destroy), //0x10
     THISCALL(AmdDxExt_GetVersion), //0x18
     THISCALL(AmdDxExt_GetExtInterface), //0x20
     THISCALL(AmdDxExt_IaSetPrimitiveTopology), //0x28
-    THISCALL(AmdDxExt_SetSingleSampleRead), //0x30 ??
-    THISCALL(AmdDxExt_SetSingleSampleRead11), //0x38 ??
-    THISCALL(AmdDxExt_IaSetPrimitiveTopologyCtx), //0x40 ??
+    THISCALL(AmdDxExt_IaGetPrimitiveTopology), // 0x30
+    THISCALL(AmdDxExt_SetSingleSampleRead), //0x38 ??
+    THISCALL(AmdDxExt_SetSingleSampleRead11), //0x40 ??
     THISCALL(AmdDxExt_QueryFeatureSupport), //0x48
-    THISCALL(AmdDxExt_IaGetPrimitiveTopologyCtx) //0x50 ??
+    THISCALL(AmdDxExt_IaSetPrimitiveTopologyCtx), //0x50 ??
+    THISCALL(AmdDxExt_IaGetPrimitiveTopologyCtx) //0x58 ??
 };
 
 static const IAmdDxExtQuadBufferStereoVtbl quadbufstereo_vtable =
 {
     THISCALL(AmdDxExtQuadBufferStereo_AddRef),
     THISCALL(AmdDxExtQuadBufferStereo_Release),
+    THISCALL(AmdDxExtQuadBufferStereo_Destroy),
     THISCALL(AmdDxExtQuadBufferStereo_EnableQuadBufferStereo),
     THISCALL(AmdDxExtQuadBufferStereo_GetLineOffset),
     THISCALL(AmdDxExtQuadBufferStereo_GetDisplayModeList),
@@ -605,7 +617,7 @@ static const IAmdDxExtDepthBoundsVtbl amddxext_depth_vtable =
 {
     THISCALL(AmdDxExtDepthBounds_AddRef),
     THISCALL(AmdDxExtDepthBounds_Release),
-    THISCALL(AmdDxExtDepthBounds_Unk1),
+    THISCALL(AmdDxExtDepthBounds_Destroy),
     THISCALL(AmdDxExtDepthBounds_SetDepthBounds),
     THISCALL(AmdDxExtDepthBounds_GetVersion)
 };
@@ -614,7 +626,7 @@ static const IAmdDxExtMultidrawIndirectVtbl amddxext_multidraw_vtable =
 {
     THISCALL(AmdDxExtMultidrawIndirect_AddRef),
     THISCALL(AmdDxExtMultidrawIndirect_Release),
-    THISCALL(AmdDxExtMultidrawIndirect_Unk1),
+    THISCALL(AmdDxExtMultidrawIndirect_Destroy),
     THISCALL(AmdDxExtMultidrawIndirect_GetVersion),
     THISCALL(AmdDxExtMultidrawIndirect_MultiDrawIndirect),
     THISCALL(AmdDxExtMultidrawIndirect_MultiDrawIndexedIndirect),
@@ -624,10 +636,10 @@ static const IAmdDxExtMultidrawIndirectVtbl amddxext_multidraw_vtable =
 
 HRESULT CDECL AmdDxExtCreate11(ID3D11Device *device, IAmdDxExt **ext)
 {
+    UINT64 id;
     HRESULT ret;
     AmdDxExt *obj;
     ID3D11VkExtDevice *ext_device;
-    UINT64 id;
     TRACE("%p %p\n", device, ext);
 
     if (!ext) return E_INVALIDARG;
