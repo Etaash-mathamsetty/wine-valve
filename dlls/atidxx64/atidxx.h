@@ -48,6 +48,8 @@ DECLARE_INTERFACE(IAmdDxExtInterface)
 {
     THISCALLMETHOD_(unsigned int, AddRef)(THIS) PURE;
     THISCALLMETHOD_(unsigned int, Release)(THIS) PURE;
+    /* virtual destructor, somehow missed this originally... im so dumb */
+    THISCALLMETHOD_(void, Destroy)(THIS) PURE;
 };
 #undef INTERFACE
 
@@ -57,18 +59,19 @@ DECLARE_INTERFACE_(IAmdDxExt, IAmdDxExtInterface)
     /*** IAmdDxExtInterface methods ***/
     THISCALLMETHOD_(unsigned int, AddRef)(THIS) PURE;
     THISCALLMETHOD_(unsigned int, Release)(THIS) PURE;
+    THISCALLMETHOD_(void, Destroy)(THIS) PURE;
 
     /*** IAmdDxExt methods ***/
-    THISCALLMETHOD_(HRESULT, IaGetPrimitiveTopology)(THIS_ AmdDxExtPrimitiveTopology *topology) PURE;
     THISCALLMETHOD_(HRESULT, GetVersion)(THIS_ AmdDxExtVersion *version) PURE;
     THISCALLMETHOD_(IAmdDxExtInterface*,GetExtInterface)(THIS_ unsigned int iface) PURE;
 
 
     THISCALLMETHOD_(HRESULT, IaSetPrimitiveTopology)(THIS_ D3D_PRIMITIVE_TOPOLOGY topology) PURE;
+    THISCALLMETHOD_(HRESULT, IaGetPrimitiveTopology)(THIS_ AmdDxExtPrimitiveTopology *topology) PURE;
     THISCALLMETHOD_(HRESULT, SetSingleSampleRead)(THIS_ ID3D10Resource *res, BOOL single_sample) PURE;
     THISCALLMETHOD_(HRESULT, SetSingleSampleRead11)(THIS_ ID3D11Resource *res, BOOL single_sample) PURE;
-    THISCALLMETHOD_(HRESULT, IaSetPrimitiveTopologyCtx)(THIS_ unsigned int topology, ID3D11DeviceContext *ctx) PURE;
     THISCALLMETHOD_(HRESULT, QueryFeatureSupport)(THIS_ unsigned int feature_token, void *data, unsigned int data_size) PURE;
+    THISCALLMETHOD_(HRESULT, IaSetPrimitiveTopologyCtx)(THIS_ unsigned int topology, ID3D11DeviceContext *ctx) PURE;
     THISCALLMETHOD_(HRESULT, IaGetPrimitiveTopologyCtx)(THIS_ AmdDxExtPrimitiveTopology *topology, ID3D11DeviceContext *ctx) PURE;
 };
 #undef INTERFACE
@@ -79,9 +82,9 @@ DECLARE_INTERFACE_(IAmdDxExtUAVOverlap, IAmdDxExtInterface)
     /*** IAmdDxExtInterface methods ***/
     THISCALLMETHOD_(unsigned int, AddRef)(THIS) PURE;
     THISCALLMETHOD_(unsigned int, Release)(THIS) PURE;
+    THISCALLMETHOD_(void, Destroy)(THIS) PURE;
 
     /*** IAmdDxExtUAVOverlap methods ***/
-    THISCALLMETHOD_(void, Unk1)(THIS) PURE;
     THISCALLMETHOD_(HRESULT, BeginUAVOverlap)(THIS) PURE;
     THISCALLMETHOD_(HRESULT, EndUAVOverlap)(THIS) PURE;
     THISCALLMETHOD_(void, GetVersion)(THIS, AmdDxExtVersion* version) PURE;
@@ -94,6 +97,7 @@ DECLARE_INTERFACE_(IAmdDxExtQuadBufferStereo, IAmdDxExtInterface)
     /*** IAmdDxExtInterface methods ***/
     THISCALLMETHOD_(unsigned int, AddRef)(THIS) PURE;
     THISCALLMETHOD_(unsigned int, Release)(THIS) PURE;
+    THISCALLMETHOD_(void, Destroy)(THIS) PURE;
 
     /*** IAmdDxExtQuadBufferStereo methods ***/
     THISCALLMETHOD_(HRESULT, EnableQuadBufferStereo)(THIS, BOOL enable) PURE;
@@ -108,9 +112,9 @@ DECLARE_INTERFACE_(IAmdDxExtDepthBounds, IAmdDxExtInterface)
     /*** IAmdDxExtInterface methods ***/
     THISCALLMETHOD_(unsigned int, AddRef)(THIS) PURE;
     THISCALLMETHOD_(unsigned int, Release)(THIS) PURE;
+    THISCALLMETHOD_(void, Destroy)(THIS) PURE;
 
     /*** IAmdDxExtDepthBounds methods ***/
-    THISCALLMETHOD_(void, Unk1)(THIS) PURE;
     THISCALLMETHOD_(HRESULT, SetDepthBounds)(THIS, BOOL enabled, float min, float max) PURE;
     THISCALLMETHOD_(void, GetVersion)(THIS, AmdDxExtVersion *version) PURE;
 };
@@ -122,9 +126,9 @@ DECLARE_INTERFACE_(IAmdDxExtMultidrawIndirect, IAmdDxExtInterface)
     /*** IAmdDxExtInterface methods ***/
     THISCALLMETHOD_(unsigned int, AddRef)(THIS) PURE;
     THISCALLMETHOD_(unsigned int, Release)(THIS) PURE;
+    THISCALLMETHOD_(void, Destroy)(THIS) PURE;
 
     /*** IAmdDxExtMultidrawIndirect methods ***/
-    THISCALLMETHOD_(void, Unk1)(THIS) PURE;
     THISCALLMETHOD_(void, GetVersion)(THIS, AmdDxExtVersion *version) PURE;
     THISCALLMETHOD_(HRESULT, MultiDrawIndirect)(THIS, unsigned int draw_count, ID3D11Buffer *buffer, unsigned int byte_offset, unsigned int byte_stride) PURE;
     THISCALLMETHOD_(HRESULT, MultiDrawIndexedIndirect)(THIS, unsigned int draw_count, ID3D11Buffer *buffer, unsigned int byte_offset, unsigned int byte_stride) PURE;
