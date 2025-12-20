@@ -34,8 +34,7 @@
 
 #if defined(SONAME_LIBEGL) && defined(HAVE_LIBWAYLAND_EGL)
 
-WINE_DEFAULT_DEBUG_CHANNEL(waylanddrv);
-WINE_DECLARE_DEBUG_CHANNEL(opengl);
+WINE_DEFAULT_DEBUG_CHANNEL(wgl);
 
 #include <wayland-egl.h>
 #include <EGL/egl.h>
@@ -728,7 +727,7 @@ static BOOL wayland_wglSwapBuffers(HDC hdc)
     HWND hwnd = NtUserWindowFromDC(hdc), toplevel = NtUserGetAncestor(hwnd, GA_ROOT);
     struct wayland_gl_drawable *gl;
 
-    TRACE_(opengl)("hdc=%p\n", hdc);
+    TRACE("hdc=%p\n", hdc);
 
     if (!(gl = wayland_gl_drawable_get(NtUserWindowFromDC(hdc), hdc))) return FALSE;
 
@@ -1315,7 +1314,7 @@ static BOOL init_egl_configs(void)
         return FALSE;
     }
 
-    if (TRACE_ON(waylanddrv))
+    if (TRACE_ON(wgl))
     {
         for (i = 0; i < num_egl_configs; i++)
         {
