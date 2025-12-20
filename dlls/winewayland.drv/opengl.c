@@ -35,6 +35,7 @@
 #if defined(SONAME_LIBEGL) && defined(HAVE_LIBWAYLAND_EGL)
 
 WINE_DEFAULT_DEBUG_CHANNEL(waylanddrv);
+WINE_DECLARE_DEBUG_CHANNEL(opengl);
 
 #include <wayland-egl.h>
 #include <EGL/egl.h>
@@ -726,6 +727,8 @@ static BOOL wayland_wglSwapBuffers(HDC hdc)
     struct wgl_context *ctx = NtCurrentTeb()->glContext;
     HWND hwnd = NtUserWindowFromDC(hdc), toplevel = NtUserGetAncestor(hwnd, GA_ROOT);
     struct wayland_gl_drawable *gl;
+
+    TRACE_(opengl)("hdc=%p\n", hdc);
 
     if (!(gl = wayland_gl_drawable_get(NtUserWindowFromDC(hdc), hdc))) return FALSE;
 
