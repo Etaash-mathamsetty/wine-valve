@@ -687,24 +687,22 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
                                         rect.left, rect.top,
                                         rect.right - rect.left,
                                         rect.bottom - rect.top);
-        if (wayland_surface_is_toplevel(surface))
+        /* HACK: reset fullscreen state to ensure surface is on correct output */
+        if (wayland_surface_is_toplevel(surface) &&
+            surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN)
         {
-            /* HACK: reset fullscreen state to ensure surface is on correct output */
-            if (surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN)
+            struct wl_output *output;
+            pthread_mutex_lock(&process_wayland.output_mutex);
+            output = wayland_get_best_output_for_rect(&surface->window.rect);
+            if (output != surface->requested_output)
             {
-                struct wl_output *output;
-                pthread_mutex_lock(&process_wayland.output_mutex);
-                output = wayland_get_best_output_for_rect(&surface->window.rect);
-                if (output != surface->requested_output)
-                {
-                    TRACE("Resetting fullscreen state: output %p, old output %p\n",
-                        output, surface->requested_output);
-                    xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
-                    wl_display_flush(process_wayland.wl_display);
-                    surface->requested_output = output;
-                }
-                pthread_mutex_unlock(&process_wayland.output_mutex);
+                TRACE("Updating fullscreen output: output %p, old output %p\n",
+                    output, surface->requested_output);
+                xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
+                wl_display_flush(process_wayland.wl_display);
+                surface->requested_output = output;
             }
+            pthread_mutex_unlock(&process_wayland.output_mutex);
         }
     }
 }
