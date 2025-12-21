@@ -428,6 +428,8 @@ static void wayland_add_device_monitor(const struct gdi_device_manager *device_m
           output_info->output->name, wine_dbgstr_rect(&monitor.rc_monitor));
 
     device_manager->add_monitor(&monitor, param);
+
+    if (monitor.edid) free(monitor.edid);
 }
 
 static void populate_devmode(struct wayland_output_mode *output_mode, DEVMODEW *mode)
