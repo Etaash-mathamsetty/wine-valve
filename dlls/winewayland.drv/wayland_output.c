@@ -43,6 +43,8 @@ static uint32_t next_output_id = 0;
 #define WAYLAND_OUTPUT_CHANGED_PRIMARIES  0x20
 #define WAYLAND_OUTPUT_CHANGED_FALL       0x40
 #define WAYLAND_OUTPUT_CHANGED_CLL        0x80
+#define WAYLAND_OUTPUT_CHANGED_REF_L      0x100
+#define WAYLAND_OUTPUT_CHANGED_MAX_TARGET_L 0x200
 
 /**********************************************************************
  *          Output handling
@@ -191,6 +193,9 @@ static void wayland_output_done(struct wayland_output *output)
 
 
     /* Copy here as well in case this gets called first */
+
+    /* FIXME: Remove redundant mutex locks in below event handlers,
+     * and read over protocol again to check if this is needed */
     if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_PRIMARIES)
     {
         output->current.primaries = output->pending.primaries;
@@ -206,6 +211,17 @@ static void wayland_output_done(struct wayland_output *output)
         output->current.max_cll = output->pending.max_cll;
     }
 
+    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_MAX_TARGET_L)
+    {
+        output->current.max_target_lum = output->pending.max_target_lum;
+    }
+
+    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_REF_L)
+    {
+        output->current.ref_lum = output->pending.ref_lum;
+    }
+
+    output->current.supports_hdr = (output->current.max_target_lum > output->current.ref_lum);
     output->pending_flags = 0;
 
     /* Ensure the logical dimensions have sane values. */
@@ -219,7 +235,8 @@ static void wayland_output_done(struct wayland_output *output)
     pthread_mutex_unlock(&process_wayland.output_mutex);
 
     TRACE("name=%s logical=%d,%d+%dx%d\n",
-          output->current.name, output->current.logical_x, output->current.logical_y,
+          output->current.name,
+          output->current.logical_x, output->current.logical_y,
           output->current.logical_w, output->current.logical_h);
 
     RB_FOR_EACH_ENTRY(mode, &output->current.modes, struct wayland_output_mode, entry)
@@ -371,7 +388,21 @@ static void wayland_image_description_info_v1_done(void *data,
         output->pending_flags &= ~WAYLAND_OUTPUT_CHANGED_CLL;
     }
 
-    TRACE("%p\n", output);
+    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_MAX_TARGET_L)
+    {
+        output->current.max_target_lum = output->pending.max_target_lum;
+        output->pending_flags &= ~WAYLAND_OUTPUT_CHANGED_MAX_TARGET_L;
+    }
+
+    if (output->pending_flags & WAYLAND_OUTPUT_CHANGED_REF_L)
+    {
+        output->current.ref_lum = output->pending.ref_lum;
+        output->pending_flags &= ~WAYLAND_OUTPUT_CHANGED_REF_L;
+    }
+
+    output->current.supports_hdr = (output->current.max_target_lum > output->current.ref_lum);
+
+    TRACE("hdr %u\n", output->current.supports_hdr);
 
     pthread_mutex_unlock(&process_wayland.output_mutex);
 
@@ -395,7 +426,7 @@ static void wayland_image_description_info_v1_primaries(void *data,
 
     pthread_mutex_lock(&process_wayland.output_mutex);
 
-    if ((output->pending_flags & WAYLAND_OUTPUT_CHANGED_PRIMARIES) == 0)
+    if (!(output->pending_flags & WAYLAND_OUTPUT_CHANGED_PRIMARIES))
     {
 #define COPY(name) output->pending.primaries.name = round((name * 1e-6) * 1024)
         COPY(r_x);
@@ -409,7 +440,8 @@ static void wayland_image_description_info_v1_primaries(void *data,
 #undef COPY
 
         TRACE("primaries: {%lf, %lf, %lf, %lf, %lf, %lf, %lf, %lf}\n",
-            r_x * 1e-6, r_y * 1e-6, g_x * 1e-6, g_y * 1e-6, b_x * 1e-6, b_y * 1e-6, w_x * 1e-6, w_y * 1e-6);
+            r_x * 1e-6, r_y * 1e-6, g_x * 1e-6, g_y * 1e-6,
+            b_x * 1e-6, b_y * 1e-6, w_x * 1e-6, w_y * 1e-6);
 
         output->pending_flags |= WAYLAND_OUTPUT_CHANGED_PRIMARIES;
     }
@@ -442,7 +474,16 @@ static void wayland_image_description_info_v1_luminance(void *data,
                             struct wp_image_description_info_v1 *info,
                             uint32_t min, uint32_t max, uint32_t ref)
 {
+    struct wayland_output *output = data;
 
+    pthread_mutex_lock(&process_wayland.output_mutex);
+
+    TRACE("reference luminance: %u\n", ref);
+
+    output->pending.ref_lum = ref;
+    output->pending_flags |= WAYLAND_OUTPUT_CHANGED_REF_L;
+
+    pthread_mutex_unlock(&process_wayland.output_mutex);
 }
 
 static void wayland_image_description_info_v1_target_primaries(void *data,
@@ -480,7 +521,16 @@ static void wayland_image_description_info_v1_target_luminance(void *data,
                             struct wp_image_description_info_v1 *info,
                             uint32_t min, uint32_t max)
 {
+    struct wayland_output *output = data;
 
+    pthread_mutex_lock(&process_wayland.output_mutex);
+
+    TRACE("max target luminance: %u\n", max);
+
+    output->pending.max_target_lum = max;
+    output->pending_flags |= WAYLAND_OUTPUT_CHANGED_MAX_TARGET_L;
+
+    pthread_mutex_unlock(&process_wayland.output_mutex);
 }
 
 static void wayland_image_description_info_v1_target_max_cll(void *data,
