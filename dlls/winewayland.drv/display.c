@@ -270,7 +270,7 @@ static uint8_t encode_max_luminance(float nits)
 /* emulate some edid data */
 static UINT get_edid(const struct output_info *output_info, unsigned char **data_out)
 {
-    const unsigned int edid_size = 256;
+    unsigned int edid_size = 128, extensions = 0;
     unsigned char *data, *p;
     unsigned int i, mwidth, mheight;
     unsigned char c;
@@ -287,6 +287,12 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
         /* assume ~150 dpi */
         mwidth = mode->width / 60;
         mheight = mode->height / 60;
+    }
+
+    if (output_info->output->supports_hdr)
+    {
+        edid_size += 128;
+        extensions++;
     }
 
     /* another 128 bytes needed for CTA-861 extension */
@@ -376,37 +382,42 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
     p[3] = 0x10;
 
     c = 0;
-    data[126] = 1; /* one extension */
+    data[126] = extensions; /* one extension */
     for (i = 0; i < 127; ++i)
         c += data[i];
     data[127] = 256 - c;
 
-    p = data + 128;
+    p = data;
 
-    p[0] = 2;
-    p[1] = 3;
-    p[2] = 0xa; /* FIXME: is this correct?  */
+    if (output_info->output->supports_hdr)
+    {
+        p += 128;
 
-    p += 4;
+        p[0] = 2;
+        p[1] = 3;
+        p[2] = 0xa; /* FIXME: is this correct?  */
 
-    p[0] = (0x7 << 5) | 0x5; /* HDR static metadata size */
-    p[1] = 6;
+        p += 4;
 
-    /* HDR static metadata block */
+        p[0] = (0x7 << 5) | 0x5; /* HDR static metadata size */
+        p[1] = 6;
 
-    p[2] = 0x7; /* ST2084 | SDR | HDR */
-    p[3] = 1;
-    p[4] = encode_max_luminance(output_info->output->max_cll);
-    p[5] = encode_max_luminance(output_info->output->max_fall);
-    p[6] = 0; /* assume undefined */
+        /* HDR static metadata block */
 
-    /* reset p to beginning of the CTA block */
-    p = data + 128;
-    c = 0;
+        p[2] = 0x7; /* ST2084 | SDR | HDR */
+        p[3] = 1;
+        p[4] = encode_max_luminance(output_info->output->max_cll);
+        p[5] = encode_max_luminance(output_info->output->max_fall);
+        p[6] = 0; /* assume undefined */
 
-    for (i = 0; i < 127; ++i)
-        c += p[i];
-    p[127] = 256 - c;
+        /* reset p to beginning of the CTA block */
+        p = data + 128;
+        c = 0;
+
+        for (i = 0; i < 127; ++i)
+            c += p[i];
+        p[127] = 256 - c;
+    }
 
     return edid_size;
 }
