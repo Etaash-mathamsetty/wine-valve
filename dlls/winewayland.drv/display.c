@@ -434,6 +434,7 @@ static void wayland_add_device_monitor(const struct gdi_device_manager *device_m
     /* We don't have a direct way to get the work area in Wayland. */
     monitor.rc_work = monitor.rc_monitor;
     monitor.edid_len = get_edid(output_info, &monitor.edid);
+    monitor.hdr_enabled = output_info->output->supports_hdr;
 
     TRACE("name=%s rc_monitor=rc_work=%s\n",
           output_info->output->name, wine_dbgstr_rect(&monitor.rc_monitor));
