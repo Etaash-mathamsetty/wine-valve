@@ -698,6 +698,8 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
             {
                 TRACE("Updating fullscreen output: output %p, old output %p\n",
                     output, surface->requested_output);
+                xdg_toplevel_unset_fullscreen(surface->xdg_toplevel);
+                wl_display_flush(process_wayland.wl_display);
                 xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
                 wl_display_flush(process_wayland.wl_display);
                 surface->requested_output = output;
