@@ -277,6 +277,9 @@ struct wayland_output_state
     struct wayland_primaries primaries;
     uint32_t max_fall;
     uint32_t max_cll;
+    uint32_t max_target_lum;
+    uint32_t ref_lum;
+    BOOL supports_hdr;
     char *name;
     char *make;
     char *model;
