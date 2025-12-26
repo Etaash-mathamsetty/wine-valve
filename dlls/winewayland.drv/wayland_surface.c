@@ -223,30 +223,6 @@ struct wayland_surface *wayland_surface_create(HWND hwnd)
     surface->window.fractional_scale = 1.0;
     surface->window.scale = 1.0;
 
-    if (process_wayland.wp_fractional_scale_manager_v1)
-    {
-        surface->wp_fractional_scale_v1 =
-            wp_fractional_scale_manager_v1_get_fractional_scale(
-                process_wayland.wp_fractional_scale_manager_v1,
-                surface->wl_surface);
-        if (!surface->wp_fractional_scale_v1) goto err;
-        wp_fractional_scale_v1_add_listener(
-            surface->wp_fractional_scale_v1,
-            &wp_fractional_scale_listener,
-            hwnd);
-    }
-
-    if (process_wayland.wp_content_type_manager_v1)
-    {
-        TRACE("using game content type!\n");
-        surface->wp_content_type_v1 =
-        wp_content_type_manager_v1_get_surface_content_type(
-            process_wayland.wp_content_type_manager_v1, surface->wl_surface);
-        if (!surface->wp_content_type_v1) goto err;
-        wp_content_type_v1_set_content_type(
-            surface->wp_content_type_v1, WP_CONTENT_TYPE_V1_TYPE_GAME);
-    }
-
     return surface;
 
 err:
@@ -282,18 +258,6 @@ void wayland_surface_destroy(struct wayland_surface *surface)
     pthread_mutex_unlock(&process_wayland.text_input.mutex);
 
     wayland_surface_clear_role(surface);
-
-    if (surface->wp_fractional_scale_v1)
-    {
-        wp_fractional_scale_v1_destroy(surface->wp_fractional_scale_v1);
-        surface->wp_fractional_scale_v1 = NULL;
-    }
-
-    if (surface->wp_content_type_v1)
-    {
-        wp_content_type_v1_destroy(surface->wp_content_type_v1);
-        surface->wp_content_type_v1 = NULL;
-    }
 
     if (surface->wp_viewport)
     {
@@ -349,16 +313,44 @@ void wayland_surface_make_toplevel(struct wayland_surface *surface)
         );
         xdg_toplevel_tag_manager_v1_set_toplevel_description(
             process_wayland.xdg_toplevel_tag_manager_v1, surface->xdg_toplevel,
-            "This is a game running through proton"
+            "A game running through proton"
         );
     }
 
-    wl_surface_commit(surface->wl_surface);
-    wl_display_flush(process_wayland.wl_display);
+    if (process_wayland.wp_content_type_manager_v1)
+    {
+        TRACE("using game content type on toplevel\n");
+        surface->wp_content_type_v1 =
+        wp_content_type_manager_v1_get_surface_content_type(
+            process_wayland.wp_content_type_manager_v1, surface->wl_surface);
+        if (!surface->wp_content_type_v1) goto err;
+        wp_content_type_v1_set_content_type(
+            surface->wp_content_type_v1, WP_CONTENT_TYPE_V1_TYPE_GAME);
+    }
+
+    if (process_wayland.wp_fractional_scale_manager_v1)
+    {
+        surface->wp_fractional_scale_v1 =
+            wp_fractional_scale_manager_v1_get_fractional_scale(
+                process_wayland.wp_fractional_scale_manager_v1,
+                surface->wl_surface);
+        if (!surface->wp_fractional_scale_v1)
+        {
+            ERR("Failed to create toplevel wp_fractional_scale_v1\n");
+            goto err;
+        }
+        wp_fractional_scale_v1_add_listener(
+            surface->wp_fractional_scale_v1,
+            &wp_fractional_scale_listener,
+            surface->hwnd);
+    }
 
     if (!NtUserInternalGetWindowText(surface->hwnd, text, ARRAY_SIZE(text)))
         text[0] = 0;
     wayland_surface_set_title(surface, text);
+
+    wl_surface_commit(surface->wl_surface);
+    wl_display_flush(process_wayland.wl_display);
 
     return;
 
@@ -391,6 +383,23 @@ void wayland_surface_make_subsurface(struct wayland_surface *surface,
     {
         ERR("Failed to create client wl_subsurface\n");
         goto err;
+    }
+
+    if (process_wayland.wp_fractional_scale_manager_v1)
+    {
+        surface->wp_fractional_scale_v1 =
+            wp_fractional_scale_manager_v1_get_fractional_scale(
+                process_wayland.wp_fractional_scale_manager_v1,
+                surface->wl_surface);
+        if (!surface->wp_fractional_scale_v1)
+        {
+            ERR("Failed to create client wp_fractional_scale_v1\n");
+            goto err;
+        }
+        wp_fractional_scale_v1_add_listener(
+            surface->wp_fractional_scale_v1,
+            &wp_fractional_scale_listener,
+            surface->hwnd);
     }
 
     surface->role = WAYLAND_SURFACE_ROLE_SUBSURFACE;
@@ -440,6 +449,18 @@ void wayland_surface_clear_role(struct wayland_surface *surface)
             surface->xdg_toplevel_icon = NULL;
         }
 
+        if (surface->wp_fractional_scale_v1)
+        {
+            wp_fractional_scale_v1_destroy(surface->wp_fractional_scale_v1);
+            surface->wp_fractional_scale_v1 = NULL;
+        }
+
+        if (surface->wp_content_type_v1)
+        {
+            wp_content_type_v1_destroy(surface->wp_content_type_v1);
+            surface->wp_content_type_v1 = NULL;
+        }
+
         if (surface->xdg_toplevel)
         {
             xdg_toplevel_destroy(surface->xdg_toplevel);
@@ -458,6 +479,12 @@ void wayland_surface_clear_role(struct wayland_surface *surface)
         {
             wl_subsurface_destroy(surface->wl_subsurface);
             surface->wl_subsurface = NULL;
+        }
+
+        if (surface->wp_fractional_scale_v1)
+        {
+            wp_fractional_scale_v1_destroy(surface->wp_fractional_scale_v1);
+            surface->wp_fractional_scale_v1 = NULL;
         }
 
         surface->toplevel_hwnd = 0;
