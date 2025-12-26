@@ -157,6 +157,8 @@ static void wp_fractional_scale_handle_scale(void *user_data,
 
         wayland_win_data_release(data);
     }
+
+    NtUserExposeWindowSurface(hwnd, 0, NULL, 0);
 }
 
 static const struct wp_fractional_scale_v1_listener wp_fractional_scale_listener =
