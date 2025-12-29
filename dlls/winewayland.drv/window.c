@@ -481,7 +481,10 @@ static HICON get_window_icon(HWND hwnd, UINT type, HICON icon, ICONINFO *ret)
     {
         icon = get_icon_info((HICON)send_message(hwnd, WM_GETICON, type, 0), ret);
         if (!icon)
-            icon = get_icon_info((HICON)NtUserGetClassLongPtrW(hwnd, GCLP_HICON), ret);
+        {
+            UINT offset = (type == ICON_BIG) ? GCLP_HICON : GCLP_HICONSM;
+            icon = get_icon_info((HICON)NtUserGetClassLongPtrW(hwnd, offset), ret);
+        }
         if (!icon && type == ICON_BIG)
         {
             icon = LoadImageW(0, (const WCHAR *)IDI_WINLOGO, IMAGE_ICON, 0, 0,
