@@ -322,7 +322,7 @@ static WCHAR *get_cache_file_name(BOOL ensure_exists)
     WCHAR *cache_dir, *ret;
     size_t len, size;
 
-    xdg_dir = getenv( "XDG_CACHE_HOME" );
+    xdg_dir = getenv( "WINE_HOST_XDG_CACHE_HOME" );
     if (xdg_dir && *xdg_dir && p_wine_get_dos_file_name)
     {
         if (!(cache_dir = p_wine_get_dos_file_name( xdg_dir ))) return NULL;
