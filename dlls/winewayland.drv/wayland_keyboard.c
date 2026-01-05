@@ -1042,8 +1042,12 @@ static void sync_mod_state(HWND hwnd)
     if (!NtUserGetAsyncKeyboardState(state)) return;
 
     pthread_mutex_lock(&keyboard->mutex);
-    numlock_active = keyboard->numlock_active;
-    caplock_active = keyboard->caplock_active;
+    numlock_active = xkb_state_mod_name_is_active(keyboard->xkb_state,
+                                                  XKB_MOD_NAME_NUM,
+                                                  XKB_STATE_MODS_LOCKED) > 0;
+    caplock_active = xkb_state_mod_name_is_active(keyboard->xkb_state,
+                                                  XKB_MOD_NAME_CAPS,
+                                                  XKB_STATE_MODS_LOCKED) > 0;
     pthread_mutex_unlock(&keyboard->mutex);
 
     numlock_changed = (!!(state[VK_NUMLOCK] & 0x1) != numlock_active)
@@ -1143,12 +1147,6 @@ static void keyboard_handle_modifiers(void *data, struct wl_keyboard *wl_keyboar
     pthread_mutex_lock(&keyboard->mutex);
     xkb_state_update_mask(keyboard->xkb_state, mods_depressed, mods_latched,
                           mods_locked, 0, 0, xkb_group);
-    keyboard->numlock_active = xkb_state_mod_name_is_active(keyboard->xkb_state,
-                                                            XKB_MOD_NAME_NUM,
-                                                            XKB_STATE_MODS_LOCKED) > 0;
-    keyboard->caplock_active = xkb_state_mod_name_is_active(keyboard->xkb_state,
-                                                            XKB_MOD_NAME_CAPS,
-                                                            XKB_STATE_MODS_LOCKED) > 0;
     pthread_mutex_unlock(&keyboard->mutex);
 
     set_current_xkb_group(xkb_group);

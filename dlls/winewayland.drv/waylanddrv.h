@@ -121,8 +121,6 @@ struct wayland_keyboard
     struct wl_keyboard *wl_keyboard;
     struct xkb_context *xkb_context;
     struct xkb_state *xkb_state;
-    BOOL numlock_active;
-    BOOL caplock_active;
     HWND focused_hwnd;
     pthread_mutex_t mutex;
 };
