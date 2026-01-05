@@ -1114,6 +1114,9 @@ static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
 
     TRACE_(key)("serial=%u hwnd=%p key=%d scan=%#x state=%#x\n", serial, hwnd, key, scan, state);
 
+    /* these keys would need to be handled in a special way otherwise they cause issues */
+    if (key == KEY_LEFTMETA || key == KEY_RIGHTMETA) return;
+
     if (key != KEY_NUMLOCK && key != KEY_CAPSLOCK)
         sync_mod_state(hwnd);
 
