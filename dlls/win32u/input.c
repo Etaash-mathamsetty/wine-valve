@@ -435,10 +435,11 @@ static void kbd_tables_init_vsc2vk( const KBDTABLES *tables, USHORT vsc2vk[0x300
 
 #define NEXT_ENTRY(t, e) ((void *)&(e)->wch[(t)->nModifications])
 
-static void kbd_tables_init_vk2char( const KBDTABLES *tables, BYTE vk2char[0x100] )
+static void kbd_tables_init_vk2char( const KBDTABLES *tables, UINT vk2char[0x100] )
 {
     const VK_TO_WCHAR_TABLE *table;
     const VK_TO_WCHARS1 *entry;
+    UINT is_dead = 0;
 
     memset( vk2char, 0, 0x100 );
 
@@ -446,15 +447,24 @@ static void kbd_tables_init_vk2char( const KBDTABLES *tables, BYTE vk2char[0x100
     {
         for (entry = table->pVkToWchars; entry->VirtualKey; entry = NEXT_ENTRY(table, entry))
         {
+            UINT temp_dead = is_dead;
+            WORD lower;
+
+            is_dead = 0;
+            lower = entry->wch[0];
+
             if (entry->VirtualKey & ~0xff) continue;
+            if (!lower) continue;
             if (entry->Attributes & SGCAPS) continue;
-            /*
-             * FIXME: implement dead keys
-             * MSDN says the top bit is set 1 in the return value of MAPVK_VK_TO_CHAR
-             */
-            /* don't overwrite an already set value */
-            if (entry->wch[0] & 0xff && entry->wch[0] != WCH_DEAD)
-                vk2char[entry->VirtualKey] = entry->wch[0];
+            if (entry->wch[0] == WCH_NONE) continue;
+            /* the next entry will be the actual character */
+            if (entry->wch[0] == WCH_DEAD)
+            {
+                is_dead |= (1u << 31);
+                continue;
+            }
+            /* for dead keys, MSDN says the top bit is set 1 in the return value of MAPVK_VK_TO_CHAR */
+            vk2char[entry->VirtualKey] = temp_dead | lower;
         }
     }
 }
@@ -1162,7 +1172,7 @@ WORD WINAPI NtUserVkKeyScanEx( WCHAR chr, HKL layout )
 UINT WINAPI NtUserMapVirtualKeyEx( UINT code, UINT type, HKL layout )
 {
     USHORT vsc2vk[0x300];
-    BYTE vk2char[0x100];
+    UINT vk2char[0x100];
     const KBDTABLES *kbd_tables;
     UINT ret = 0;
 
