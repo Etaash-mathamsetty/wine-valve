@@ -428,7 +428,8 @@ LONG WINAPI KeReleaseMutex( PRKMUTEX mutex, BOOLEAN wait )
 /***********************************************************************
  *           KeInitializeGuardedMutex   (NTOSKRNL.EXE.@)
  */
-void WINAPI KeInitializeGuardedMutex(PKGUARDED_MUTEX mutex)
+DEFINE_FASTCALL1_WRAPPER(KeInitializeGuardedMutex)
+void FASTCALL KeInitializeGuardedMutex(PKGUARDED_MUTEX mutex)
 {
     TRACE("mutex %p.\n", mutex);
     mutex->Count = FM_LOCK_BIT;
@@ -440,7 +441,8 @@ void WINAPI KeInitializeGuardedMutex(PKGUARDED_MUTEX mutex)
 /***********************************************************************
  *           KeAcquireGuardedMutexUnsafe   (NTOSKRNL.EXE.@)
  */
-void WINAPI KeAcquireGuardedMutexUnsafe(PKGUARDED_MUTEX mutex)
+DEFINE_FASTCALL1_WRAPPER(KeAcquireGuardedMutexUnsafe)
+void FASTCALL KeAcquireGuardedMutexUnsafe(PKGUARDED_MUTEX mutex)
 {
     LONG count;
 
@@ -454,7 +456,8 @@ void WINAPI KeAcquireGuardedMutexUnsafe(PKGUARDED_MUTEX mutex)
 /***********************************************************************
  *           KeAcquireGuardedMutex   (NTOSKRNL.EXE.@)
  */
-void WINAPI KeAcquireGuardedMutex(PKGUARDED_MUTEX mutex)
+DEFINE_FASTCALL1_WRAPPER(KeAcquireGuardedMutex)
+void FASTCALL KeAcquireGuardedMutex(PKGUARDED_MUTEX mutex)
 {
     /* FIXME: Enter Guarded Region */
     KeAcquireGuardedMutexUnsafe(mutex);
@@ -463,7 +466,8 @@ void WINAPI KeAcquireGuardedMutex(PKGUARDED_MUTEX mutex)
 /***********************************************************************
  *           KeReleaseGuardedMutexUnsafe   (NTOSKRNL.EXE.@)
  */
-void WINAPI KeReleaseGuardedMutexUnsafe(PKGUARDED_MUTEX mutex)
+DEFINE_FASTCALL1_WRAPPER(KeReleaseGuardedMutexUnsafe)
+void FASTCALL KeReleaseGuardedMutexUnsafe(PKGUARDED_MUTEX mutex)
 {
     LONG count;
 
@@ -477,7 +481,8 @@ void WINAPI KeReleaseGuardedMutexUnsafe(PKGUARDED_MUTEX mutex)
 /***********************************************************************
  *           KeReleaseGuardedMutex   (NTOSKRNL.EXE.@)
  */
-void WINAPI KeReleaseGuardedMutex(PKGUARDED_MUTEX mutex)
+DEFINE_FASTCALL1_WRAPPER(KeReleaseGuardedMutex)
+void FASTCALL KeReleaseGuardedMutex(PKGUARDED_MUTEX mutex)
 {
     KeReleaseGuardedMutexUnsafe(mutex);
     /* FIXME: Leave Guarded Region */
