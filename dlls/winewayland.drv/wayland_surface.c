@@ -38,6 +38,7 @@ static void xdg_surface_handle_configure(void *private, struct xdg_surface *xdg_
                                          uint32_t serial)
 {
     struct wayland_surface *surface;
+    enum zxdg_toplevel_decoration_v1_mode decor;
     BOOL should_post = FALSE, initial_configure = FALSE;
     struct wayland_win_data *data;
     HWND hwnd = private;
@@ -57,8 +58,13 @@ static void xdg_surface_handle_configure(void *private, struct xdg_surface *xdg_
         should_post = surface->requested.serial == 0;
         initial_configure = surface->current.serial == 0;
         surface->pending.serial = serial;
+        decor = surface->pending.decor;
         surface->requested = surface->pending;
         memset(&surface->pending, 0, sizeof(surface->pending));
+
+        /* This is not always updated with the other configuration events,
+         * so we must assume it remains unchanged */
+        surface->pending.decor = decor;
     }
 
     wayland_win_data_release(data);
@@ -182,6 +188,31 @@ static const struct wl_surface_listener wl_surface_listener =
     wl_surface_handle_leave
 };
 
+static void zxdg_toplevel_decoration_v1_configure(void *user_data,
+                                                  struct zxdg_toplevel_decoration_v1 *decoration,
+                                                  uint32_t mode)
+{
+
+    struct wayland_win_data *data;
+    struct wayland_surface *surface;
+    HWND hwnd = user_data;
+
+    if ((data = wayland_win_data_get(hwnd)))
+    {
+        if ((surface = data->wayland_surface) && wayland_surface_is_toplevel(surface))
+        {
+            TRACE("got mode %u for surface %p\n", mode, surface);
+            surface->pending.decor = mode;
+        }
+        wayland_win_data_release(data);
+    }
+}
+
+static const struct zxdg_toplevel_decoration_v1_listener zxdg_toplevel_decoration_listener =
+{
+    zxdg_toplevel_decoration_v1_configure
+};
+
 /**********************************************************************
  *          wayland_surface_create
  *
@@ -281,7 +312,7 @@ void wayland_surface_destroy(struct wayland_surface *surface)
  *
  * Gives the toplevel role to a plain wayland surface.
  */
-void wayland_surface_make_toplevel(struct wayland_surface *surface)
+void wayland_surface_make_toplevel(struct wayland_surface *surface, BOOL server_decor)
 {
     WCHAR text[1024];
 
@@ -343,6 +374,29 @@ void wayland_surface_make_toplevel(struct wayland_surface *surface)
             surface->wp_fractional_scale_v1,
             &wp_fractional_scale_listener,
             surface->hwnd);
+    }
+
+    if (process_wayland.zxdg_decoration_manager_v1 && server_decor)
+    {
+        surface->zxdg_toplevel_decoration_v1 =
+        zxdg_decoration_manager_v1_get_toplevel_decoration(
+            process_wayland.zxdg_decoration_manager_v1,
+            surface->xdg_toplevel);
+        if (!surface->zxdg_toplevel_decoration_v1)
+        {
+            ERR("Failed to create toplevel zxdg_toplevel_decoration_v1\n");
+            goto err;
+        }
+        zxdg_toplevel_decoration_v1_add_listener(
+            surface->zxdg_toplevel_decoration_v1,
+            &zxdg_toplevel_decoration_listener,
+            surface->hwnd);
+        zxdg_toplevel_decoration_v1_set_mode(
+            surface->zxdg_toplevel_decoration_v1,
+            ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+        /* our first frame will be server side decorated,
+         * but after that we should be dynamically switch if necessessary */
+        surface->current.decor = ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE;
     }
 
     if (!NtUserInternalGetWindowText(surface->hwnd, text, ARRAY_SIZE(text)))
@@ -459,6 +513,12 @@ void wayland_surface_clear_role(struct wayland_surface *surface)
         {
             wp_content_type_v1_destroy(surface->wp_content_type_v1);
             surface->wp_content_type_v1 = NULL;
+        }
+
+        if (surface->zxdg_toplevel_decoration_v1)
+        {
+            zxdg_toplevel_decoration_v1_destroy(surface->zxdg_toplevel_decoration_v1);
+            surface->zxdg_toplevel_decoration_v1 = NULL;
         }
 
         if (surface->xdg_toplevel)
