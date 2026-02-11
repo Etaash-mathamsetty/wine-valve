@@ -156,7 +156,8 @@ static void wayland_win_data_get_config(struct wayland_win_data *data,
     enum wayland_surface_config_state window_state = 0;
     DWORD style;
 
-    conf->rect = data->rects.window;
+    conf->rect = data->rects.visible;
+    conf->window_rect = data->rects.window;
     conf->client_rect = data->rects.client;
     style = NtUserGetWindowLongW(data->hwnd, GWL_STYLE);
 
@@ -204,13 +205,14 @@ static BOOL wayland_win_data_create_wayland_surface(struct wayland_win_data *dat
     struct wayland_client_surface *client = data->client_surface;
     struct wayland_surface *surface;
     enum wayland_surface_role role;
-    BOOL visible;
+    BOOL visible, server_decor = FALSE;
     DWORD exstyle = NtUserGetWindowLongW(data->hwnd, GWL_EXSTYLE);
+    DWORD style = NtUserGetWindowLongW(data->hwnd, GWL_STYLE);
     struct wl_region *input_region;
 
     TRACE("hwnd=%p\n", data->hwnd);
 
-    visible = ((NtUserGetWindowLongW(data->hwnd, GWL_STYLE) & WS_VISIBLE) == WS_VISIBLE) &&
+    visible = ((style & WS_VISIBLE) == WS_VISIBLE) &&
                (!(exstyle & WS_EX_LAYERED) || data->layered_attribs_set);
 
     if (!visible) role = WAYLAND_SURFACE_ROLE_NONE;
@@ -235,6 +237,12 @@ static BOOL wayland_win_data_create_wayland_surface(struct wayland_win_data *dat
     wl_surface_set_input_region(surface->wl_surface, input_region);
     if (input_region) wl_region_destroy(input_region);
 
+    if (!EqualRect(&data->rects.visible, &data->rects.window)
+        && is_decoration_enabled(style, exstyle))
+    {
+        server_decor = TRUE;
+    }
+
     /* If the window is a visible toplevel make it a wayland
      * xdg_toplevel. Otherwise keep it role-less to avoid polluting the
      * compositor with empty xdg_toplevels. */
@@ -244,7 +252,7 @@ static BOOL wayland_win_data_create_wayland_surface(struct wayland_win_data *dat
         wayland_surface_clear_role(surface);
         break;
     case WAYLAND_SURFACE_ROLE_TOPLEVEL:
-        wayland_surface_make_toplevel(surface);
+        wayland_surface_make_toplevel(surface, server_decor);
         break;
     case WAYLAND_SURFACE_ROLE_SUBSURFACE:
         wayland_surface_make_subsurface(surface, toplevel_surface);
@@ -550,7 +558,7 @@ void WAYLAND_WindowPosChanged(HWND hwnd, HWND insert_after, HWND owner_hint, UIN
         if (insert_after != HWND_BOTTOM && insert_after != HWND_NOTOPMOST
             && insert_after != HWND_TOP && insert_after != HWND_TOPMOST)
         {
-            WARN( "hwnd %p setting force_below_hack.\n", hwnd );
+            WARN("hwnd %p setting force_below_hack.\n", hwnd);
             data->force_below_hack = TRUE;
         }
     }
@@ -583,7 +591,7 @@ static void wayland_configure_window(HWND hwnd)
 {
     struct wayland_surface *surface;
     INT width, height, window_width, window_height;
-    INT window_surf_width, window_surf_height;
+    INT window_surf_width, window_surf_height, offset_x, offset_y;
     UINT flags = 0;
     uint32_t state;
     DWORD style;
@@ -670,6 +678,10 @@ static void wayland_configure_window(HWND hwnd)
 
     wayland_surface_coords_to_window(surface, width, height,
                                      &window_width, &window_height);
+    offset_x = ((surface->window.rect.left - surface->window.window_rect.left) +
+                (surface->window.window_rect.right - surface->window.rect.right));
+    offset_y = ((surface->window.rect.top - surface->window.window_rect.top) +
+                (surface->window.window_rect.bottom - surface->window.rect.bottom));
 
     wayland_win_data_release(data);
 
@@ -680,6 +692,12 @@ static void wayland_configure_window(HWND hwnd)
 
     flags |= SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOMOVE;
     if (window_width == 0 || window_height == 0) flags |= SWP_NOSIZE;
+    /* avoid any behavior differences when server side decorations is disabled */
+    else if (process_wayland.zxdg_decoration_manager_v1)
+    {
+        window_height += offset_y;
+        window_width += offset_x;
+    }
 
     style = NtUserGetWindowLongW(hwnd, GWL_STYLE);
     if (!(state & WAYLAND_SURFACE_CONFIG_STATE_MAXIMIZED) != !(style & WS_MAXIMIZE))

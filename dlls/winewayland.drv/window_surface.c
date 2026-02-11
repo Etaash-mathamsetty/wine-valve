@@ -531,6 +531,43 @@ BOOL WAYLAND_CreateWindowSurface(HWND hwnd, BOOL layered, const RECT *surface_re
 }
 
 /***********************************************************************
+ *           WAYLAND_GetWindowStyleMasks
+ */
+BOOL WAYLAND_GetWindowStyleMasks(HWND hwnd, UINT style, UINT ex_style, UINT *style_mask, UINT *ex_style_mask)
+{
+    BOOL ret = TRUE;
+    struct wayland_win_data *data;
+    struct wayland_surface *surface;
+
+    TRACE("%p %x %x %p %p\n", hwnd, style, ex_style, style_mask, ex_style_mask);
+
+    *style_mask = *ex_style_mask = 0;
+
+    if (!process_wayland.zxdg_decoration_manager_v1) return FALSE;
+
+    if (!(data = wayland_win_data_get(hwnd))) return FALSE;
+
+    if ((surface = data->wayland_surface) && wayland_surface_is_toplevel(surface))
+    {
+        if (!data->managed) ret = FALSE;
+        else if (surface->current.decor != ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE)
+            ret = FALSE;
+    }
+
+    wayland_win_data_release(data);
+
+    if (ret) ret = is_decoration_enabled(style, ex_style);
+
+    if (ret)
+    {
+        *style_mask |= WS_CAPTION | WS_DLGFRAME | WS_THICKFRAME;
+        *ex_style_mask |= WS_EX_DLGMODALFRAME;
+    }
+
+    return ret;
+}
+
+/***********************************************************************
  *           WAYLAND_HasWindowManager
  */
 BOOL WAYLAND_HasWindowManager(const char *name)
@@ -538,8 +575,7 @@ BOOL WAYLAND_HasWindowManager(const char *name)
     static int once;
     const char *env = getenv("XDG_CURRENT_DESKTOP");
 
-    if (!once++)
-        TRACE("DE: %s\n", debugstr_a(env));
+    if (!once++) TRACE("DE: %s\n", debugstr_a(env));
 
     if (!strcmp("waylanddrv", name)) return TRUE;
     if (env && !strcmp(env, name)) return TRUE;
