@@ -86,6 +86,17 @@ static const struct wl_seat_listener seat_listener =
     wl_seat_handle_name
 };
 
+static int wayland_disable_ssd(void)
+{
+    static int disabled = -1;
+    const char *env;
+
+    if (disabled == -1)
+        disabled = (env = getenv("WAYLANDDRV_SSD")) && !strcmp(env, "0");
+
+    return disabled;
+}
+
 /**********************************************************************
  *          Registry handling
  */
@@ -246,6 +257,12 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
     {
         process_wayland.wp_pointer_warp_v1 =
             wl_registry_bind(registry, id, &wp_pointer_warp_v1_interface, 1);
+    }
+    else if (strcmp(interface, "zxdg_decoration_manager_v1") == 0)
+    {
+        if (!wayland_disable_ssd())
+            process_wayland.zxdg_decoration_manager_v1 =
+                wl_registry_bind(registry, id, &zxdg_decoration_manager_v1_interface, 1);
     }
 }
 
@@ -422,10 +439,13 @@ BOOL wayland_process_init(void)
         WARN("Wayland compositor doesn't support optional wp_content_type_manager_v1!\n");
 
     if (!process_wayland.zwp_linux_dmabuf_v1)
-        ERR("Wayland compositor doesn't support optional zwp_linux_dmabuf_v1 version 4 (Cross process rendering will not be supported)!");
+        ERR("Wayland compositor doesn't support optional zwp_linux_dmabuf_v1 version 4 (Cross process rendering will not be supported)!\n");
 
     if (!process_wayland.xdg_toplevel_tag_manager_v1)
         WARN("Wayland compositor doesn't support optional xdg_toplevel_tag_manager_v1!\n");
+
+    if (!process_wayland.zxdg_decoration_manager_v1)
+        WARN("Wayland compositor doesn't support optional zxdg_decoration_manager_v1!\n");
 
     process_wayland.initialized = TRUE;
 
