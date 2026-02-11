@@ -57,6 +57,16 @@ static void xdg_surface_handle_configure(void *private, struct xdg_surface *xdg_
         should_post = surface->requested.serial == 0;
         initial_configure = surface->current.serial == 0;
         surface->pending.serial = serial;
+        if (!surface->pending.decor && surface->current.decor)
+            surface->pending.decor = surface->current.decor;
+        else if (!surface->pending.decor && surface->requested.decor)
+            surface->pending.decor = surface->requested.decor;
+        if (surface->pending.decor &&
+            surface->pending.decor != surface->current.decor)
+        {
+            should_post = TRUE;
+            initial_configure = TRUE;
+        }
         surface->requested = surface->pending;
         memset(&surface->pending, 0, sizeof(surface->pending));
     }
@@ -185,6 +195,30 @@ static const struct wp_fractional_scale_v1_listener wp_fractional_scale_listener
     wp_fractional_scale_handle_scale
 };
 
+static void zxdg_toplevel_decoration_v1_configure(void *user_data,
+                                                  struct zxdg_toplevel_decoration_v1 *decoration,
+                                                  uint32_t mode)
+{
+    struct wayland_win_data *data;
+    struct wayland_surface *surface;
+    HWND hwnd = user_data;
+
+    if ((data = wayland_win_data_get(hwnd)))
+    {
+        if ((surface = data->wayland_surface) && wayland_surface_is_toplevel(surface))
+        {
+            TRACE("got mode %u for surface %p\n", mode, surface);
+            surface->pending.decor = mode;
+        }
+        wayland_win_data_release(data);
+    }
+}
+
+static const struct zxdg_toplevel_decoration_v1_listener zxdg_toplevel_decoration_listener =
+{
+    zxdg_toplevel_decoration_v1_configure
+};
+
 /**********************************************************************
  *          wayland_surface_create
  *
@@ -311,19 +345,62 @@ static void wayland_surface_init_fractional_scale(struct wayland_surface *surfac
     }
 }
 
+static void wayland_surface_init_decoration(struct wayland_surface *surface)
+{
+    TRACE("surface %p\n", surface);
+
+    if (process_wayland.zxdg_decoration_manager_v1)
+    {
+        surface->current.decor = 0;
+        surface->zxdg_toplevel_decoration_v1 =
+        zxdg_decoration_manager_v1_get_toplevel_decoration(
+            process_wayland.zxdg_decoration_manager_v1,
+            surface->xdg_toplevel);
+        if (!surface->zxdg_toplevel_decoration_v1)
+        {
+            ERR("Failed to create toplevel zxdg_toplevel_decoration_v1\n");
+            return;
+        }
+        zxdg_toplevel_decoration_v1_set_mode(
+            surface->zxdg_toplevel_decoration_v1,
+            ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+        zxdg_toplevel_decoration_v1_add_listener(
+            surface->zxdg_toplevel_decoration_v1,
+            &zxdg_toplevel_decoration_listener,
+            surface->hwnd);
+    }
+}
+
 /**********************************************************************
  *          wayland_surface_make_toplevel
  *
  * Gives the toplevel role to a plain wayland surface.
  */
-void wayland_surface_make_toplevel(struct wayland_surface *surface)
+void wayland_surface_make_toplevel(struct wayland_surface *surface, BOOL server_decor)
 {
     WCHAR text[1024];
 
     TRACE("surface=%p\n", surface);
 
     assert(!surface->role || surface->role == WAYLAND_SURFACE_ROLE_TOPLEVEL);
-    if (surface->xdg_surface && surface->xdg_toplevel) return;
+    if (surface->xdg_surface && surface->xdg_toplevel)
+    {
+        if (process_wayland.zxdg_decoration_manager_v1)
+        {
+            if (!server_decor && surface->zxdg_toplevel_decoration_v1)
+            {
+                zxdg_toplevel_decoration_v1_destroy(surface->zxdg_toplevel_decoration_v1);
+                surface->zxdg_toplevel_decoration_v1 = NULL;
+                surface->pending.decor = surface->current.decor = 0;
+            }
+            else if (server_decor && !surface->zxdg_toplevel_decoration_v1)
+                wayland_surface_init_decoration(surface);
+
+            wl_surface_commit(surface->wl_surface);
+            wl_display_flush(process_wayland.wl_display);
+        }
+        return;
+    }
 
     wayland_surface_clear_role(surface);
     surface->role = WAYLAND_SURFACE_ROLE_TOPLEVEL;
@@ -359,6 +436,8 @@ void wayland_surface_make_toplevel(struct wayland_surface *surface)
     wayland_surface_assign_icon(surface);
 
     wayland_surface_init_fractional_scale(surface, 1.0);
+
+    if (server_decor) wayland_surface_init_decoration(surface);
 
     wl_surface_commit(surface->wl_surface);
     wl_display_flush(process_wayland.wl_display);
@@ -445,6 +524,12 @@ void wayland_surface_clear_role(struct wayland_surface *surface)
                 surface->xdg_toplevel, NULL);
             xdg_toplevel_icon_v1_destroy(surface->xdg_toplevel_icon);
             surface->xdg_toplevel_icon = NULL;
+        }
+
+        if (surface->zxdg_toplevel_decoration_v1)
+        {
+            zxdg_toplevel_decoration_v1_destroy(surface->zxdg_toplevel_decoration_v1);
+            surface->zxdg_toplevel_decoration_v1 = NULL;
         }
 
         if (surface->xdg_toplevel)
@@ -741,9 +826,12 @@ static BOOL wayland_surface_reconfigure_xdg(struct wayland_surface *surface,
                                              width, height,
                                              window->state))
     {
+        /* if a decoration change occured during the initial configure, avoid
+         * a double ack as that would cause a protocol error */
+        if (surface->processing.serial != surface->current.serial)
+            xdg_surface_ack_configure(surface->xdg_surface, surface->processing.serial);
         surface->current = surface->processing;
         memset(&surface->processing, 0, sizeof(surface->processing));
-        xdg_surface_ack_configure(surface->xdg_surface, surface->current.serial);
     }
     /* If this is the initial configure, and we have a compatible requested
      * config, use that, in order to draw windows that don't go through the
@@ -753,9 +841,13 @@ static BOOL wayland_surface_reconfigure_xdg(struct wayland_surface *surface,
                                                   width, height,
                                                   window->state))
     {
+        if (surface->requested.serial != surface->current.serial)
+            xdg_surface_ack_configure(surface->xdg_surface, surface->requested.serial);
         surface->current = surface->requested;
         memset(&surface->requested, 0, sizeof(surface->requested));
-        xdg_surface_ack_configure(surface->xdg_surface, surface->current.serial);
+        /* decoration changes must go through the message loop */
+        surface->requested.decor = surface->current.decor;
+        surface->current.decor = 0;
     }
     else if (!surface->current.serial ||
              !wayland_surface_config_is_compatible(&surface->current,
