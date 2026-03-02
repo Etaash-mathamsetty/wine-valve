@@ -183,7 +183,10 @@ static void wayland_win_data_get_config(struct wayland_win_data *data,
         window_state |= WAYLAND_SURFACE_CONFIG_STATE_RESIZEABLE;
 
     conf->state = window_state;
-    conf->scale = conf->fractional_scale;
+    if (process_wayland.wp_fractional_scale_manager_v1)
+        conf->scale = conf->fractional_scale;
+    else
+        conf->scale = NtUserGetSystemDpiForProcess(0) / 96.0;
     conf->visible = (style & WS_VISIBLE) == WS_VISIBLE;
     conf->managed = data->managed;
 }
@@ -192,7 +195,7 @@ static void reapply_cursor_clipping(void)
 {
     RECT rect;
     UINT context = NtUserSetThreadDpiAwarenessContext(NTUSER_DPI_PER_MONITOR_AWARE);
-    if (NtUserGetClipCursor(&rect )) NtUserClipCursor(&rect);
+    if (NtUserGetClipCursor(&rect)) NtUserClipCursor(&rect);
     NtUserSetThreadDpiAwarenessContext(context);
 }
 
