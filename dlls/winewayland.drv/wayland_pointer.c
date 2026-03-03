@@ -774,6 +774,11 @@ static void wayland_pointer_update_cursor_buffer(HCURSOR hcursor, double scale)
     if (info.hbmColor)
     {
         HDC hdc = NtGdiCreateCompatibleDC(0);
+        if (!hdc)
+        {
+            ERR("Failed to create hdc.\n");
+            goto clear_cursor;
+        }
         cursor->shm_buffer =
             wayland_shm_buffer_from_color_bitmaps(hdc, info.hbmColor, info.hbmMask, FALSE);
         NtGdiDeleteObjectApp(hdc);
