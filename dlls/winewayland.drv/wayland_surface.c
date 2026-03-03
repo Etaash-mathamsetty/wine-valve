@@ -1407,7 +1407,11 @@ void wayland_surface_set_icon(struct wayland_surface *surface, UINT type, ICONIN
     assert(ii);
     assert(wayland_surface_is_toplevel(surface));
 
-    hDC = NtGdiCreateCompatibleDC(0);
+    if (!(hDC = NtGdiCreateCompatibleDC(0)))
+    {
+        ERR("Failed to create hDC.\n");
+        return;
+    }
     icon_buf = wayland_shm_buffer_from_color_bitmaps(hDC, ii->hbmColor, ii->hbmMask, TRUE);
     NtGdiDeleteObjectApp(hDC);
 
