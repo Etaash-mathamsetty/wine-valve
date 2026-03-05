@@ -3420,7 +3420,8 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
                    "movq 0x28(%rcx),%rdi\n\t"
                    "movq 0x20(%rcx),%rsi\n\t"
                    "movq 0x08(%rcx),%rbx\n\t"
-                   "leaq 0x70(%rcx),%rsp\n\t"      /* %rsp > frame means no longer inside syscall */
+                   /* switch to user stack */
+                   "movq 0x88(%rcx),%rsp\n\t"
 #ifdef __linux__
                    "testl $12,%r14d\n\t"           /* SYSCALL_HAVE_PTHREAD_TEB | SYSCALL_HAVE_WRFSGSBASE */
                    "jz 1f\n\t"
@@ -3433,8 +3434,6 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
                    "3:\ttestl $0x3,%edx\n\t"       /* CONTEXT_CONTROL | CONTEXT_INTEGER */
                    "jnz 1f\n\t"
 
-                   /* switch to user stack */
-                   "movq 0x88(%rcx),%rsp\n\t"
                    /* push rcx-based kernel stack cfi */
                    __ASM_CFI(".cfi_remember_state\n\t")
                    __ASM_CFI(".cfi_def_cfa %rsp, 0\n\t")
@@ -3459,7 +3458,8 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
                    /* pop rcx-based kernel stack cfi */
                    __ASM_CFI(".cfi_restore_state\n")
 
-                   "1:\ttestl $0x2,%edx\n\t"       /* CONTEXT_INTEGER */
+                   "1:\tleaq 0x70(%rcx),%rsp\n\t"  /* %rsp > frame means no longer inside syscall */
+                   "testl $0x2,%edx\n\t"           /* CONTEXT_INTEGER */
                    "jnz 1f\n\t"
                    /* CONTEXT_CONTROL */
                    "movq (%rsp),%rcx\n\t"          /* frame->rip */
@@ -3487,6 +3487,7 @@ __ASM_GLOBAL_FUNC( __wine_syscall_dispatcher,
                    "movq (%r10),%r10\n\t"
                    "test %r10,%r10\n\t"
                    "jz 3b\n\t"
+                   "leaq 0x70(%rcx),%rsp\n\t"     /* %rsp > frame means no longer inside syscall */
                    "testl $0x2,%edx\n\t"          /* CONTEXT_INTEGER */
                    "jnz 1b\n\t"
                    "xchgq %r10,(%rsp)\n\t"
