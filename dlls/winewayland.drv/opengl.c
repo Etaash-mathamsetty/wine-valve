@@ -725,6 +725,7 @@ static BOOL wayland_wglSwapBuffers(HDC hdc)
 {
     struct wgl_context *ctx = NtCurrentTeb()->glContext;
     HWND hwnd = NtUserWindowFromDC(hdc), toplevel = NtUserGetAncestor(hwnd, GA_ROOT);
+    DWORD style = NtUserGetWindowLongW(toplevel, GWL_STYLE);
     struct wayland_gl_drawable *gl;
 
     TRACE("hdc=%p\n", hdc);
@@ -737,7 +738,15 @@ static BOOL wayland_wglSwapBuffers(HDC hdc)
 
     /* Although all the EGL surfaces we create are double-buffered, we want to
      * use some as single-buffered, so avoid swapping those. */
-    if (gl->double_buffered) p_eglSwapBuffers(egl_display, gl->surface);
+    if (gl->double_buffered)
+    {
+        /* Don't swap when there is no mapped toplevel,
+         * otherwise these swaps can cause hangs */
+        if (gl->swap_interval && !(style & WS_VISIBLE))
+            ERR("Cannot swap when toplevel is not visible!\n");
+        else
+            p_eglSwapBuffers(egl_display, gl->surface);
+    }
     wayland_gl_drawable_sync_size(gl);
 
     wayland_gl_drawable_release(gl);
