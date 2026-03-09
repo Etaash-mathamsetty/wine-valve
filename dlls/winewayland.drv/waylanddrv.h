@@ -89,9 +89,7 @@ enum wayland_surface_config_state
     WAYLAND_SURFACE_CONFIG_STATE_MAXIMIZED = (1 << 0),
     WAYLAND_SURFACE_CONFIG_STATE_RESIZING = (1 << 1),
     WAYLAND_SURFACE_CONFIG_STATE_TILED = (1 << 2),
-    WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN = (1 << 3),
-    WAYLAND_SURFACE_CONFIG_STATE_MINIMIZED = (1 << 4),
-    WAYLAND_SURFACE_CONFIG_STATE_RESIZEABLE = (1 << 5)
+    WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN = (1 << 3)
 };
 
 enum wayland_surface_role
@@ -326,6 +324,8 @@ struct wayland_window_config
     double scale;
     BOOL visible;
     BOOL managed;
+    BOOL resizeable;
+    BOOL minimized;
 };
 
 struct wayland_client_surface
