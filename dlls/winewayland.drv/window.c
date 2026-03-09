@@ -163,9 +163,11 @@ static void wayland_win_data_get_config(struct wayland_win_data *data,
 
     TRACE("window=%s style=%#lx\n", wine_dbgstr_rect(&conf->rect), (long)style);
 
+    conf->minimized = FALSE;
+
     if (data->force_below_hack)
     {
-        window_state |= WAYLAND_SURFACE_CONFIG_STATE_MINIMIZED;
+        conf->minimized = TRUE;
     }
     /* The fullscreen state is implied by the window position and style. */
     else if (data->is_fullscreen)
@@ -180,9 +182,7 @@ static void wayland_win_data_get_config(struct wayland_win_data *data,
         window_state |= WAYLAND_SURFACE_CONFIG_STATE_MAXIMIZED;
     }
 
-    if (style & WS_THICKFRAME || data->is_fullscreen)
-        window_state |= WAYLAND_SURFACE_CONFIG_STATE_RESIZEABLE;
-
+    conf->resizeable = !!(style & WS_THICKFRAME);
     conf->state = window_state;
     if (process_wayland.wp_fractional_scale_manager_v1)
         conf->scale = conf->fractional_scale;
@@ -330,19 +330,16 @@ static void wayland_surface_update_state_toplevel(struct wayland_surface *surfac
         if ((surface->window.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN) &&
            !(surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN))
         {
-            struct wl_output *output;
             pthread_mutex_lock(&process_wayland.output_mutex);
-            output = wayland_get_best_output_for_rect(rect);
-            xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
-            surface->requested_output = output;
+            surface->requested_output = wayland_get_best_output_for_rect(rect);
+            xdg_toplevel_set_fullscreen(surface->xdg_toplevel, surface->requested_output);
             pthread_mutex_unlock(&process_wayland.output_mutex);
         }
-        if ((surface->window.state & WAYLAND_SURFACE_CONFIG_STATE_MINIMIZED) &&
-            !(surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_MINIMIZED))
+        if (surface->window.minimized)
         {
             xdg_toplevel_set_minimized(surface->xdg_toplevel);
         }
-        if (surface->window.state & WAYLAND_SURFACE_CONFIG_STATE_RESIZEABLE)
+        if (surface->window.resizeable)
         {
             xdg_toplevel_set_min_size(surface->xdg_toplevel, 0, 0);
             xdg_toplevel_set_max_size(surface->xdg_toplevel, 0, 0);
