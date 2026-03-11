@@ -626,12 +626,10 @@ void wayland_pointer_init(struct wl_pointer *wl_pointer)
             zwp_relative_pointer_manager_v1_get_relative_pointer(
             process_wayland.zwp_relative_pointer_manager_v1,
             pointer->wl_pointer);
-
-            zwp_relative_pointer_v1_add_listener(
-            pointer->zwp_relative_pointer_v1,
-            &relative_pointer_v1_listener,
-            NULL
-        );
+        zwp_relative_pointer_v1_add_listener(
+        pointer->zwp_relative_pointer_v1,
+        &relative_pointer_v1_listener,
+        NULL);
     }
 }
 

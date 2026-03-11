@@ -395,7 +395,7 @@ void wayland_surface_make_toplevel(struct wayland_surface *surface, BOOL server_
             surface->zxdg_toplevel_decoration_v1,
             ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
         /* our first frame will be server side decorated,
-         * but after that we should be dynamically switch if necessessary */
+         * but after that we should be able to dynamically switch if necessessary */
         surface->current.decor = ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE;
     }
 
@@ -613,7 +613,7 @@ void wayland_surface_attach_shm(struct wayland_surface *surface,
     win_height = surface->window.rect.bottom - surface->window.rect.top;
 
     /* It is an error to specify a wp_viewporter source rectangle that
-     * is partially or completely outside of the wl_buffe.
+     * is partially or completely outside of the wl_buffer.
      * 0 is also an invalid width / height value so use 1x1 instead.
      */
     win_width = max(1, min(win_width, shm_buffer->width));
