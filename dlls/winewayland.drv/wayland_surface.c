@@ -1388,6 +1388,7 @@ static const struct wl_buffer_listener dummy_buffer_listener =
  */
 void wayland_surface_ensure_contents(struct wayland_surface *surface)
 {
+    static int once;
     struct wayland_shm_buffer *dummy_shm_buffer;
     HRGN damage = NULL;
     int width, height;
@@ -1399,8 +1400,9 @@ void wayland_surface_ensure_contents(struct wayland_surface *surface)
                      (surface->content_width != width ||
                       surface->content_height != height);
 
-    TRACE("surface=%p hwnd=%p needs_contents=%d\n",
-          surface, surface->hwnd, needs_contents);
+    if (needs_contents || !once++)
+        TRACE("surface=%p hwnd=%p needs_contents=%d\n",
+              surface, surface->hwnd, needs_contents);
 
     if (!needs_contents) return;
 
