@@ -7666,6 +7666,18 @@ NTSTATUS WINAPI NtUserDisplayConfigGetDeviceInfo( DISPLAYCONFIG_DEVICE_INFO_HEAD
             return STATUS_SUCCESS;
         }
 
+        if ((env = getenv("DXVK_NO_HDR")) && *env == '1')
+        {
+            color_info->advancedColorSupported = 0;
+            color_info->advancedColorEnabled = 0;
+            color_info->wideColorEnforced = 0;
+            color_info->advancedColorForceDisabled = 0;
+            color_info->colorEncoding = DISPLAYCONFIG_COLOR_ENCODING_RGB;
+            color_info->bitsPerColorChannel = 8;
+
+            return STATUS_SUCCESS;
+        }
+
         if (!lock_display_devices( FALSE )) return STATUS_UNSUCCESSFUL;
 
         LIST_FOR_EACH_ENTRY(monitor, &monitors, struct monitor, entry)
