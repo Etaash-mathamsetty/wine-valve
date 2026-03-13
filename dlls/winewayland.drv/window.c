@@ -339,17 +339,6 @@ static void wayland_surface_update_state_toplevel(struct wayland_surface *surfac
         {
             xdg_toplevel_set_minimized(surface->xdg_toplevel);
         }
-        if (surface->window.resizeable)
-        {
-            xdg_toplevel_set_min_size(surface->xdg_toplevel, 0, 0);
-            xdg_toplevel_set_max_size(surface->xdg_toplevel, 0, 0);
-        }
-        else
-        {
-            int width = rect->right - rect->left, height = rect->bottom - rect->top;
-            xdg_toplevel_set_min_size(surface->xdg_toplevel, width, height);
-            xdg_toplevel_set_max_size(surface->xdg_toplevel, width, height);
-        }
         if (process_wayland.xdg_toplevel_icon_manager_v1 && !surface->big_icon_buffer)
         {
             HICON big, small;
