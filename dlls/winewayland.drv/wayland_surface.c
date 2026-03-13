@@ -737,7 +737,7 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
                                         rect.bottom - rect.top);
         /* HACK: reset fullscreen state to ensure surface is on correct output */
         if (wayland_surface_is_toplevel(surface) &&
-            surface->current.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN)
+            surface->window.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN)
         {
             struct wl_output *output;
             pthread_mutex_lock(&process_wayland.output_mutex);
