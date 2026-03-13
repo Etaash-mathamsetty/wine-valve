@@ -746,24 +746,6 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
             xdg_toplevel_set_min_size(surface->xdg_toplevel, width, height);
             xdg_toplevel_set_max_size(surface->xdg_toplevel, width, height);
         }
-        /* HACK: reset fullscreen state to ensure surface is on correct output */
-        if (surface->window.state & WAYLAND_SURFACE_CONFIG_STATE_FULLSCREEN)
-        {
-            struct wl_output *output;
-            pthread_mutex_lock(&process_wayland.output_mutex);
-            output = wayland_get_best_output_for_rect(&surface->window.rect);
-            if (output != surface->requested_output)
-            {
-                TRACE("Updating fullscreen output: output %p, old output %p\n",
-                    output, surface->requested_output);
-                xdg_toplevel_unset_fullscreen(surface->xdg_toplevel);
-                wl_display_flush(process_wayland.wl_display);
-                xdg_toplevel_set_fullscreen(surface->xdg_toplevel, output);
-                wl_display_flush(process_wayland.wl_display);
-                surface->requested_output = output;
-            }
-            pthread_mutex_unlock(&process_wayland.output_mutex);
-        }
     }
 }
 
