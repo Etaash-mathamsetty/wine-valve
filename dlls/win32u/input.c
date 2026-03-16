@@ -435,13 +435,13 @@ static void kbd_tables_init_vsc2vk( const KBDTABLES *tables, USHORT vsc2vk[0x300
 
 #define NEXT_ENTRY(t, e) ((void *)&(e)->wch[(t)->nModifications])
 
-static void kbd_tables_init_vk2char( const KBDTABLES *tables, UINT vk2char[0x100] )
+static void kbd_tables_vkey_to_char( const KBDTABLES *tables, UINT vkey, UINT *vk2char )
 {
     const VK_TO_WCHAR_TABLE *table;
     const VK_TO_WCHARS1 *entry;
     UINT is_dead = 0;
 
-    memset( vk2char, 0, 0x100 );
+    *vk2char = 0;
 
     for (table = tables->pVkToWcharTable; table->pVkToWchars; table++)
     {
@@ -464,7 +464,8 @@ static void kbd_tables_init_vk2char( const KBDTABLES *tables, UINT vk2char[0x100
                 continue;
             }
             /* for dead keys, MSDN says the top bit is set 1 in the return value of MAPVK_VK_TO_CHAR */
-            vk2char[entry->VirtualKey] = temp_dead | lower;
+            if (entry->VirtualKey == vkey)
+                *vk2char = temp_dead | lower;
         }
     }
 }
@@ -1172,7 +1173,6 @@ WORD WINAPI NtUserVkKeyScanEx( WCHAR chr, HKL layout )
 UINT WINAPI NtUserMapVirtualKeyEx( UINT code, UINT type, HKL layout )
 {
     USHORT vsc2vk[0x300];
-    UINT vk2char[0x100];
     const KBDTABLES *kbd_tables;
     UINT ret = 0;
 
@@ -1234,10 +1234,9 @@ UINT WINAPI NtUserMapVirtualKeyEx( UINT code, UINT type, HKL layout )
         }
         break;
     case MAPVK_VK_TO_CHAR:
-        kbd_tables_init_vk2char( kbd_tables, vk2char );
-        if (code >= ARRAY_SIZE(vk2char)) ret = 0;
+        if (code >= 0x100) ret = 0;
         else if (code >= 'A' && code <= 'Z') ret = code;
-        else ret = vk2char[code];
+        else kbd_tables_vkey_to_char(kbd_tables, code & 0xff, &ret);
         break;
     default:
         FIXME_(keyboard)( "unknown type %d\n", type );
