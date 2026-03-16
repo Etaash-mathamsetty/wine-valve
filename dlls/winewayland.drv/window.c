@@ -657,6 +657,11 @@ static void wayland_configure_window(HWND hwnd)
     {
         flags |= SWP_FRAMECHANGED;
     }
+    /* Transitions between CSD and SSD modes may entail a frame change. */
+    else if (surface->processing.decor != surface->current.decor)
+    {
+        flags |= SWP_FRAMECHANGED;
+    }
 
     wayland_surface_coords_from_window(surface,
                                        surface->window.rect.right -
