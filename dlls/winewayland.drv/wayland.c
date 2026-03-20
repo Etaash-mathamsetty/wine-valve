@@ -40,7 +40,10 @@ struct wayland process_wayland =
     .text_input.mutex = PTHREAD_MUTEX_INITIALIZER,
     .data_device.mutex = PTHREAD_MUTEX_INITIALIZER,
     .output_list = {&process_wayland.output_list, &process_wayland.output_list},
-    .output_mutex = PTHREAD_MUTEX_INITIALIZER
+    .output_mutex = PTHREAD_MUTEX_INITIALIZER,
+    .supports_extended_volume = FALSE,
+    .supports_pq = FALSE,
+    .supports_scrgb = FALSE
 };
 
 /**********************************************************************
@@ -220,6 +223,7 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
     {
         process_wayland.wp_color_manager_v1 =
             wl_registry_bind(registry, id, &wp_color_manager_v1_interface, 1);
+        if (process_wayland.wp_color_manager_v1) wayland_color_manager_init();
     }
     else if (strcmp(interface, "xdg_system_bell_v1") == 0)
     {
@@ -373,6 +377,7 @@ BOOL wayland_process_init(void)
     wl_display_roundtrip_queue(process_wayland.wl_display, process_wayland.wl_event_queue);
     wl_display_roundtrip_queue(process_wayland.wl_display, process_wayland.wl_event_queue);
 
+    /* initialize steam overlay event */
     init_overlay_event();
 
     /* Check for required protocol globals. */
