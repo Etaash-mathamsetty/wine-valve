@@ -247,6 +247,10 @@ struct wayland
     LONG input_serial;
     /* Steam overlay active event */
     HANDLE overlay_event;
+    /* used to check for HDR support */
+    BOOL supports_pq;
+    BOOL supports_scrgb;
+    BOOL supports_extended_volume;
 };
 
 struct wayland_output_mode
@@ -517,6 +521,12 @@ void wayland_text_input_deinit(void);
  */
 
 void wayland_data_device_init(void);
+
+/**********************************************************************
+*          Wayland Color Manager
+*/
+
+void wayland_color_manager_init(void);
 
 /**********************************************************************
  *          OpenGL
