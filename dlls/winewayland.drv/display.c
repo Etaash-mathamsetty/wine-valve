@@ -372,7 +372,7 @@ static UINT get_edid(const struct output_info *output_info, unsigned char **data
 
         p[i] = '\n';
 
-        TRACE("model: %s\n", p);
+        TRACE("model: %s", p);
         p -= 5;
     }
 
