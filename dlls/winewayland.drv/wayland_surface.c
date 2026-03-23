@@ -1517,13 +1517,16 @@ static void xdg_activation_token_handle_done(void *user_data,
     HWND hwnd = user_data;
     struct wayland_win_data *data;
 
-
     if ((data = wayland_win_data_get(hwnd)))
     {
         if (data->wayland_surface)
             xdg_activation_v1_activate(process_wayland.xdg_activation_v1,
                                        token, data->wayland_surface->wl_surface);
         wayland_win_data_release(data);
+    }
+    else
+    {
+        ERR("could not activate hwnd %p\n", hwnd);
     }
 
     xdg_activation_token_v1_destroy(xdg_activation_token_v1);
