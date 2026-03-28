@@ -165,7 +165,7 @@ static void wayland_win_data_get_config(struct wayland_win_data *data,
 
     conf->minimized = FALSE;
 
-    if (data->force_below_hack)
+    if (data->force_below_hack || style & WS_MINIMIZE)
     {
         conf->minimized = TRUE;
     }
@@ -598,6 +598,7 @@ static void wayland_configure_window(HWND hwnd)
     DWORD style;
     BOOL needs_enter_size_move = FALSE;
     BOOL needs_exit_size_move = FALSE;
+    BOOL restoring_from_minimize = FALSE;
     struct wayland_win_data *data;
     RECT rect;
 
@@ -688,6 +689,27 @@ static void wayland_configure_window(HWND hwnd)
                 (surface->window.window_rect.right - surface->window.rect.right));
     offset_y = ((surface->window.rect.top - surface->window.window_rect.top) +
                 (surface->window.window_rect.bottom - surface->window.rect.bottom));
+
+    /* Detect restore from minimize: the window is at the offscreen sentinel
+     * position (-32000,-32000) and the compositor is sending a configure.
+     * Send SC_RESTORE to let Win32 handle the full restore sequence (clearing
+     * WS_MINIMIZE, restoring position/size, sending WM_SIZE, etc.).
+     * We must ack the configure before returning to avoid a protocol
+     * violation, then let SC_RESTORE trigger a new configure cycle. */
+    restoring_from_minimize = data->rects.window.left <= -32000 &&
+                              data->rects.window.top <= -32000 &&
+                              (NtUserGetWindowLongW(hwnd, GWL_STYLE) & WS_MINIMIZE);
+    if (restoring_from_minimize)
+    {
+        TRACE("hwnd=%p restoring from minimize\n", hwnd);
+        surface->current = surface->processing;
+        memset(&surface->processing, 0, sizeof(surface->processing));
+        xdg_surface_ack_configure(surface->xdg_surface,
+                                  surface->current.serial);
+        wayland_win_data_release(data);
+        send_message(hwnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+        return;
+    }
 
     flags |= SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOMOVE;
     if (window_width == 0 || window_height == 0) flags |= SWP_NOSIZE;
