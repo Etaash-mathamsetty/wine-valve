@@ -167,7 +167,7 @@ static void wayland_win_data_get_config(struct wayland_win_data *data,
 
     conf->minimized = FALSE;
 
-    if (data->force_below_hack)
+    if (data->force_below_hack || style & WS_MINIMIZE)
     {
         conf->minimized = TRUE;
     }
@@ -749,8 +749,21 @@ LRESULT WAYLAND_WindowMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         wayland_configure_window(hwnd);
         return 0;
     case WM_WAYLAND_SET_FOREGROUND:
-        NtUserSetForegroundWindow(hwnd);
+    {
+        HWND focused;
+        pthread_mutex_lock(&process_wayland.keyboard.mutex);
+        focused = process_wayland.keyboard.focused_hwnd;
+        pthread_mutex_unlock(&process_wayland.keyboard.mutex);
+        /* if the focused hwnd is already == hwnd, this was a spurious leave event. */
+        if (wp && NtUserGetForegroundWindow() == hwnd && focused != hwnd)
+            NtUserSetForegroundWindow(NtUserGetDesktopWindow());
+        /* the same applies here */
+        else if (!wp && focused == hwnd)
+            NtUserSetForegroundWindow(hwnd);
+        else
+            WARN("Ignoring stale %s message\n", wp ? "focus loss" : "focus gain");
         return 0;
+    }
     default:
         FIXME("got window msg %x hwnd %p wp %lx lp %lx\n", msg, hwnd, (long)wp, lp);
         return 0;

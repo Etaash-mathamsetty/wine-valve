@@ -968,16 +968,20 @@ static void keyboard_handle_enter(void *private, struct wl_keyboard *wl_keyboard
          * directly once it's updated to not explicitly deactivate the old
          * foreground window when both the old and new foreground windows
          * are in the same non-current thread. */
-        if (surface->window.managed)
+        if (surface->window.minimized)
+            NtUserPostMessage(hwnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+        else if (surface->window.managed)
             NtUserPostMessage(hwnd, WM_WAYLAND_SET_FOREGROUND, 0, 0);
     }
 
     wayland_win_data_release(data);
 }
 
-static void keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
+static void keyboard_handle_leave(void *private, struct wl_keyboard *wl_keyboard,
                                   uint32_t serial, struct wl_surface *wl_surface)
 {
+    struct wayland_win_data *data;
+    struct wayland_surface *surface;
     struct wayland_keyboard *keyboard = &process_wayland.keyboard;
     HWND hwnd;
 
@@ -1005,9 +1009,21 @@ static void keyboard_handle_leave(void *data, struct wl_keyboard *wl_keyboard,
     {
         if (!(NtUserGetWindowLongW(hwnd, GWL_STYLE) & WS_MINIMIZE))
             send_message(hwnd, WM_CANCELMODE, 0, 0);
-    }
 
-    /* FIXME: update foreground window as well */
+        if (!(data = wayland_win_data_get(hwnd))) return;
+
+        if ((surface = data->wayland_surface))
+        {
+            /* TODO: Drop the internal message and call NtUserSetForegroundWindow
+             * directly once it's updated to not explicitly deactivate the old
+             * foreground window when both the old and new foreground windows
+             * are in the same non-current thread. */
+            if (surface->window.managed)
+                NtUserPostMessage(hwnd, WM_WAYLAND_SET_FOREGROUND, 1, 0);
+        }
+
+        wayland_win_data_release(data);
+    }
 }
 
 static void send_right_control(HWND hwnd, uint32_t state)
