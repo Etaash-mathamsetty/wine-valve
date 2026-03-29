@@ -268,6 +268,7 @@ struct wayland_window_config
     BOOL visible;
     BOOL managed;
     BOOL resizeable;
+    BOOL minimized;
 };
 
 struct wayland_client_surface
