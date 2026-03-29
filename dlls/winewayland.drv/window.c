@@ -167,7 +167,7 @@ static void wayland_win_data_get_config(struct wayland_win_data *data,
 
     conf->minimized = FALSE;
 
-    if (data->force_below_hack)
+    if (data->force_below_hack || style & WS_MINIMIZE)
     {
         conf->minimized = TRUE;
     }
@@ -748,7 +748,10 @@ LRESULT WAYLAND_WindowMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         wayland_configure_window(hwnd);
         return 0;
     case WM_WAYLAND_SET_FOREGROUND:
-        NtUserSetForegroundWindow(hwnd);
+        if (wp && NtUserGetForegroundWindow() == hwnd)
+            NtUserSetForegroundWindow(NtUserGetDesktopWindow());
+        else if (!wp)
+            NtUserSetForegroundWindow(hwnd);
         return 0;
     default:
         FIXME("got window msg %x hwnd %p wp %lx lp %lx\n", msg, hwnd, (long)wp, lp);
