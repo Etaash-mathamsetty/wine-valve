@@ -52,8 +52,10 @@ static pthread_mutex_t surface_list_lock = PTHREAD_MUTEX_INITIALIZER;
 struct surface
 {
     struct vulkan_surface obj;
+    struct swapchain *swapchain;
     void *driver_private;
     HWND hwnd;
+    LONG refcnt;
 
     struct list entry;
     struct list temp_entry;
@@ -155,6 +157,8 @@ static VkResult win32u_vkCreateWin32SurfaceKHR( VkInstance client_instance, cons
         return res;
     }
 
+    surface->refcnt = 1;
+
     pthread_mutex_lock( &surface_list_lock );
     if (!(win = get_win_ptr( surface->hwnd )) || win == WND_DESKTOP || win == WND_OTHER_PROCESS)
         list_init( &surface->entry );
@@ -194,6 +198,8 @@ static void win32u_vkDestroySurfaceKHR( VkInstance client_instance, VkSurfaceKHR
         release_win_ptr( win );
     }
     pthread_mutex_unlock( &surface_list_lock );
+
+    if (surface->swapchain) surface->swapchain->surface = NULL;
 
     instance->p_vkDestroySurfaceKHR( instance->host.instance, surface->obj.host.surface, NULL /* allocator */ );
     driver_funcs->p_vulkan_surface_destroy( surface->hwnd, surface->driver_private );
@@ -863,11 +869,33 @@ static VkResult win32u_vkCreateSwapchainKHR( VkDevice client_device, const VkSwa
     VkSurfaceCapabilitiesKHR capabilities;
     VkSwapchainKHR host_swapchain;
     VkResult res;
+    WND *win;
 
     if (!NtUserIsWindow( surface->hwnd ))
     {
         ERR( "surface %p, hwnd %p is invalid!\n", surface, surface->hwnd );
         return VK_ERROR_INITIALIZATION_FAILED;
+    }
+
+    /* some games create a new vksurface per swapchain which causes issues for wayland WSI  */
+    if (surface && (win = get_win_ptr( surface->hwnd ))
+        && win != WND_DESKTOP && win != WND_OTHER_PROCESS)
+    {
+        struct surface *temp;
+        pthread_mutex_lock( &surface_list_lock );
+        LIST_FOR_EACH_ENTRY( temp, &win->vulkan_surfaces, struct surface, entry )
+        {
+            if (!temp->refcnt && temp != surface)
+            {
+                surface = temp;
+                surface->refcnt = 1;
+                WARN( "reusing surface %p\n",
+                      (void *)(UINT_PTR)surface->obj.host.surface );
+                break;
+            }
+        }
+        release_win_ptr( win );
+        pthread_mutex_unlock( &surface_list_lock );
     }
 
     if (surface) create_info_host.surface = surface->obj.host.surface;
@@ -921,6 +949,8 @@ static VkResult win32u_vkCreateSwapchainKHR( VkDevice client_device, const VkSwa
     vulkan_object_init( &swapchain->obj.obj, host_swapchain );
     swapchain->surface = surface;
     swapchain->extents = create_info->imageExtent;
+
+    surface->swapchain = swapchain;
 
     if (swapchain->fs_hack_enabled)
     {
@@ -981,6 +1011,13 @@ void win32u_vkDestroySwapchainKHR( VkDevice client_device, VkSwapchainKHR client
         free( swapchain->fs_hack_images );
     }
 
+    if (swapchain->surface)
+    {
+        pthread_mutex_lock( &surface_list_lock );
+        swapchain->surface->refcnt = 0;
+        swapchain->surface->swapchain = NULL;
+        pthread_mutex_unlock( &surface_list_lock );
+    }
     device->p_vkDestroySwapchainKHR( device->host.device, swapchain->obj.host.swapchain, NULL );
     instance->p_remove_object( instance, &swapchain->obj.obj );
 
