@@ -58,12 +58,17 @@ static const struct vulkan_driver_funcs wayland_vulkan_driver_funcs;
 static void wine_vk_surface_destroy(struct wayland_client_surface *client)
 {
     HWND hwnd = wl_surface_get_user_data(client->wl_surface);
-    struct wayland_win_data *data = wayland_win_data_get(hwnd);
+    struct wayland_win_data *data;
 
-    if (wayland_client_surface_release(client) && data)
+    if ((data = wayland_win_data_get(hwnd)))
+    {
+        if (data->saved_client_surface)
+            wayland_client_surface_release(data->saved_client_surface);
+        wayland_client_surface_detach(client);
+        data->saved_client_surface = client;
         data->client_surface = NULL;
-
-    if (data) wayland_win_data_release(data);
+        wayland_win_data_release(data);
+    }
 }
 
 static BOOL vulkan_opwr_disabled(void)
@@ -87,11 +92,19 @@ static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_ins
     VkResult res;
     DWORD pid, tid;
     VkWaylandSurfaceCreateInfoKHR create_info_host;
-    struct wayland_client_surface *client;
+    struct wayland_win_data *data;
+    struct wayland_client_surface *client = NULL;
 
     TRACE("%p %p %p %p\n", hwnd, instance, surface, private);
 
-    if (!(client = wayland_client_surface_create(hwnd)))
+    if ((data = wayland_win_data_get(hwnd)))
+    {
+        client = data->saved_client_surface;
+        data->saved_client_surface = NULL;
+        wayland_win_data_release(data);
+    }
+
+    if (!client && !(client = wayland_client_surface_create(hwnd)))
     {
         ERR("Failed to create client surface for hwnd=%p\n", hwnd);
         return VK_ERROR_OUT_OF_HOST_MEMORY;

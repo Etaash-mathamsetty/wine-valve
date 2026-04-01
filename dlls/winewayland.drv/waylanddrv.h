@@ -472,6 +472,10 @@ struct wayland_win_data
     struct wayland_surface *wayland_surface;
     /* wayland client surface (if any) for this window */
     struct wayland_client_surface *client_surface;
+    /* saved wayland client surface for this window.
+     * This is used to keep dmabuf modifiers unchanged when
+     * broken vulkan applications try to recreate their swapchain */
+    struct wayland_client_surface *saved_client_surface;
     /* window rects, relative to parent client area */
     struct window_rects rects;
     BOOL is_fullscreen;

@@ -102,6 +102,8 @@ static void wayland_win_data_destroy(struct wayland_win_data *data)
 
     pthread_mutex_unlock(&win_data_mutex);
 
+    if (data->saved_client_surface)
+        wayland_client_surface_release(data->saved_client_surface);
     if (data->wayland_surface) wayland_surface_destroy(data->wayland_surface);
     if (data->window_contents) wayland_shm_buffer_unref(data->window_contents);
     free(data);
