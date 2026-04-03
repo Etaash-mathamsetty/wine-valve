@@ -1517,18 +1517,99 @@ static void xdg_activation_token_handle_done(void *user_data,
     HWND hwnd = user_data;
     struct wayland_win_data *data;
 
+    assert(token);
+    TRACE("hwnd %p, token %s\n", hwnd, debugstr_a(token));
+
     if ((data = wayland_win_data_get(hwnd)))
     {
         if (data->wayland_surface)
-            xdg_activation_v1_activate(process_wayland.xdg_activation_v1,
-                                       token, data->wayland_surface->wl_surface);
+        {
+            xdg_activation_v1_activate(process_wayland.xdg_activation_v1, token,
+                                       data->wayland_surface->wl_surface);
+        }
         wayland_win_data_release(data);
     }
     else
     {
-        ERR("could not activate hwnd %p\n", hwnd);
+        DWORD pid;
+        void *addr;
+        CLIENT_ID id = {0};
+        HANDLE handle, process;
+        NTSTATUS status;
+        SIZE_T view_size = 0;
+        OBJECT_ATTRIBUTES attr;
+        LARGE_INTEGER section_size;
+
+        if (!NtUserGetWindowThread(hwnd, &pid))
+        {
+            ERR("Failed to get process for hwnd %p\n", hwnd);
+            goto fail;
+        }
+
+        /* Don't bother if this is the current process,
+         * the window must have been destroyed */
+        if (pid == GetCurrentProcessId())
+        {
+            goto fail;
+        }
+
+        /* the hwnd to activate is part of another process */
+        section_size.QuadPart = strlen(token) + 1;
+        status = NtCreateSection(&handle,
+                                 GENERIC_READ | SECTION_MAP_READ | SECTION_MAP_WRITE,
+                                 NULL, &section_size, PAGE_READWRITE, SEC_COMMIT, 0);
+        if (status)
+        {
+            ERR("Failed to create section for activation token\n");
+            goto fail;
+        }
+
+
+        status = NtMapViewOfSection(handle, GetCurrentProcess(), &addr, 0, 0,
+                                    NULL, &view_size, ViewUnmap, 0, PAGE_READWRITE);
+
+        if (status)
+        {
+            ERR("Failed to map section for activation token\n");
+            NtClose(handle);
+            goto fail;
+        }
+
+        strcpy(addr, token);
+
+        NtUnmapViewOfSection(GetCurrentProcess(), addr);
+
+        id.UniqueProcess = ULongToHandle(pid);
+
+        InitializeObjectAttributes(&attr, NULL, 0, 0, NULL);
+        status = NtOpenProcess(&process, PROCESS_ALL_ACCESS, &attr, &id);
+
+        if (status)
+        {
+            ERR("Failed to open process handle for pid %u\n", pid);
+            NtClose(handle);
+            goto fail;
+        }
+
+        status = NtMapViewOfSection(handle, process, &addr, 0, 0, NULL,
+                                    &view_size, ViewUnmap, 0, PAGE_READONLY);
+
+        if (status)
+        {
+            ERR("Failed to map other process section for activation token\n");
+            NtClose(process);
+            NtClose(handle);
+            goto fail;
+        }
+
+        TRACE("Posting cross process window activation to hwnd %p\n", hwnd);
+        NtUserPostMessage(hwnd, WM_WAYLAND_ACTIVATE, 0, (LPARAM)addr);
+
+        NtClose(process);
+        NtClose(handle);
     }
 
+    fail:
     xdg_activation_token_v1_destroy(xdg_activation_token_v1);
 }
 
@@ -1536,12 +1617,13 @@ const static struct xdg_activation_token_v1_listener xdg_activation_listener = {
     xdg_activation_token_handle_done
 };
 
-void wayland_surface_set_activation(struct wayland_surface *surface, BOOL activate)
+void wayland_surface_activate(struct wayland_surface *surface, HWND to_activate, UINT serial)
 {
     struct xdg_activation_token_v1 *xdg_activation_token_v1;
-    assert(surface);
 
-    if (activate && process_wayland.xdg_activation_v1)
+    TRACE("surface %p, activate %p, serial %u\n", surface, to_activate, serial);
+
+    if (process_wayland.xdg_activation_v1)
     {
         xdg_activation_token_v1 =
             xdg_activation_v1_get_activation_token(process_wayland.xdg_activation_v1);
@@ -1553,8 +1635,15 @@ void wayland_surface_set_activation(struct wayland_surface *surface, BOOL activa
         }
 
         xdg_activation_token_v1_add_listener(xdg_activation_token_v1,
-                                             &xdg_activation_listener, surface->hwnd);
-        xdg_activation_token_v1_set_surface(xdg_activation_token_v1, surface->wl_surface);
+                                             &xdg_activation_listener, to_activate);
+        xdg_activation_token_v1_set_surface(xdg_activation_token_v1,
+                                            surface->wl_surface);
+        if (serial)
+        {
+            xdg_activation_token_v1_set_serial(xdg_activation_token_v1, serial,
+                                               process_wayland.seat.wl_seat);
+            xdg_activation_token_v1_set_app_id(xdg_activation_token_v1, process_name);
+        }
         xdg_activation_token_v1_commit(xdg_activation_token_v1);
     }
 }

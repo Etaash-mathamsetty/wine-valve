@@ -82,6 +82,8 @@ enum wayland_window_message
     WM_WAYLAND_INIT_DISPLAY_DEVICES = WM_WINE_FIRST_DRIVER_MSG,
     WM_WAYLAND_CONFIGURE,
     WM_WAYLAND_SET_FOREGROUND,
+    WM_WAYLAND_REQUEST_ACTIVATION,
+    WM_WAYLAND_ACTIVATE
 };
 
 enum wayland_surface_config_state
@@ -438,7 +440,7 @@ void wayland_client_surface_detach(struct wayland_client_surface *client);
 void wayland_surface_ensure_contents(struct wayland_surface *surface);
 void wayland_surface_set_title(struct wayland_surface *surface, LPCWSTR title);
 void wayland_surface_set_icon(struct wayland_surface *surface, UINT type, ICONINFO *ii);
-void wayland_surface_set_activation(struct wayland_surface *surface, BOOL activation);
+void wayland_surface_activate(struct wayland_surface *surface, HWND to_activate, UINT serial);
 
 static inline BOOL wayland_surface_is_toplevel(struct wayland_surface *surface)
 {
@@ -590,6 +592,7 @@ RGNDATA *get_region_data(HRGN region);
 /**********************************************************************
  *          USER driver functions
  */
+void WAYLAND_ActivateWindow(HWND hwnd, HWND previous);
 void WAYLAND_Beep(void);
 LRESULT WAYLAND_ClipboardWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam);
 BOOL WAYLAND_ClipCursor(const RECT *clip, BOOL reset);

@@ -35,6 +35,7 @@ char *process_name = NULL;
 
 static const struct user_driver_funcs waylanddrv_funcs =
 {
+    .pActivateWindow = WAYLAND_ActivateWindow,
     .pBeep = WAYLAND_Beep,
     .pClipboardWindowProc = WAYLAND_ClipboardWindowProc,
     .pClipCursor = WAYLAND_ClipCursor,

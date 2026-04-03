@@ -734,6 +734,41 @@ static void wayland_configure_window(HWND hwnd)
     NtUserSetRawWindowPos(hwnd, rect, flags, FALSE);
 }
 
+static void wayland_window_activate(HWND hwnd, HWND to_activate, UINT serial)
+{
+    struct wayland_surface *surface;
+    struct wayland_win_data *data;
+
+    TRACE("hwnd %p, activate %p, serial %u\n", hwnd, to_activate, serial);
+
+    if ((data = wayland_win_data_get(hwnd)))
+    {
+        if ((surface = data->wayland_surface))
+            wayland_surface_activate(surface, to_activate, serial);
+
+        wayland_win_data_release(data);
+    }
+}
+
+static void wayland_window_handle_activation(HWND hwnd, const char *token)
+{
+    struct wayland_surface *surface;
+    struct wayland_win_data *data;
+
+    TRACE("hwnd %p, token %s\n", hwnd, debugstr_a(token));
+
+    if ((data = wayland_win_data_get(hwnd)))
+    {
+        if ((surface = data->wayland_surface))
+        {
+            xdg_activation_v1_activate(process_wayland.xdg_activation_v1,
+                                       token, surface->wl_surface);
+        }
+
+        wayland_win_data_release(data);
+    }
+}
+
 /**********************************************************************
  *           WAYLAND_WindowMessage
  */
@@ -753,6 +788,24 @@ LRESULT WAYLAND_WindowMessage(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         else if (!wp)
             NtUserSetForegroundWindow(hwnd);
         return 0;
+    case WM_WAYLAND_REQUEST_ACTIVATION:
+    {
+        LONG serial = ReadAcquire(&process_wayland.input_serial);
+        if ((HWND)lp != NtUserGetForegroundWindow())
+        {
+            WARN("Ignoring stale activation request!\n");
+            return 0;
+        }
+        wayland_window_activate(hwnd, (HWND)lp, serial);
+        return 0;
+    }
+    case WM_WAYLAND_ACTIVATE:
+    {
+        void *token = (void *)lp;
+        wayland_window_handle_activation(hwnd, token);
+        NtUnmapViewOfSection(GetCurrentProcess(), token);
+        return 0;
+    }
     default:
         FIXME("got window msg %x hwnd %p wp %lx lp %lx\n", msg, hwnd, (long)wp, lp);
         return 0;
@@ -922,16 +975,25 @@ void WAYLAND_Beep(void)
  */
 void WAYLAND_FlashWindowEx(FLASHWINFO *info)
 {
-    struct wayland_win_data *data;
 
     TRACE("hwnd=%p flags=%x\n", info->hwnd, info->dwFlags);
 
-    if ((data = wayland_win_data_get(info->hwnd)))
-    {
-        if (data->wayland_surface)
-            wayland_surface_set_activation(data->wayland_surface, info->dwFlags);
-        wayland_win_data_release(data);
-    }
+    if (info->dwFlags)
+        wayland_window_activate(info->hwnd, info->hwnd, 0);
+}
+
+/**********************************************************************
+ *          WAYLAND_ActivateWindow
+ */
+void WAYLAND_ActivateWindow(HWND hwnd, HWND previous)
+{
+    HWND h = hwnd;
+    TRACE("hwnd %p previous %p\n", hwnd, previous);
+
+    if (previous && previous != NtUserGetDesktopWindow())
+        h = previous;
+
+    NtUserPostMessage(h, WM_WAYLAND_REQUEST_ACTIVATION, 0, (LPARAM)hwnd);
 }
 
 void set_client_surface(HWND hwnd, struct wayland_client_surface *new_client)
