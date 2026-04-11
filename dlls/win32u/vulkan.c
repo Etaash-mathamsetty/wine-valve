@@ -885,6 +885,8 @@ static VkResult win32u_vkCreateSwapchainKHR( VkDevice client_device, const VkSwa
         pthread_mutex_lock( &surface_list_lock );
         LIST_FOR_EACH_ENTRY( temp, &win->vulkan_surfaces, struct surface, entry )
         {
+            /* avoid using the old swapchain's surface since this will cause native window in use */
+            if (old_swapchain && old_swapchain->surface == temp) continue;
             if (!temp->refcnt && temp != surface)
             {
                 surface = temp;
