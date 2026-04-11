@@ -256,6 +256,7 @@ static BOOL wayland_win_data_create_wayland_surface(struct wayland_win_data *dat
      * Ensure that this restoration is not user driven,
      * as this case is already handled by the compositor */
     if (surface->window.minimized && focused != data->hwnd
+        && (surface->current.caps & WAYLAND_SURFACE_WM_CAPS_MINIMIZE)
         && !(style & WS_MINIMIZE) && !data->force_below_hack)
     {
         wayland_surface_clear_role(surface);

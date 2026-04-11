@@ -115,6 +115,14 @@ enum wayland_pointer_axis_stop_flags
     WAYLAND_POINTER_AXIS_STOP_HORIZONTAL = (1 << 1)
 };
 
+enum wayland_surface_wm_caps
+{
+    WAYLAND_SURFACE_WM_CAPS_SHOW_WINDOW = (1 << 0),
+    WAYLAND_SURFACE_WM_CAPS_MAXIMIZE = (1 << 1),
+    WAYLAND_SURFACE_WM_CAPS_FULLSCREEN = (1 << 2),
+    WAYLAND_SURFACE_WM_CAPS_MINIMIZE = (1 << 3)
+};
+
 struct wayland_keyboard
 {
     struct wl_keyboard *wl_keyboard;
@@ -312,6 +320,7 @@ struct wayland_surface_config
     int32_t width, height;
     enum wayland_surface_config_state state;
     enum zxdg_toplevel_decoration_v1_mode decor;
+    enum wayland_surface_wm_caps caps;
     uint32_t serial;
     BOOL processed;
 };
