@@ -202,7 +202,7 @@ static void win32u_vkDestroySurfaceKHR( VkInstance client_instance, VkSurfaceKHR
     if (surface->swapchain) surface->swapchain->surface = NULL;
 
     instance->p_vkDestroySurfaceKHR( instance->host.instance, surface->obj.host.surface, NULL /* allocator */ );
-    driver_funcs->p_vulkan_surface_destroy( surface->hwnd, surface->driver_private );
+    driver_funcs->p_vulkan_surface_destroy( surface->hwnd, surface->driver_private, surface->refcnt );
 
     instance->p_remove_object( instance, &surface->obj.obj );
 
@@ -1496,7 +1496,7 @@ static VkResult nulldrv_vulkan_surface_create( HWND hwnd, const struct vulkan_in
     return instance->p_vkCreateHeadlessSurfaceEXT( instance->host.instance, &create_info, NULL, surface );
 }
 
-static void nulldrv_vulkan_surface_destroy( HWND hwnd, void *private )
+static void nulldrv_vulkan_surface_destroy( HWND hwnd, void *private, UINT ref )
 {
 }
 
@@ -1566,10 +1566,10 @@ static VkResult lazydrv_vulkan_surface_create( HWND hwnd, const struct vulkan_in
     return driver_funcs->p_vulkan_surface_create( hwnd, instance, surface, private );
 }
 
-static void lazydrv_vulkan_surface_destroy( HWND hwnd, void *private )
+static void lazydrv_vulkan_surface_destroy( HWND hwnd, void *private, UINT ref )
 {
     vulkan_driver_load();
-    return driver_funcs->p_vulkan_surface_destroy( hwnd, private );
+    return driver_funcs->p_vulkan_surface_destroy( hwnd, private, ref );
 }
 
 static void lazydrv_vulkan_surface_detach( HWND hwnd, void *private )

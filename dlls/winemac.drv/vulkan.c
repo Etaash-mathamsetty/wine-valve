@@ -166,7 +166,7 @@ err:
     return res;
 }
 
-static void macdrv_vulkan_surface_destroy(HWND hwnd, void *private)
+static void macdrv_vulkan_surface_destroy(HWND hwnd, void *private, UINT ref)
 {
     struct wine_vk_surface *mac_surface = private;
 

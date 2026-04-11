@@ -185,7 +185,7 @@ static VkResult X11DRV_vulkan_surface_create( HWND hwnd, const struct vulkan_ins
     return VK_SUCCESS;
 }
 
-static void X11DRV_vulkan_surface_destroy( HWND hwnd, void *private )
+static void X11DRV_vulkan_surface_destroy( HWND hwnd, void *private, UINT ref )
 {
     struct x11drv_vulkan_surface *surface = private;
 

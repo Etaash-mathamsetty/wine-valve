@@ -55,17 +55,21 @@ static VkBool32 (*pvkGetPhysicalDeviceWaylandPresentationSupportKHR)(VkPhysicalD
 
 static const struct vulkan_driver_funcs wayland_vulkan_driver_funcs;
 
-static void wine_vk_surface_destroy(struct wayland_client_surface *client)
+static void wine_vk_surface_destroy(struct wayland_client_surface *client, UINT ref)
 {
     HWND hwnd = wl_surface_get_user_data(client->wl_surface);
     struct wayland_win_data *data;
 
     if ((data = wayland_win_data_get(hwnd)))
     {
-        if (data->saved_client_surface)
-            wayland_client_surface_release(data->saved_client_surface);
+        /* if the swapchain using this surface was destroyed, it is safe to reuse */
+        if (!ref)
+        {
+            if (data->saved_client_surface)
+                wayland_client_surface_release(data->saved_client_surface);
+            data->saved_client_surface = client;
+        }
         wayland_client_surface_detach(client);
-        data->saved_client_surface = client;
         data->client_surface = NULL;
         wayland_win_data_release(data);
     }
@@ -132,7 +136,7 @@ static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_ins
     if (res != VK_SUCCESS)
     {
         ERR("Failed to create vulkan wayland surface, res=%d\n", res);
-        wine_vk_surface_destroy(client);
+        wine_vk_surface_destroy(client, 1);
         return res;
     }
 
@@ -143,13 +147,13 @@ static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_ins
     return VK_SUCCESS;
 }
 
-static void wayland_vulkan_surface_destroy(HWND hwnd, void *private)
+static void wayland_vulkan_surface_destroy(HWND hwnd, void *private, UINT ref)
 {
     struct wayland_client_surface *client = private;
 
     TRACE("%p %p\n", hwnd, private);
 
-    wine_vk_surface_destroy(client);
+    wine_vk_surface_destroy(client, ref);
 }
 
 static void wayland_vulkan_surface_detach(HWND hwnd, void *private)

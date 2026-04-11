@@ -219,7 +219,7 @@ struct vulkan_funcs
 struct vulkan_driver_funcs
 {
     VkResult (*p_vulkan_surface_create)(HWND, const struct vulkan_instance *, VkSurfaceKHR *, void **);
-    void (*p_vulkan_surface_destroy)(HWND, void *);
+    void (*p_vulkan_surface_destroy)(HWND, void *, UINT);
     void (*p_vulkan_surface_detach)(HWND, void *);
     void (*p_vulkan_surface_update)(HWND, void *);
     void (*p_vulkan_surface_presented)(HWND, void *, VkResult);
