@@ -241,7 +241,6 @@ static BOOL wayland_win_data_create_wayland_surface(struct wayland_win_data *dat
     if (input_region) wl_region_destroy(input_region);
 
     if (!EqualRect(&data->rects.visible, &data->rects.window)
-        && EqualRect(&data->rects.client, &data->rects.visible)
         && is_decoration_enabled(style, exstyle))
     {
         server_decor = TRUE;
