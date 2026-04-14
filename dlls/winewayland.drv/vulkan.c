@@ -105,6 +105,7 @@ static VkResult wayland_vulkan_surface_create(HWND hwnd, const struct vulkan_ins
     {
         client = data->saved_client_surface;
         data->saved_client_surface = NULL;
+        WARN("Reusing client surface %p\n", client);
         wayland_win_data_release(data);
     }
 

@@ -157,8 +157,6 @@ static VkResult win32u_vkCreateWin32SurfaceKHR( VkInstance client_instance, cons
         return res;
     }
 
-    surface->refcnt = 1;
-
     pthread_mutex_lock( &surface_list_lock );
     if (!(win = get_win_ptr( surface->hwnd )) || win == WND_DESKTOP || win == WND_OTHER_PROCESS)
         list_init( &surface->entry );
@@ -197,9 +195,8 @@ static void win32u_vkDestroySurfaceKHR( VkInstance client_instance, VkSurfaceKHR
         list_remove( &surface->entry );
         release_win_ptr( win );
     }
-    pthread_mutex_unlock( &surface_list_lock );
-
     if (surface->swapchain) surface->swapchain->surface = NULL;
+    pthread_mutex_unlock( &surface_list_lock );
 
     instance->p_vkDestroySurfaceKHR( instance->host.instance, surface->obj.host.surface, NULL /* allocator */ );
     driver_funcs->p_vulkan_surface_destroy( surface->hwnd, surface->driver_private, surface->refcnt );
@@ -877,7 +874,7 @@ static VkResult win32u_vkCreateSwapchainKHR( VkDevice client_device, const VkSwa
         return VK_ERROR_INITIALIZATION_FAILED;
     }
 
-    /* some games create a new vksurface per swapchain which causes issues for wayland WSI  */
+    /* some games create a new vksurface per swapchain which causes issues for wayland WSI. */
     if (surface && (win = get_win_ptr( surface->hwnd ))
         && win != WND_DESKTOP && win != WND_OTHER_PROCESS)
     {
@@ -885,12 +882,9 @@ static VkResult win32u_vkCreateSwapchainKHR( VkDevice client_device, const VkSwa
         pthread_mutex_lock( &surface_list_lock );
         LIST_FOR_EACH_ENTRY( temp, &win->vulkan_surfaces, struct surface, entry )
         {
-            /* avoid using the old swapchain's surface since this will cause native window in use */
-            if (old_swapchain && old_swapchain->surface == temp) continue;
             if (!temp->refcnt && temp != surface)
             {
                 surface = temp;
-                surface->refcnt = 1;
                 WARN( "reusing surface %p\n",
                       (void *)(UINT_PTR)surface->obj.host.surface );
                 break;
@@ -952,7 +946,10 @@ static VkResult win32u_vkCreateSwapchainKHR( VkDevice client_device, const VkSwa
     swapchain->surface = surface;
     swapchain->extents = create_info->imageExtent;
 
+    pthread_mutex_lock(&surface_list_lock);
     surface->swapchain = swapchain;
+    surface->refcnt = 1;
+    pthread_mutex_unlock(&surface_list_lock);
 
     if (swapchain->fs_hack_enabled)
     {
