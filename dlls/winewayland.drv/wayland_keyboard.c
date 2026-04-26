@@ -1031,6 +1031,15 @@ static void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
     input.ki.wScan = (scan & 0x300) ? scan + 0xdf00 : scan;
     input.ki.dwFlags = KEYEVENTF_SCANCODE;
     if (scan & ~0xff) input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+    /* these keys are extended despite not having an extended scan code */
+    else switch (key)
+    {
+    case KEY_NUMLOCK:
+    case KEY_RIGHTSHIFT:
+        input.ki.dwFlags |= KEYEVENTF_EXTENDEDKEY;
+        break;
+    default: break;
+    }
 
     if (state == WL_KEYBOARD_KEY_STATE_RELEASED) input.ki.dwFlags |= KEYEVENTF_KEYUP;
     NtUserSendHardwareInput(hwnd, 0, &input, 0);
