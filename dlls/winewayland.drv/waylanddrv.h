@@ -51,6 +51,7 @@ struct xkb_compose_table;
 #include "color-management-v1-client-protocol.h"
 #include "xdg-activation-v1-client-protocol.h"
 #include "pointer-warp-v1-client-protocol.h"
+#include "tearing-control-v1-client-protocol.h"
 #include "keyboard-shortcuts-inhibit-unstable-v1-client-protocol.h"
 
 #include "windef.h"
@@ -240,6 +241,7 @@ struct wayland
     struct wp_color_manager_v1 *wp_color_manager_v1;
     struct xdg_activation_v1 *xdg_activation_v1;
     struct wp_pointer_warp_v1 *wp_pointer_warp_v1;
+    struct wp_tearing_control_manager_v1 *wp_tearing_control_manager_v1;
     struct zwp_keyboard_shortcuts_inhibit_manager_v1* zwp_keyboard_shortcuts_inhibit_manager_v1;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
@@ -343,6 +345,7 @@ struct wayland_client_surface
     struct wl_surface *wl_surface;
     struct wl_subsurface *wl_subsurface;
     struct wp_color_management_surface_v1 *wp_color_management_surface_v1;
+    struct wp_tearing_control_v1 *wp_tearing_control_v1;
     struct wp_viewport *wp_viewport;
     struct wp_content_type_v1 *wp_content_type_v1;
     /* if true then the client surface has an alpha channel controlling transparency */
@@ -442,6 +445,7 @@ void wayland_client_surface_attach(struct wayland_client_surface *client, HWND t
 void wayland_client_surface_attach_image_description(struct client_surface *client,
                                                      struct wp_image_description_v1 *image_desc);
 void wayland_client_surface_set_alpha(struct client_surface *client, BOOL alpha);
+void wayland_client_surface_set_tearing_hint(struct client_surface *client, BOOL tear);
 void wayland_surface_ensure_contents(struct wayland_surface *surface,
                                      struct wayland_client_surface *client);
 void wayland_surface_set_title(struct wayland_surface *surface, LPCWSTR title);

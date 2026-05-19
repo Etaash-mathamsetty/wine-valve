@@ -1316,6 +1316,8 @@ static void wayland_client_surface_destroy(struct client_surface *client)
         wp_color_management_surface_v1_destroy(surface->wp_color_management_surface_v1);
     if (surface->wp_content_type_v1)
         wp_content_type_v1_destroy(surface->wp_content_type_v1);
+    if (surface->wp_tearing_control_v1)
+        wp_tearing_control_v1_destroy(surface->wp_tearing_control_v1);
     if (surface->wp_viewport)
         wp_viewport_destroy(surface->wp_viewport);
     if (surface->wl_subsurface)
@@ -1554,6 +1556,31 @@ void wayland_client_surface_set_alpha(struct client_surface *client, BOOL alpha)
 {
     struct wayland_client_surface *surface = impl_from_client_surface(client);
     surface->has_alpha = alpha;
+}
+
+void wayland_client_surface_set_tearing_hint(struct client_surface *client, BOOL tear)
+{
+    struct wayland_client_surface *surface = impl_from_client_surface(client);
+
+    if (!process_wayland.wp_tearing_control_manager_v1) return;
+    if (!client) return;
+
+    TRACE("client %p tear %u\n", client, tear);
+
+    if (tear && !surface->wp_tearing_control_v1)
+    {
+        surface->wp_tearing_control_v1 = wp_tearing_control_manager_v1_get_tearing_control(
+                                            process_wayland.wp_tearing_control_manager_v1,
+                                            surface->wl_surface);
+        wp_tearing_control_v1_set_presentation_hint(
+            surface->wp_tearing_control_v1,
+            WP_TEARING_CONTROL_V1_PRESENTATION_HINT_ASYNC);
+    }
+    else if (!tear && surface->wp_color_management_surface_v1)
+    {
+        wp_tearing_control_v1_destroy(surface->wp_tearing_control_v1);
+        surface->wp_tearing_control_v1 = NULL;
+    }
 }
 
 static void dummy_buffer_release(void *data, struct wl_buffer *buffer)

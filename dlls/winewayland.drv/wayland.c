@@ -101,6 +101,21 @@ static int wayland_disable_ssd(void)
     return disabled;
 }
 
+/* HACK: Mesa doesn't support tearing on EGL */
+static int use_egl_tearing(void)
+{
+    static int enabled = -1;
+    const char *env;
+
+    if (enabled == -1)
+    {
+        enabled = (env = getenv("WAYLANDDRV_EGL_TEARING")) &&
+                    !strcmp(env, "1");
+    }
+
+    return enabled;
+}
+
 /**********************************************************************
  *          Registry handling
  */
@@ -271,6 +286,12 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
     {
         process_wayland.zwp_keyboard_shortcuts_inhibit_manager_v1 =
             wl_registry_bind(registry, id, &zwp_keyboard_shortcuts_inhibit_manager_v1_interface, 1);
+    }
+    else if (strcmp(interface, "wp_tearing_control_manager_v1") == 0)
+    {
+        if (use_egl_tearing())
+            process_wayland.wp_tearing_control_manager_v1 =
+                wl_registry_bind(registry, id, &wp_tearing_control_manager_v1_interface, 1);
     }
 }
 

@@ -61,6 +61,7 @@ static void wayland_drawable_destroy(struct opengl_drawable *base)
 {
     struct wayland_gl_drawable *gl = impl_from_opengl_drawable(base);
     if (gl->wl_egl_window) wl_egl_window_destroy(gl->wl_egl_window);
+    wayland_client_surface_set_tearing_hint(base->client, FALSE);
 }
 
 static EGLConfig egl_config_for_format(int format)
@@ -145,7 +146,11 @@ static void wayland_drawable_flush(struct opengl_drawable *base, UINT flags)
 
     TRACE("drawable %s, flags %#x\n", debugstr_opengl_drawable(base), flags);
 
-    if (flags & GL_FLUSH_INTERVAL) funcs->p_eglSwapInterval(egl->display, abs(base->interval));
+    if (flags & GL_FLUSH_INTERVAL)
+    {
+        funcs->p_eglSwapInterval(egl->display, abs(base->interval));
+        wayland_client_surface_set_tearing_hint(base->client, !base->interval);
+    }
 
     /* Since context_flush is called from operations that may latch the native size,
      * perform any pending resizes before calling them. */
