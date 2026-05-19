@@ -140,15 +140,26 @@ static void wayland_init_egl_platform(struct egl_platform *platform)
     egl = platform;
 }
 
+static int wayland_override_interval(int interval)
+{
+    const char *env = getenv("WAYLANDDRV_EGL_SWAP_INTERVAL");
+    int override = env ? atoi(env) : interval;
+    if (override < 0) override = 0;
+    if (env) FIXME("HACK: swap interval override %u\n", override);
+    return override;
+}
+
 static void wayland_drawable_flush(struct opengl_drawable *base, UINT flags)
 {
+    int interval;
     struct wayland_gl_drawable *gl = impl_from_opengl_drawable(base);
 
     TRACE("drawable %s, flags %#x\n", debugstr_opengl_drawable(base), flags);
 
     if (flags & GL_FLUSH_INTERVAL)
     {
-        funcs->p_eglSwapInterval(egl->display, abs(base->interval));
+        interval = wayland_override_interval(abs(base->interval));
+        funcs->p_eglSwapInterval(egl->display, interval);
         wayland_client_surface_set_tearing_hint(base->client, !base->interval);
     }
 
