@@ -52,6 +52,7 @@ struct xkb_compose_table;
 #include "xdg-activation-v1-client-protocol.h"
 #include "pointer-warp-v1-client-protocol.h"
 #include "keyboard-shortcuts-inhibit-unstable-v1-client-protocol.h"
+#include "alpha-modifier-v1-client-protocol.h"
 
 #include "windef.h"
 #include "winbase.h"
@@ -241,6 +242,7 @@ struct wayland
     struct xdg_activation_v1 *xdg_activation_v1;
     struct wp_pointer_warp_v1 *wp_pointer_warp_v1;
     struct zwp_keyboard_shortcuts_inhibit_manager_v1* zwp_keyboard_shortcuts_inhibit_manager_v1;
+    struct wp_alpha_modifier_v1 *wp_alpha_modifier_v1;
     struct wayland_seat seat;
     struct wayland_keyboard keyboard;
     struct wayland_pointer pointer;
@@ -369,6 +371,7 @@ struct wayland_surface
     struct wl_surface *wl_surface;
     struct wp_viewport *wp_viewport;
     struct wp_fractional_scale_v1 *wp_fractional_scale_v1;
+    struct wp_alpha_modifier_surface_v1 *wp_alpha_modifier_surface_v1;
     struct zwp_keyboard_shortcuts_inhibitor_v1* zwp_keyboard_shortcuts_inhibitor_v1;
     struct wayland_shm_buffer *small_icon_buffer;
     struct wayland_shm_buffer *big_icon_buffer;
@@ -395,6 +398,7 @@ struct wayland_surface
     BOOL resizing;
     struct wayland_window_config window;
     int content_width, content_height;
+    UINT32 alpha_multiplier;
     HCURSOR hcursor;
 };
 
@@ -450,6 +454,7 @@ void wayland_surface_assign_icon(struct wayland_surface *surface);
 void wayland_surface_set_icon_buffer(struct wayland_surface *surface, UINT type, const ICONINFO *ii);
 void wayland_surface_activate(struct wayland_surface *surface);
 void wayland_surface_shortcut_control(struct wayland_surface *surface, BOOL inhibit);
+void wayland_surface_sync_alpha(struct wayland_surface *surface);
 
 static inline BOOL wayland_surface_is_toplevel(struct wayland_surface *surface)
 {
@@ -492,6 +497,7 @@ struct wayland_win_data
     BOOL layered_attribs_set;
     BOOL ime_enabled;
     int num_ime_children;
+    UINT32 alpha_multiplier;
 };
 
 struct wayland_win_data *wayland_win_data_get(HWND hwnd);
@@ -579,6 +585,7 @@ BOOL WAYLAND_SetIMEEnabled(HWND hwnd, BOOL enable);
 void WAYLAND_SetCursor(HWND hwnd, HCURSOR hcursor);
 BOOL WAYLAND_SetCursorPos(INT x, INT y);
 void WAYLAND_SetLayeredWindowAttributes(HWND hwnd, COLORREF key, BYTE alpha, DWORD flags);
+void WAYLAND_UpdateLayeredWindow(HWND hwnd, BYTE alpha, UINT flags);
 void WAYLAND_SetWindowIcons(HWND hwnd, HICON icon, const ICONINFO *ii, HICON icon_small, const ICONINFO *ii_small);
 void WAYLAND_SetWindowStyle(HWND hwnd, INT offset, STYLESTRUCT *style);
 void WAYLAND_SetWindowText(HWND hwnd, LPCWSTR text);

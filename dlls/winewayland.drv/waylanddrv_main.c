@@ -47,6 +47,7 @@ static const struct user_driver_funcs waylanddrv_funcs =
     .pSetCursor = WAYLAND_SetCursor,
     .pSetCursorPos = WAYLAND_SetCursorPos,
     .pSetLayeredWindowAttributes = WAYLAND_SetLayeredWindowAttributes,
+    .pUpdateLayeredWindow = WAYLAND_UpdateLayeredWindow,
     .pSetWindowIcons = WAYLAND_SetWindowIcons,
     .pSetWindowStyle = WAYLAND_SetWindowStyle,
     .pSetWindowText = WAYLAND_SetWindowText,
