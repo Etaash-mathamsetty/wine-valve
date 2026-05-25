@@ -359,6 +359,8 @@ struct vulkan_funcs
     PFN_vkQueueSubmit2KHR p_vkQueueSubmit2KHR;
     PFN_vkUnmapMemory p_vkUnmapMemory;
     PFN_vkUnmapMemory2KHR p_vkUnmapMemory2KHR;
+    PFN_vkWaitForPresentKHR p_vkWaitForPresentKHR;
+    PFN_vkWaitForPresent2KHR p_vkWaitForPresent2KHR;
 };
 
 /* interface between win32u and the user drivers */
