@@ -74,6 +74,7 @@ static struct wayland_win_data *wayland_win_data_create(HWND hwnd, const struct 
     data->rects = *rects;
     data->ime_enabled = FALSE;
     data->num_ime_children = 0;
+    data->alpha_multiplier = UINT32_MAX;
 
     pthread_mutex_lock(&win_data_mutex);
 
@@ -272,6 +273,9 @@ static BOOL wayland_win_data_create_wayland_surface(struct wayland_win_data *dat
         TRACE("restoring hwnd %p\n", data->hwnd);
         wayland_surface_clear_role(surface);
     }
+
+    if (!layer_set) data->alpha_multiplier = surface->alpha_multiplier = UINT32_MAX;
+    else surface->alpha_multiplier = data->alpha_multiplier;
 
     /* If the window is a visible toplevel make it a wayland
      * xdg_toplevel. Otherwise keep it role-less to avoid polluting the
@@ -779,14 +783,34 @@ LRESULT WAYLAND_DesktopWindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 }
 
 /*****************************************************************
+ *		WAYLAND_UpdateLayeredWindow
+ */
+void WAYLAND_UpdateLayeredWindow(HWND hwnd, BYTE alpha, UINT flags)
+{
+    struct wayland_win_data *data;
+
+    TRACE("hwnd=%p alpha=%u flags=%#x\n", hwnd, alpha, flags);
+
+    if (!(data = wayland_win_data_get(hwnd))) return;
+    if (!(flags & LWA_ALPHA)) alpha = UINT8_MAX;
+    data->alpha_multiplier = (UINT32)alpha * (UINT32_MAX / UINT8_MAX);
+
+    wayland_win_data_release(data);
+}
+
+/*****************************************************************
  *		WAYLAND_SetLayeredWindowAttributes
  */
 void WAYLAND_SetLayeredWindowAttributes(HWND hwnd, COLORREF key, BYTE alpha, DWORD flags)
 {
     struct wayland_win_data *data;
 
+    TRACE("hwnd=%p alpha=%u flags=%#x\n", hwnd, alpha, flags);
+
     if (!(data = wayland_win_data_get(hwnd))) return;
     data->layered_attribs_set = TRUE;
+    if (!(flags & LWA_ALPHA)) alpha = UINT8_MAX;
+    data->alpha_multiplier = (UINT32)alpha * (UINT32_MAX / UINT8_MAX);
     wayland_win_data_release(data);
 }
 
@@ -1029,6 +1053,12 @@ BOOL set_window_surface_contents(HWND hwnd, struct wayland_shm_buffer *shm_buffe
     {
         if (wayland_surface_reconfigure(wayland_surface))
         {
+            /* sync the alpha multiplier if it has changed due to SLWA/ULW */
+            if (data->alpha_multiplier != wayland_surface->alpha_multiplier)
+            {
+                wayland_surface->alpha_multiplier = data->alpha_multiplier;
+                wayland_surface_sync_alpha(wayland_surface);
+            }
             wayland_surface_attach_shm(wayland_surface, shm_buffer, damage_region);
             wl_surface_commit(wayland_surface->wl_surface);
             committed = TRUE;
