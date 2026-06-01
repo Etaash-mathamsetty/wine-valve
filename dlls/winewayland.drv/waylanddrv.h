@@ -97,6 +97,7 @@ enum wayland_surface_role
     WAYLAND_SURFACE_ROLE_NONE,
     WAYLAND_SURFACE_ROLE_TOPLEVEL,
     WAYLAND_SURFACE_ROLE_SUBSURFACE,
+    WAYLAND_SURFACE_ROLE_POPUP,
 };
 
 enum wayland_surface_wm_caps
@@ -329,6 +330,7 @@ struct wayland_output
 
 struct wayland_surface_config
 {
+    int32_t x, y;
     int32_t width, height;
     enum wayland_surface_config_state state;
     enum zxdg_toplevel_decoration_v1_mode decor;
@@ -392,15 +394,22 @@ struct wayland_surface
     struct wayland_shm_buffer *big_icon_buffer;
 
     enum wayland_surface_role role;
+
+    struct xdg_surface *xdg_surface;
+
     union
     {
         struct
         {
-            struct xdg_surface *xdg_surface;
             struct xdg_toplevel *xdg_toplevel;
             struct xdg_toplevel_icon_v1 *xdg_toplevel_icon;
             struct zxdg_toplevel_decoration_v1 *zxdg_toplevel_decoration_v1;
             struct wl_output *requested_output;
+        };
+        struct
+        {
+            struct xdg_popup *xdg_popup;
+            HWND owner_hwnd;
         };
         struct
         {
@@ -444,6 +453,8 @@ void wayland_surface_destroy(struct wayland_surface *surface);
 void wayland_surface_make_toplevel(struct wayland_surface *surface, BOOL server_decor);
 void wayland_surface_make_subsurface(struct wayland_surface *surface,
                                      struct wayland_surface *parent);
+void wayland_surface_make_popup(struct wayland_surface *surface,
+                                struct wayland_surface *owner, const RECT *rect);
 void wayland_surface_clear_role(struct wayland_surface *surface);
 void wayland_surface_attach_shm(struct wayland_surface *surface,
                                 struct wayland_shm_buffer *shm_buffer,
@@ -475,6 +486,11 @@ void wayland_surface_sync_alpha(struct wayland_surface *surface);
 static inline BOOL wayland_surface_is_toplevel(struct wayland_surface *surface)
 {
     return surface->role == WAYLAND_SURFACE_ROLE_TOPLEVEL && surface->xdg_toplevel;
+}
+
+static inline BOOL wayland_surface_is_popup(struct wayland_surface *surface)
+{
+    return surface->role == WAYLAND_SURFACE_ROLE_POPUP && surface->xdg_popup;
 }
 
 /**********************************************************************
