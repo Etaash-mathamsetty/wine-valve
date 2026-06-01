@@ -144,6 +144,12 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
     {
         /* Bind version 2 so that compositors (e.g., sway) can properly send tiled
          * states, instead of falling back to (ab)using the maximized state. */
+        /* version 3 is required for xdg_popup::reposition */
+        if (version < 3)
+        {
+            ERR("xdg_wm_base version 3 or higher is required!\n");
+            return;
+        }
         process_wayland.xdg_wm_base =
             wl_registry_bind(registry, id, &xdg_wm_base_interface,
                              version < 5 ? version : 5);
