@@ -2504,7 +2504,8 @@ static BOOL expose_window_surface( HWND hwnd, UINT flags, const RECT *rect, UINT
         add_bounds_rect( &surface->bounds, &exposed_rect );
     }
     window_surface_unlock( surface );
-    if (surface->alpha_mask) window_surface_flush( surface );
+    if (surface->alpha_mask || !user_driver->dc_funcs.pPutImage)
+        window_surface_flush( surface );
     window_surface_release( surface );
     return TRUE;
 }
