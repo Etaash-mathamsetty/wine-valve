@@ -412,6 +412,7 @@ struct wayland_surface
     struct wayland_surface_config pending, requested, processing, current;
     BOOL resizing;
     struct wayland_window_config window;
+    RECT geometry;
     int content_width, content_height;
     UINT32 alpha_multiplier;
     HCURSOR hcursor;
