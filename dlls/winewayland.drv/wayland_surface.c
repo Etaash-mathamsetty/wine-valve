@@ -673,6 +673,7 @@ void wayland_surface_clear_role(struct wayland_surface *surface)
 
     surface->content_width = 0;
     surface->content_height = 0;
+    SetRect(&surface->geometry, 0, 0, 0, 0);
 
     wl_display_flush(process_wayland.wl_display);
 }
@@ -843,12 +844,13 @@ static void wayland_surface_reconfigure_geometry(struct wayland_surface *surface
 
     TRACE("hwnd=%p geometry=%s\n", surface->hwnd, wine_dbgstr_rect(&rect));
 
-    if (!IsRectEmpty(&rect))
+    if (!IsRectEmpty(&rect) && !EqualRect(&surface->geometry, &rect))
     {
         int width = rect.right - rect.left, height = rect.bottom - rect.top;
         xdg_surface_set_window_geometry(surface->xdg_surface,
                                         rect.left, rect.top,
                                         width, height);
+        surface->geometry = rect;
         if (surface->window.resizeable)
         {
             xdg_toplevel_set_min_size(surface->xdg_toplevel, 0, 0);
