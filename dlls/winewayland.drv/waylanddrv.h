@@ -359,7 +359,9 @@ struct wayland_client_surface
 {
     struct client_surface client;
     HWND toplevel;
+    RECT rect;
     struct wl_surface *wl_surface;
+    const struct wl_surface *toplevel_wl_surface;
     struct wl_subsurface *wl_subsurface;
     struct wp_color_management_surface_v1 *wp_color_management_surface_v1;
     struct wp_viewport *wp_viewport;
