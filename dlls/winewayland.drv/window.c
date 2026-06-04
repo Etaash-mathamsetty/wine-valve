@@ -229,10 +229,12 @@ static BOOL wayland_win_data_create_wayland_surface(struct wayland_win_data *dat
         visible = TRUE;
     }
 
+    /* If the toplevel has no observable area, make it roleless. */
     if (!visible) role = WAYLAND_SURFACE_ROLE_NONE;
     else if (owner_surface) role = WAYLAND_SURFACE_ROLE_POPUP;
     else if (toplevel_surface) role = WAYLAND_SURFACE_ROLE_SUBSURFACE;
-    else role = WAYLAND_SURFACE_ROLE_TOPLEVEL;
+    else if (!IsRectEmpty(&data->rects.window)) role = WAYLAND_SURFACE_ROLE_TOPLEVEL;
+    else role = WAYLAND_SURFACE_ROLE_NONE;
 
     /* we can temporarily clear the role of a surface but cannot assign a different one after it's set */
     if (surface && role && surface->role && surface->role != role)
@@ -585,7 +587,10 @@ void WAYLAND_WindowPosChanged(HWND hwnd, HWND insert_after, HWND owner_hint, UIN
      * Demote to subsurface instead if this condition is not met. */
     if (owner_surface && !owner_surface->xdg_surface)
     {
-        toplevel_surface = owner_surface;
+        /* if the window is unmanaged and the owner
+         * is not visible, we cannot use a subsurface. */
+        if (owner_surface->role != WAYLAND_SURFACE_ROLE_NONE)
+            toplevel_surface = owner_surface;
         owner_surface = NULL;
     }
     /* Cycles can occur during some transition states.
