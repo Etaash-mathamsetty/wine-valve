@@ -476,8 +476,6 @@ void wayland_client_surface_attach(struct wayland_client_surface *client, HWND t
 void wayland_client_surface_attach_image_description(struct client_surface *client,
                                                      struct wp_image_description_v1 *image_desc);
 void wayland_client_surface_set_alpha(struct client_surface *client, BOOL alpha);
-void wayland_surface_ensure_contents(struct wayland_surface *surface,
-                                     struct wayland_client_surface *client);
 void wayland_surface_set_title(struct wayland_surface *surface, LPCWSTR title);
 void wayland_surface_assign_icon(struct wayland_surface *surface);
 void wayland_surface_set_icon_buffer(struct wayland_surface *surface, UINT type, const ICONINFO *ii);
