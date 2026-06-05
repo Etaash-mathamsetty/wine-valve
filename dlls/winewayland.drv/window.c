@@ -1154,6 +1154,7 @@ struct wayland_shm_buffer *get_window_surface_contents(HWND hwnd)
 
 void ensure_window_surface_contents(HWND hwnd)
 {
+    BOOL expose = FALSE;
     struct wayland_surface *wayland_surface;
     struct wayland_win_data *data;
 
@@ -1161,17 +1162,24 @@ void ensure_window_surface_contents(HWND hwnd)
 
     if ((wayland_surface = data->wayland_surface))
     {
-        wayland_surface_ensure_contents(wayland_surface, data->client_surface);
-
-        /* Handle any processed configure request, to ensure the related
-         * surface state is applied by the compositor. */
-        if (wayland_surface->processing.serial &&
-            wayland_surface->processing.processed &&
-            wayland_surface_reconfigure(wayland_surface))
+        if (wayland_surface->window.visible)
         {
-            wl_surface_commit(wayland_surface->wl_surface);
+            if (data->window_contents)
+            {
+                /* Handle any processed configure request, to ensure the related
+                * surface state is applied by the compositor. */
+                if (wayland_surface->processing.serial &&
+                    wayland_surface->processing.processed &&
+                    wayland_surface_reconfigure(wayland_surface))
+                {
+                    wl_surface_commit(wayland_surface->wl_surface);
+                }
+            }
+            else expose = TRUE;
         }
     }
 
     wayland_win_data_release(data);
+
+    if (expose) NtUserExposeWindowSurface(hwnd, 0, NULL, 0);
 }
