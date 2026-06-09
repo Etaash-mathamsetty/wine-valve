@@ -1615,10 +1615,8 @@ static void wayland_client_surface_update(struct client_surface *client)
 
     if (!(data = wayland_win_data_get(hwnd))) return;
 
-    if (toplevel && NtUserIsWindowVisible(hwnd))
-        wayland_client_surface_attach(surface, toplevel);
-    else
-        wayland_client_surface_attach(surface, NULL);
+    /* the client surface is not detached by update, only the geometry is updated */
+    if (toplevel) wayland_client_surface_attach(surface, toplevel);
 
     wayland_win_data_release(data);
 }
