@@ -639,7 +639,7 @@ static void wayland_configure_window(HWND hwnd)
 {
     struct wayland_surface *surface;
     INT width, height, window_width, window_height;
-    INT window_surf_width, window_surf_height, offset_x, offset_y;
+    INT window_surf_width, window_surf_height;
     UINT flags = 0;
     uint32_t state;
     DWORD style;
@@ -749,22 +749,15 @@ static void wayland_configure_window(HWND hwnd)
 
     wayland_surface_coords_to_window(surface, width, height,
                                      &window_width, &window_height);
-    offset_x = ((surface->window.rect.left - surface->window.window_rect.left) +
-                (surface->window.window_rect.right - surface->window.rect.right));
-    offset_y = ((surface->window.rect.top - surface->window.window_rect.top) +
-                (surface->window.window_rect.bottom - surface->window.rect.bottom));
+
+    SetRect(&rect, 0, 0, window_width, window_height);
+    OffsetRect(&rect, data->rects.window.left, data->rects.window.top);
 
     flags |= SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_NOMOVE;
     if (window_width == 0 || window_height == 0) flags |= SWP_NOSIZE;
     /* avoid any behavior differences when server side decorations is disabled */
     else if (surface->processing.decor == ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE)
-    {
-        window_height += offset_y;
-        window_width += offset_x;
-    }
-
-    SetRect(&rect, 0, 0, window_width, window_height);
-    OffsetRect(&rect, data->rects.window.left, data->rects.window.top);
+        visible_rect_from_window(&data->rects, rect);
 
     wayland_win_data_release(data);
 
