@@ -3340,9 +3340,19 @@ NTSTATUS WINAPI ObReferenceObjectByPointer(void *obj, ACCESS_MASK access,
                                            POBJECT_TYPE type,
                                            KPROCESSOR_MODE mode)
 {
-    FIXME("(%p, %lx, %p, %d): stub\n", obj, access, type, mode);
+    TRACE("(%p, %lx, %p, %d)\n", obj, access, type, mode);
 
-    return STATUS_NOT_IMPLEMENTED;
+    if (mode != KernelMode)
+    {
+        FIXME( "UserMode access not implemented\n" );
+        return STATUS_NOT_IMPLEMENTED;
+    }
+
+    if (type && ObGetObjectType(obj) != type) return STATUS_OBJECT_TYPE_MISMATCH;
+
+    ObReferenceObject(obj);
+
+    return STATUS_SUCCESS;
 }
 
 
