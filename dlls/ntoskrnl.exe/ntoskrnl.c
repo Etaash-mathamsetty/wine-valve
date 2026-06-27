@@ -3645,8 +3645,20 @@ NTSTATUS WINAPI PsTerminateSystemThread(NTSTATUS status)
  */
 NTSTATUS WINAPI PsSuspendProcess(PEPROCESS process)
 {
-    FIXME("stub: %p\n", process);
-    return STATUS_NOT_IMPLEMENTED;
+    NTSTATUS status;
+    HANDLE h;
+
+    TRACE("%p\n", process);
+
+    if ((status = ObOpenObjectByPointer(process, 0, NULL, PROCESS_ALL_ACCESS, NULL, KernelMode, &h)))
+    {
+        WARN("Error opening process object, status %#lx.\n", status);
+        return STATUS_NOT_FOUND;
+    }
+
+    status = NtSuspendProcess(h);
+    NtClose(h);
+    return status;
 }
 
 
