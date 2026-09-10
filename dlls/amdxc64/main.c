@@ -196,16 +196,24 @@ HRESULT STDMETHODCALLTYPE AMDFSR4FFX_UpdateFfxApiProvider(IAmdExtFfxApi *iface, 
     struct AMDFSR4FFX *this = impl_from_IAmdExtFfxApi(iface);
     struct ffxExternalProvider *data = _data;
     /* required to expose MLFG support */
-    struct unk_data unk_data[1] = {{{0, 1, 0, 0}, NULL}};
+    static struct unk_data unk_data[1] = {{{0, 1, 0, 0}, NULL}};
     const char *env;
-    updateffxapi_pfn_ex pfn_ex;
-    updateffxapi_pfn pfn;
-    HMODULE amdffx;
+    static LONG load_state = 0;
+    static updateffxapi_pfn_ex pfn_ex = NULL;
+    static updateffxapi_pfn pfn = NULL;
+    static HMODULE amdffx = NULL;
+
     BOOL fsr4;
 
     TRACE("%p %p %u\n", iface, data, size);
 
     if (!data) return E_INVALIDARG;
+
+    if (load_state == 2)
+    {
+      if (size && pfn_ex) return pfn_ex(data, size, unk_data);
+      if (size && pfn) return pfn(data, size);
+    }
 
     env = getenv("MLFG_UPGRADE");
     if (this->fp8_supported || (env && !strcmp(env, "1")))
@@ -216,14 +224,32 @@ HRESULT STDMETHODCALLTYPE AMDFSR4FFX_UpdateFfxApiProvider(IAmdExtFfxApi *iface, 
     /* explicitly disabled */
     if (env && !fsr4) return E_NOTIMPL;
 
-    if (!(amdffx = LoadLibraryA("amdxcffx64")))
+    if (load_state != 2)
+    {
+        if (InterlockedCompareExchange(&load_state, 1, 0) == 0)
+        {
+            amdffx = LoadLibraryA("amdxcffx64");
+            if (amdffx)
+            {
+                pfn_ex = (updateffxapi_pfn_ex)GetProcAddress(amdffx, "UpdateFfxApiProviderEx");
+                pfn = (updateffxapi_pfn)GetProcAddress(amdffx, "UpdateFfxApiProvider");
+            }
+            InterlockedExchange(&load_state, 2);
+        }
+        else
+        {
+            while (InterlockedCompareExchange(&load_state, 2, 2) != 2)
+            {
+                SwitchToThread();
+            }
+        }
+    }
+
+    if (!amdffx)
     {
         ERR("Failed to load FSR4 dll (amdxcffx64)!\n");
         return E_NOINTERFACE;
     }
-
-    pfn_ex = (updateffxapi_pfn_ex)GetProcAddress(amdffx, "UpdateFfxApiProviderEx");
-    pfn = (updateffxapi_pfn)GetProcAddress(amdffx, "UpdateFfxApiProvider");
 
     if (pfn_ex)
     {
@@ -243,6 +269,7 @@ HRESULT STDMETHODCALLTYPE AMDFSR4FFX_UpdateFfxApiProvider(IAmdExtFfxApi *iface, 
         if (!this->fp8_supported)
         {
             ERR("FSR4 not supported on this system!\n");
+            pfn = NULL;
             return E_NOINTERFACE;
         }
 
